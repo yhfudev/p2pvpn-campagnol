@@ -1,0 +1,112 @@
+======
+README
+======
+
+Campagnol VPN - distributed VPN over UDP/DTLS
+Copyright © 2007 Antoine Vianey
+            2008 Florent Bondoux
+
+Campagnol is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+
+If you have any ideas, suggestions or if you need help,
+you can use the forums on the SourceForge project page:
+http://sourceforge.net/projects/campagnol/
+
+
+Compilation
+-----------
+
+In order to compile Campagnol you need:
+- Java SDK >= 1.4 to build the rendezvous server
+- OpenSSL library version >= 0.9.8g http://www.openssl.org/
+- Universal TUN/TAP driver          http://vtun.sourceforge.net/tun
+
+
+Creating the certificates
+-------------------------
+
+First, you need to create a private key and a root certificate for the
+VPN. The private key will be used to create and sign every certificates
+used on the VPN. You can use "openssl req" to create the key and the
+certificate. It will ask you a password to protect your private key.
+
+The following example will create a minimal CA.
+
+You have to create a specific openssl configuration file. See the man
+page of "openssl ca" for the relevant options.
+The following options are mandatory:
+new_certs_dir, certificate, private_key, default_md, database, serial,
+policy
+
+You may have something similar in your configuration file:
+
+################################################
+[ ca ]
+default_ca      = CA_default            # The default ca section
+
+[ CA_default ]
+
+dir             = .                     # Where everything is kept
+database        = $dir/index.txt        # database index file.
+new_certs_dir   = $dir/certs            # default place for new certs.
+
+certificate     = $dir/cacert.pem       # The CA certificate
+serial          = $dir/serial           # The current serial number
+private_key     = $dir/private/cakey.pem # The private key
+
+name_opt        = ca_default            # Subject Name options
+cert_opt        = ca_default            # Certificate field options
+
+default_days    = 3650                  # how long to certify for
+default_crl_days= 30                    # how long before next CRL
+default_md      = sha1                  # which md to use.
+preserve        = no                    # keep passed DN ordering
+
+# A few difference way of specifying how similar the request should look
+# For type CA, the listed attributes must be the same, and the optional
+# and supplied fields are just that :-)
+policy          = policy_match
+
+# For the CA policy
+[ policy_match ]
+countryName             = match
+stateOrProvinceName     = match
+organizationName        = match
+organizationalUnitName  = optional
+commonName              = supplied
+emailAddress            = optional
+################################################
+
+
+Then we create a certs directory to store the clients certificates and
+a private directory to store your private key. We also create the file
+needed by the openssl configuration file. The index.txt file keep a
+trace of every certificates generated with the key and the serial file
+contains the serial number of the next certificate.
+
+mkdir -p certs private
+touch index.txt
+echo "01" > serial
+openssl req -new -x509 -days 365 -extensions v3_ca -keyout ./private/cakey.pem -out cacert.pem -config ./openssl.cnf
+
+When you want to create a new certificate for a new client, first generate
+a certificate request and a private key for the client.
+
+mkdir client1
+openssl req -new -nodes -keyout "./client1/key.pem" -out "client1_req.pem" -config ./openssl.cnf
+
+Then we can create and sign the new certificate:
+
+openssl ca -config openssl.cnf -in "client1_req.pem" -out "client1/certificat.pem"
+
+
+
+Configuration
+-------------
+
+You have to edit the sample campagnol configuration file for each
+client. A few options are mandatory.
