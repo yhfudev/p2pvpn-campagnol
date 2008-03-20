@@ -1,0 +1,25 @@
+<project name="Campagnol" default="compile" basedir=".">
+	<property name="targetVM" value="1.4" />
+
+	<target name="compile" description="Compiles files">
+		<javac srcdir="${basedir}" source="${targetVM}" target="${targetVM}"/>
+	</target>
+	
+	<target name="clean">
+		<delete>
+	    	<fileset dir="." includes="*.class"/>
+	        <fileset dir="." includes="*~"/>
+	    </delete>
+	</target>
+	
+	<target name="run" depends="compile">
+		<java classname="CampagnolServer" fork="yes" failonerror="yes"/>
+	</target>
+
+	<target name="runGUI" depends="compile">
+		<java classname="CampagnolServer" fork="yes" failonerror="yes">
+			<arg value="-g"/>
+		</java>
+	</target>
+</project>
+
