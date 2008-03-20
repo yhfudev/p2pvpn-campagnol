@@ -1,0 +1,11 @@
+=========
+TODO LIST
+=========
+
+Known bugs
+----------
+- When trying to open a session between two peers, one using a revoked
+  certificate, both peers will eventually crash.
+- Client do not handle the loss of DLTS shutdown packets.
+
+
