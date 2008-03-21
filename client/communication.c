@@ -136,7 +136,7 @@ int register_rdv(int sockfd) {
     /** initialisation du message HELLO */  
     if (config.verbose) printf("Enregistrement auprès du serveur...\n");
     init_smsg(&smsg, HELLO, config.vpnIP.s_addr, 0);
-    if (config.verbose) printf("Sending HELLO");
+    if (config.debug) printf("Sending HELLO");
     
     while (notRegistered && registeringTries<MAX_REGISTERING_TRIES && !end_campagnol) {
         /** envoi du HELLO au server */
@@ -144,7 +144,7 @@ int register_rdv(int sockfd) {
         if ((s=sendto(sockfd,&smsg,sizeof(struct message),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr))) == -1) {
             perror("sendto");
         }
-        if (config.verbose) printf(".");
+        if (config.debug) printf(".");
         fflush(stdout);
         
         /** initialisation du select */
@@ -154,7 +154,7 @@ int register_rdv(int sockfd) {
         select(sockfd+1, &fd_select, NULL, NULL, &timeout);
         
         if (FD_ISSET(sockfd, &fd_select)!=0 && !end_campagnol) {
-            if (config.verbose) printf("\n");
+            if (config.debug) printf("\n");
             /** message reçu du serveur */
             socklen_t len = sizeof(struct sockaddr_in);
             if ( (r = recvfrom(sockfd,&smsg,MESSAGE_MAX_LENGTH,0,(struct sockaddr *)&config.serverAddr,&len)) == -1) {
@@ -291,7 +291,7 @@ void * lectureSSL(void * args) {
             peer->time = time(NULL);
             peer->state = ESTABLISHED;
             MUTEXUNLOCK;
-            if (config.verbose) printf("...\nMessage VPN reçu de taille %d de SRC = %u.%u.%u.%u pour DST = %u.%u.%u.%u\n",
+            if (config.debug) printf("...\nMessage VPN reçu de taille %d de SRC = %u.%u.%u.%u pour DST = %u.%u.%u.%u\n",
                             r,
                             (ntohl(u.fmt.ip.saddr) >> 24) & 0xFF,
                             (ntohl(u.fmt.ip.saddr) >> 16) & 0xFF,
@@ -417,7 +417,7 @@ void * comm_socket(void * argument) {
             /** Message d'un client */
             else {
                 // voir la structure de l'entete IP qui permettrait de différencier les types de messages
-                if (config.verbose) printf("Paquet reçu d'un client du VPN de taille %d\n", r);
+                if (config.debug) printf("Paquet reçu d'un client du VPN de taille %d\n", r);
                 /** Le paquet est un PUNCH ou un PUNCH_ACK */
                 if (rmsg->type == PUNCH || rmsg->type == PUNCH_ACK) {
                     /** On analyse le message du serveur */
@@ -429,7 +429,7 @@ void * comm_socket(void * argument) {
                             MUTEXLOCK;
                             peer = get_client_VPN(&(rmsg->ip1));
                             if (peer != NULL) { // TODO : cas d'un punch qui arrive avant un FWD_CONNECTION
-                                if (config.verbose) printf("connecté à %s\n", inet_ntoa(rmsg->ip1));
+                                if (config.verbose && peer->state != ESTABLISHED) printf("connecté à %s\n", inet_ntoa(rmsg->ip1));
                                 peer->time = time(NULL);
                                 peer->state = ESTABLISHED;
                                 peer->clientaddr = unknownaddr;
@@ -480,7 +480,7 @@ void * comm_socket(void * argument) {
                 if (time(NULL)-peer->time>config.timeout) {
                     peer->state = TIMEOUT;
                     if (peer->ssl != NULL) {
-                        if (config.verbose) printf("peer timeout %s\n", inet_ntoa(peer->vpnIP));                      
+                        if (config.debug) printf("peer timeout %s\n", inet_ntoa(peer->vpnIP));                      
                         if (peer->is_dtls_client && peer->thread_running) {// Fermeture des connexions que l'on a initié
                             peer->thread_running = 0;
                             SSL_shutdown(peer->ssl);
@@ -541,7 +541,7 @@ void * comm_tun(void * argument) {
             /** Lecture du paquet IP */
             r = read(tunfd, &u, sizeof(u));
             /** Affichage des informations concernant le paquet reçu */
-            if (config.verbose) printf("...\nMessage à envoyer sur le VPN de taille %d de SRC = %u.%u.%u.%u  pour DST = %u.%u.%u.%u\n",
+            if (config.debug) printf("...\nMessage à envoyer sur le VPN de taille %d de SRC = %u.%u.%u.%u  pour DST = %u.%u.%u.%u\n",
                                 r,
                                 (ntohl(u.fmt.ip.saddr) >> 24) & 0xFF,
                                 (ntohl(u.fmt.ip.saddr) >> 16) & 0xFF,
@@ -689,7 +689,7 @@ void lancer_vpn(int sockfd, int tunfd) {
     
     
     init_smsg(&smsg, BYE, config.vpnIP.s_addr, 0);
-    if (config.verbose) printf("Sending BYE\n");
+    if (config.debug) printf("Sending BYE\n");
     if (sendto(sockfd,&smsg,sizeof(struct message),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr)) == -1) {
         perror("sendto");
     }

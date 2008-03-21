@@ -63,22 +63,22 @@ int init_tun(struct in_addr *vpnIP, int istun) {
         exit(1);
     }
     
-    if (config.verbose) printf("le device utilise est : %s \n",ifr.ifr_name);
+    if (config.debug) printf("le device utilise est : %s \n",ifr.ifr_name);
     
     /** Configuration de l'interface TUN */
     if (config.verbose) printf("Configuration de l'interface TUN\n");
-    if (config.verbose) printf("ifconfig...\n");
+    if (config.debug) printf("ifconfig...\n");
     snprintf(systemcall, 100, "ifconfig %s %s mtu 1400 up", ifr.ifr_name, inet_ntoa (*vpnIP));
-    if (config.verbose) puts(systemcall);
+    if (config.debug) puts(systemcall);
     system(systemcall);
-    if (config.verbose) printf("ip route...\n");
+    if (config.debug) printf("ip route...\n");
     snprintf(systemcall, 100, "ip route replace %s via %s", config.network, inet_ntoa (*vpnIP));
-    if (config.verbose) puts(systemcall);
+    if (config.debug) puts(systemcall);
     int r = system(systemcall);
     if (r != 0) { // iproute2 non installé sur la machine ?
-        if (config.verbose) puts("route add...");
+        if (config.debug) puts("route add...");
         snprintf(systemcall, 100, "route add -net %s gw %s", config.network, inet_ntoa (*vpnIP));
-        if (config.verbose) puts(systemcall);
+        if (config.debug) puts(systemcall);
         r = system(systemcall);
     }
     if (r != 0) {

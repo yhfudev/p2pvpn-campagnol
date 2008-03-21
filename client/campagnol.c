@@ -29,6 +29,7 @@
 #include <linux/if.h>
 #include <netdb.h>
 #include <sys/stat.h> 
+#include <getopt.h>
 
 
 #include "campagnol.h"
@@ -48,26 +49,42 @@ void handler_term(int s) {
 }
 
 
-void usage(const char * prog_name) {
-  fprintf(stderr, "%s [-v] [-d] configuration_file\n", prog_name);
-  fprintf(stderr, "           -v : verbose mode\n");
-  fprintf(stderr, "           -d : daemonize\n");
-  exit(1);
+void usage(void) {
+    fprintf(stderr, "Usage: campagnol [OPTION]... configuration_file\n\n");
+    fprintf(stderr, "Options\n");
+    fprintf(stderr, " -v, --verbose\t\t\tverbose mode\n");
+    fprintf(stderr, " -d, --daemon\t\t\tfork in background\n");
+    fprintf(stderr, " -D, --debug\t\t\tdebug mode\n");
+    fprintf(stderr, " -h, --help\t\t\tthis help message\n");
+    exit(1);
 }
 
-int parse_args(int argc, char ** argv, char **configFile) {
+int parse_args(int argc, char **argv, char **configFile) {
     int opt;
     
     config.verbose = 0;
     config.daemonize = 0;
-    while((opt = getopt(argc, argv, "vd")) > 0){
+    config.debug = 0;
+    struct option long_options[] = {
+        {"verbose", 0, NULL, 'v'},
+        {"daemon", 0, NULL, 'd'},
+        {"debug", 0, NULL, 'D'},
+        {"help", 0, NULL, 'h'}
+    };
+    while ((opt = getopt_long(argc, argv, "vdDh", long_options, NULL)) >= 0) {
         switch(opt) {
-            case 'v' :
+            case 'v':
                 config.verbose = 1;
                 break;
             case 'd' :
                 config.daemonize = 1;
                 break;
+            case 'D' :
+                config.debug = 1;
+                config.verbose = 1;
+                break;
+            case 'h' :
+                return 1;
             default : return 1;
         }
     }
@@ -98,6 +115,7 @@ void daemonize(void) {
         exit(1);
     }
     if (pid > 0) {
+        printf("Going in background with pid %d\n", pid);
         exit(0);
     }
     
@@ -111,6 +129,8 @@ void daemonize(void) {
     freopen( "/dev/null", "r", stdin);
     freopen( "/dev/null", "w", stdout);
     freopen( "/dev/null", "w", stderr);
+    config.verbose = 0;
+    config.debug = 0;
 }
 
 
@@ -124,7 +144,7 @@ int main (int argc, char **argv) {
     
 
     if (parse_args(argc, argv, &configFile) != 0) {
-        usage(argv[0]);
+        usage();
     }
     
     if (config.daemonize) daemonize();
@@ -145,8 +165,6 @@ int main (int argc, char **argv) {
     }
     sockfd = create_socket(&config.localIP, config.localport, config.iface);
     
-    if (config.verbose) printf("Taille des messages %zd bytes\n", sizeof(struct message));
-    
     
     
     /** la socket est configuree
@@ -157,6 +175,9 @@ int main (int argc, char **argv) {
 
     tunfd = init_tun(&config.vpnIP, 1);
     
+    if (config.verbose) {
+        printf("Démarrage du VPN\n");
+    }
     lancer_vpn(sockfd, tunfd);
     
     close_tun(tunfd);

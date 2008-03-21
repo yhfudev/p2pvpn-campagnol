@@ -60,7 +60,7 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct
     peer->prev = NULL;
     if (peer->next) peer->next->prev = peer;
     clients = peer;
-    if (config.verbose) printf("Ajout structure pour le client %s\n", inet_ntoa(vpnIP));
+    if (config.debug) printf("Ajout structure pour le client %s\n", inet_ntoa(vpnIP));
     return peer;
 }
 
@@ -73,7 +73,7 @@ struct client *cache_client_real = NULL;
 /** Retire un client de la liste chaînée et désaloue les structures SSL associées
  */
 void remove_client(struct client *peer) {
-    if (config.verbose) printf("Suppression structure pour le client %s\n", inet_ntoa(peer->vpnIP));
+    if (config.debug) printf("Suppression structure pour le client %s\n", inet_ntoa(peer->vpnIP));
     
     if (peer->thread_running) {
         peer->thread_running = 0;
@@ -107,7 +107,7 @@ struct client * get_client_VPN(struct in_addr *address) {
         && cache_client_VPN->vpnIP.s_addr == address->s_addr) {
         return cache_client_VPN;
     }
-    if (config.verbose) printf("get %s\n", inet_ntoa(*address));
+    if (config.debug) printf("get %s\n", inet_ntoa(*address));
     struct client *peer = clients;
     while (peer != NULL) {
         if (peer->vpnIP.s_addr == address->s_addr) {
@@ -129,7 +129,7 @@ struct client * get_client_real(struct sockaddr_in *cl_address) {
         && cache_client_real->clientaddr.sin_port == cl_address->sin_port) {
         return cache_client_real;
     }
-    if (config.verbose) printf("get by client IP %s\n", inet_ntoa(cl_address->sin_addr));
+    if (config.debug) printf("get by client IP %s\n", inet_ntoa(cl_address->sin_addr));
     struct client *peer = clients;
     while (peer != NULL) {
         if (peer->clientaddr.sin_addr.s_addr == cl_address->sin_addr.s_addr

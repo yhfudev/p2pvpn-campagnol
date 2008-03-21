@@ -32,6 +32,7 @@
 
 struct configuration {
     int verbose;                                // verbeux
+    int debug;                                  // plus verbeux
     int daemonize;                              // daemonize the client
     struct in_addr localIP;                     // adresse IP locale
     int localIP_set;                            // localIP est défini
