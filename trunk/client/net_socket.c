@@ -35,10 +35,10 @@ int create_socket(struct in_addr *localIP, int localport, char *iface) {
     struct sockaddr_in localaddr;
     
     /** creation de la socket */
-    if (config.verbose) printf("Création de la socket...\n");
+    if (config.debug) printf("Création de la socket...\n");
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd<0) {
-        if (config.verbose) printf("Erreur d'ouverture de socket\n");
+        if (config.debug) printf("Erreur d'ouverture de socket\n");
         exit(1);
     }
     
