@@ -26,6 +26,6 @@
 
 #include "communication.h"
 
-extern int create_socket(struct in_addr *localIP, int localport, char *iface);
+extern int create_socket(void);
 
 #endif /*NET_SOCKET_H_*/

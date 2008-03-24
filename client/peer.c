@@ -20,11 +20,10 @@
  *
  */
 
- /*
-  * Définition de la liste des clients et fonctions de manipulation :
-  * ajout/suppression, recherche par IP/port réel ou par IP VPN
-  */
-
+/*
+ * Definition of the list of known clients and manipulation functions:
+ * add/remove, search by IP/port or by VPN IP
+ */
 #include "campagnol.h"
 #include "peer.h"
 #include "pthread_wrap.h"
@@ -32,12 +31,12 @@
 
 #include <arpa/inet.h>
 
-// bibliothèque des clients connus
+/* List of known clients */
 struct client *clients = NULL;
-// Mutex pour manipuler la liste clients
+/* mutex used to manipulate 'clients' */
 pthread_mutex_t mutex_clients = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
 
-/** Ajout d'un client à la liste clients */
+/* Add a client to the list */
 struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct in_addr clientIP, u_int16_t clientPort, struct in_addr vpnIP, int is_dtls_client) {
     struct client *peer = malloc(sizeof(struct client));
     peer->time = time;
@@ -60,20 +59,23 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct
     peer->prev = NULL;
     if (peer->next) peer->next->prev = peer;
     clients = peer;
-    if (config.debug) printf("Ajout structure pour le client %s\n", inet_ntoa(vpnIP));
+    if (config.debug) printf("Adding new client %s\n", inet_ntoa(vpnIP));
     return peer;
 }
 
-/* Contient les deniers résultats de recherche avec
- * get_client_VPN et get_client_real
- */
+/*
+ * Contains the last search results for
+ * get_client_VPN and get_client_real
+ */ 
 struct client *cache_client_VPN = NULL;
 struct client *cache_client_real = NULL;
 
-/** Retire un client de la liste chaînée et désaloue les structures SSL associées
+/*
+ * Remove a client from the list "clients"
+ * Free the associated SSL structures
  */
 void remove_client(struct client *peer) {
-    if (config.debug) printf("Suppression structure pour le client %s\n", inet_ntoa(peer->vpnIP));
+    if (config.debug) printf("Deleting the client %s\n", inet_ntoa(peer->vpnIP));
     
     if (peer->thread_running) {
         peer->thread_running = 0;
@@ -99,8 +101,9 @@ void remove_client(struct client *peer) {
     cache_client_real = NULL;
 }
 
-/** Retourne un client par son addresse VPN
- * ou NULL si le client est inconnu
+/*
+ * Get a client by its VPN IP address
+ * return NULL if the client is unknown
  */
 struct client * get_client_VPN(struct in_addr *address) {
     if (cache_client_VPN != NULL
@@ -111,7 +114,7 @@ struct client * get_client_VPN(struct in_addr *address) {
     struct client *peer = clients;
     while (peer != NULL) {
         if (peer->vpnIP.s_addr == address->s_addr) {
-            /** le client est deja connu */
+            /* found */
             cache_client_VPN = peer;
             return peer;
         }
@@ -120,8 +123,9 @@ struct client * get_client_VPN(struct in_addr *address) {
     return NULL;
 }
 
-/** Retourne un client par son addresse IP et port réels
- * ou NULL si le client est inconnu
+/*
+ * Get a client by its real IP address and UDP port
+ * return NULL if the client is unknown
  */
 struct client * get_client_real(struct sockaddr_in *cl_address) {
     if (cache_client_real != NULL
@@ -134,7 +138,7 @@ struct client * get_client_real(struct sockaddr_in *cl_address) {
     while (peer != NULL) {
         if (peer->clientaddr.sin_addr.s_addr == cl_address->sin_addr.s_addr
             && peer->clientaddr.sin_port == cl_address->sin_port) {
-            /** le client est deja connu */
+            /* found */
             cache_client_real = peer;
             return peer;
         }
@@ -143,10 +147,10 @@ struct client * get_client_real(struct sockaddr_in *cl_address) {
     return NULL;
 }
 
-/* Fonction callback utilisée pour vérifier si un certificat
- * est dans la CRL
- * un callback transparent se contente de retourner preverify_ok
- * si preverify_ok == 0, on sort
+/*
+ * Callback function used to check a certificate against a CRL
+ * A transparent callback would return preverify_ok
+ * If preverify_ok == 0, return.
  */
 int verify_crl(int preverify_ok, X509_STORE_CTX *x509_ctx) {
     X509_REVOKED *revoked;
@@ -156,21 +160,21 @@ int verify_crl(int preverify_ok, X509_STORE_CTX *x509_ctx) {
         return preverify_ok;
     
     if (config.crl) {
-        // Vérification du nom du fournisseur du certificat
+        /* Check the name of the certificate issuer */
         if (X509_NAME_cmp(X509_CRL_get_issuer(config.crl), X509_get_issuer_name(x509_ctx->current_cert)) != 0) {
-            fprintf(stderr, "Le certificat n'est pas un certificat de Campagnol\n");
+            fprintf(stderr, "The received certificate and the CRL have different issuers!\n");
             ERR_print_errors_fp(stderr);
             return 0;
         }
         
-        // nombre de certificats dans la CRL
+        /* Number of certificates in the CRL */
         n = sk_num(X509_CRL_get_REVOKED(config.crl));
         
-        // Vérification pour chaque certificat dans la CRL, comparaison des numéros de série
+        /* Compare the certificate serial number with the one of every certificates in the list */
         for (i = 0; i < n; i++) {
             revoked = (X509_REVOKED *)sk_value(X509_CRL_get_REVOKED(config.crl), i);
             if (ASN1_INTEGER_cmp(revoked->serialNumber, X509_get_serialNumber(x509_ctx->current_cert)) == 0) {
-              fprintf(stderr, "Le certificat reçu est révoqué\n");
+              fprintf(stderr, "The received certificate is revoked!\n");
               ERR_print_errors_fp(stderr);
               return 0;
             }
@@ -180,8 +184,9 @@ int verify_crl(int preverify_ok, X509_STORE_CTX *x509_ctx) {
     return preverify_ok;
 }
 
-/* Construit les objets SSL associés à un client
- * si recreate, alors les objets sont reconstruits
+/*
+ * Build the SSL structure for a client
+ * if recreate is true, delete existing structures
  */
 void createClientSSL(struct client *peer, int recreate) {
     if (recreate) {
@@ -208,7 +213,7 @@ void createClientSSL(struct client *peer, int recreate) {
         exit(1);
     }
     
-    // Nécessaire pour DTLS
+    /* Mandatory for DTLS */
     SSL_CTX_set_read_ahead(peer->ctx, 1);
     
     peer->ssl = SSL_new(peer->ctx);
@@ -216,9 +221,9 @@ void createClientSSL(struct client *peer, int recreate) {
     peer->rbio = BIO_new(BIO_s_fifo());
     SSL_set_bio(peer->ssl, peer->rbio, peer->wbio);
     
-    // Pas de compression
+    /* No zlib compression */
     peer->ssl->ctx->comp_methods = NULL;
-    // Algorithmes
+    /* Algorithms */
     if (strlen(config.cipher_list) != 0) {
         if (! SSL_CTX_set_cipher_list(peer->ssl->ctx, config.cipher_list)){
             perror("SSL_CTX_set_cipher_list");
@@ -227,7 +232,12 @@ void createClientSSL(struct client *peer, int recreate) {
         }
     }
     peer->is_dtls_client ? SSL_set_connect_state(peer->ssl) : SSL_set_accept_state(peer->ssl);
-    // Forcer la mtu à 1500
+    
+    /* Don't try to discover the MTU
+     * Don't want that OpenSSL fragments our packets
+     * The MTU of the TUN device is 1400 which ensure that the encrypted packets are < 1500 bytes
+     * the typical overhead is 20 (IP) + 8 (UDP) + 5 (DTLS record) + 20 (160 bits SHA1 MAC)
+     */
     SSL_set_options(peer->ssl, SSL_OP_NO_QUERY_MTU);
     peer->ssl->d1->mtu = 1500;
 }

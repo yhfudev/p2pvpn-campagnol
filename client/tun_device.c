@@ -30,18 +30,21 @@
 #include "campagnol.h"
 #include "tun_device.h"
 
-/* Ouverture d'une interface tun, liée à l'adresse donnée
+/*
+ * Open a new TUN virtual interface
+ * Bind it to config.vpnIP
+ * istun : use a TUN or TAP device
  */
-int init_tun(struct in_addr *vpnIP, int istun) {
+int init_tun(int istun) {
     int tunfd;
-    struct ifreq ifr;                           // pour l'ouverture du device tun
-    char systemcall[100] = "";                  // utilisée pour configurer le driver tun via system
+    struct ifreq ifr;                   // interface request used to open the TUN device
+    char systemcall[100] = "";          // used to configure the new interface with system shell commands
     
-    /** Initialisation de l'interface TUN */
-    if (config.verbose) printf("Initialisation de l'interface TUN\n");
+    /* Open TUN interface */
+    if (config.verbose) printf("TUN interface initialization\n");
     if( (tunfd = open("/dev/net/tun", O_RDWR)) < 0 ) {
-         perror("Impossible d'ouvrir /dev/net/tun");
-         exit(1);
+         perror("Could not open /dev/net/tun");
+         return -1;
     }
 
     bzero(&ifr, sizeof(ifr));
@@ -54,39 +57,37 @@ int init_tun(struct in_addr *vpnIP, int istun) {
     
     if ((ioctl(tunfd, TUNSETIFF, (void *) &ifr)) < 0) {
         close(tunfd);
-        perror("Erreur configuration du driver tun");
-        exit(1);
+        perror("Error: ioctl TUNSETIFF");
+        return -1;
     }
     if ((ioctl(tunfd, TUNSETNOCSUM, 1)) < 0) {
         close(tunfd);
-        perror("Erreur configuration du driver tun");
-        exit(1);
+        perror("Error: ioctl TUNSETNOCSUM");
+        return -1;
     }
     
-    if (config.debug) printf("le device utilise est : %s \n",ifr.ifr_name);
+    if (config.debug) printf("Using TUN device: %s\n",ifr.ifr_name);
     
-    /** Configuration de l'interface TUN */
-    if (config.verbose) printf("Configuration de l'interface TUN\n");
+    /* Inteface configuration */
+    if (config.verbose) printf("TUN interface configuration\n");
     if (config.debug) printf("ifconfig...\n");
-    snprintf(systemcall, 100, "ifconfig %s %s mtu 1400 up", ifr.ifr_name, inet_ntoa (*vpnIP));
+    snprintf(systemcall, 100, "ifconfig %s %s mtu 1400 up", ifr.ifr_name, inet_ntoa (config.vpnIP));
     if (config.debug) puts(systemcall);
     system(systemcall);
     if (config.debug) printf("ip route...\n");
-    snprintf(systemcall, 100, "ip route replace %s via %s", config.network, inet_ntoa (*vpnIP));
+    snprintf(systemcall, 100, "ip route replace %s via %s", config.network, inet_ntoa (config.vpnIP));
     if (config.debug) puts(systemcall);
     int r = system(systemcall);
-    if (r != 0) { // iproute2 non installé sur la machine ?
+    if (r != 0) { // iproute2 is not installed ? try with route
         if (config.debug) puts("route add...");
-        snprintf(systemcall, 100, "route add -net %s gw %s", config.network, inet_ntoa (*vpnIP));
+        snprintf(systemcall, 100, "route add -net %s gw %s", config.network, inet_ntoa (config.vpnIP));
         if (config.debug) puts(systemcall);
         r = system(systemcall);
     }
     if (r != 0) {
-        fprintf(stderr, "Erreur configuration de l'interface TUN\n");
-        exit(1);
+        fprintf(stderr, "Error while configuring the TUN interface\n");
+        return -1;
     }
-    /** L'interface TUN est configurée pour envoyer tous les messages à destination 
-        du réseau NETMASK par l'addresse attribuée à l'interface TUN */
         
     return tunfd;
 }

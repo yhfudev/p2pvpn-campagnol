@@ -23,7 +23,7 @@
 #ifndef PEER_H_
 #define PEER_H_
 
-// etats des clients
+/* clients states */
 #define PUNCHING 0
 #define WAITING 1
 #define ESTABLISHED 2
@@ -31,32 +31,32 @@
 #define TIMEOUT 4
 #define NOT_CONNECTED 5
 
-/** structure d'un client */
+/* client storage structure */
 struct client {
-    time_t time;                    // dernier message recu (time(NULL))
-    struct sockaddr_in clientaddr;  // addresse réelle du client
-    struct in_addr vpnIP;           // vpnIP du client
-    int state;                      // état du client
-    int tunfd;                      // fd du périphérique tun
-    int sockfd;
-    struct client *next;            // client suivant dans la liste
-    struct client *prev;            // client précédant dans la liste
-    pthread_cond_t cond_connected;  // condition pour indiquer que le client est connecté
-    SSL *ssl;                       // connexion SSL
-    BIO *wbio;                      // BIO (abstraction I/O) utilisé en écriture par SSL
-    BIO *rbio;                      // BIO utilisé en lecture par SSL
-    SSL_CTX *ctx;                   // contexte SSL associé à la connexion
-    int is_dtls_client;             // client ou serveur DTLS
-    int thread_running;             // le thread de lecture SSL est lancé
-    pthread_t thread;               // le thread
+    time_t time;                    // last message received (time(NULL))
+    struct sockaddr_in clientaddr;  // real IP address and port
+    struct in_addr vpnIP;           // VPN IP address
+    int state;                      // client's state
+    int tunfd;                      // tun device file descriptor
+    int sockfd;                     // local UDP socket file descriptor
+    struct client *next;            // next client in list
+    struct client *prev;            // previous client in list
+    pthread_cond_t cond_connected;  // pthread_cond used during connection
+    SSL *ssl;                       // SSL structure
+    BIO *wbio;                      // BIO (I/O abstraction) used for outgoing packets
+    BIO *rbio;                      // BIO for incoming packets
+    SSL_CTX *ctx;                   // SSL context associated to the connection
+    int is_dtls_client;             // DTLS client or server ?
+    int thread_running;             // the thread from SSL_reading is running
+    pthread_t thread;               // SSL_reading thread
 };
-/** fin structure */
 
 
 
 extern struct client *clients;
 extern pthread_mutex_t mutex_clients;
-// Manipulation du mutex
+
+/* mutex manipulation */
 #define MUTEXLOCK {mutexLock(&mutex_clients);}
 #define MUTEXUNLOCK {mutexUnlock(&mutex_clients);}
 

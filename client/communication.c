@@ -36,68 +36,67 @@
 #include "peer.h"
 
 
-/** affiche le message a l ecran */
-void print_smsg(struct message *smsg) {
-    int i, k;
-    char *s;
-    switch(smsg->type) {
-        case HELLO :            s = "| HELLO "; break;
-        case PING :             s = "| PING  "; break;
-        case ASK_CONNECTION :   s = "| ASK   "; break;
-        case PONG :             s = "| PONG  "; break;
-        case OK :               s = "| OK    "; break;
-        case NOK :              s = "| NOK   "; break;
-        case FWD_CONNECTION :   s = "| FWD   "; break;
-        case ANS_CONNECTION :   s = "| ANS   "; break;
-        case REJ_CONNECTION :   s = "| REJ   "; break;
-        case PUNCH :            s = "| PUNCH "; break;
-        case PUNCH_ACK :        s = "| PEER+ "; break;
-        case BYE :              s = "| BYE   "; break;
-        case RECONNECT :        s = "| RECNCT"; break;
-        case CLOSE_CONNECTION :            s = "| CLOSE "; break;
-        default : return; break;
-    }
+/*
+ * Print a message with its content
+ */
+//void print_smsg(struct message *smsg) {
+//    int i, k;
+//    char *s;
+//    switch(smsg->type) {
+//        case HELLO :            s = "| HELLO "; break;
+//        case PING :             s = "| PING  "; break;
+//        case ASK_CONNECTION :   s = "| ASK   "; break;
+//        case PONG :             s = "| PONG  "; break;
+//        case OK :               s = "| OK    "; break;
+//        case NOK :              s = "| NOK   "; break;
+//        case FWD_CONNECTION :   s = "| FWD   "; break;
+//        case ANS_CONNECTION :   s = "| ANS   "; break;
+//        case REJ_CONNECTION :   s = "| REJ   "; break;
+//        case PUNCH :            s = "| PUNCH "; break;
+//        case PUNCH_ACK :        s = "| PEER+ "; break;
+//        case BYE :              s = "| BYE   "; break;
+//        case RECONNECT :        s = "| RECNCT"; break;
+//        case CLOSE_CONNECTION :            s = "| CLOSE "; break;
+//        default : return; break;
+//    }
+//
+//    printf("*****************************************************\n"
+//           "| TYPE  | PORT  | IP 1            | IP 2            |\n");
+//    printf("%s", s);
+//    // port
+//    k = ntohs(smsg->port);
+//    printf("| %-6d", k);
+//    // ip1
+//    char *tmp = inet_ntoa(smsg->ip1);
+//    printf("| %s", tmp);
+//    for (i=0; i<16-strlen(tmp); i++) printf(" ");
+//    // ip2
+//    tmp = inet_ntoa(smsg->ip2);
+//    printf("| %s", tmp);
+//    for (i=0; i<16-strlen(tmp); i++) printf(" ");
+//    printf("|\n*****************************************************\n");
+//} 
 
-    printf("*****************************************************\n"
-           "| TYPE  | PORT  | IP 1            | IP 2            |\n");
-    printf("%s", s);
-    // port
-    k = ntohs(smsg->port);
-    printf("| %-6d", k);
-    // ip1
-    char *tmp = inet_ntoa(smsg->ip1);
-    printf("| %s", tmp);
-    for (i=0; i<16-strlen(tmp); i++) printf(" ");
-    // ip2
-    tmp = inet_ntoa(smsg->ip2);
-    printf("| %s", tmp);
-    for (i=0; i<16-strlen(tmp); i++) printf(" ");
-    printf("|\n*****************************************************\n");
-} 
-/** fin de procedure */
-
-/** initialise le message */
-void init_smsg(struct message *smsg, int type, u_int32_t ip1, u_int32_t ip2) {
+/* Initialise a message with the given fields */
+inline void init_smsg(struct message *smsg, int type, u_int32_t ip1, u_int32_t ip2) {
     bzero(smsg, sizeof(struct message));
     smsg->type = type;
     smsg->ip1.s_addr = ip1;
     smsg->ip2.s_addr = ip2;
 }
-/** fin de procédure */
 
-/** procedure initialisant le temp d attente du select */
-void init_timeout(struct timeval *timeout) {
-    timeout->tv_sec = ATTENTE_SECONDES;
-    timeout->tv_usec = ATTENTE_MICROSECONDES;
+/* Initialise a timeval structure to use with select */
+inline void init_timeout(struct timeval *timeout) {
+    timeout->tv_sec = SELECT_DELAY_SEC;
+    timeout->tv_usec = SELECT_DELAY_USEC;
 }
-/** fin de procedure */
 
 
-/* Calcul de checksum
- * voir RFC1071
+/*
+ * Compute the internet checksum
+ * See RFC 1071
  * http://tools.ietf.org/html/rfc1071
- * modification de l'exemple donné
- * fonction utilisée pour modifier les adresses broadcast
+ * This function is based on the example in the RFC
  */
 uint16_t compute_csum(uint16_t *addr, size_t count){
    register int32_t sum = 0;
@@ -119,13 +118,12 @@ uint16_t compute_csum(uint16_t *addr, size_t count){
 }
 
 
-/** Enregistrement auprès du serveur de rendez-vous
- * sockfd : socket
- * serveraddr : adresse serveur RDV
- * vpnIP : adresse VPN du client
+/*
+ * Perform the registration of the client to the RDV server
+ * sockfd: UDP socket
  */
 int register_rdv(int sockfd) {
-    struct message smsg;
+    struct message smsg, rmsg;
     struct timeval timeout;
     
     int s,r;
@@ -133,80 +131,80 @@ int register_rdv(int sockfd) {
     int registeringTries = 0;
     fd_set fd_select;
     
-    /** initialisation du message HELLO */  
-    if (config.verbose) printf("Enregistrement auprès du serveur...\n");
+    /* Create a HELLO message */
+    if (config.verbose) printf("Registering with the RDV server...\n");
     init_smsg(&smsg, HELLO, config.vpnIP.s_addr, 0);
-    if (config.debug) printf("Sending HELLO");
     
     while (notRegistered && registeringTries<MAX_REGISTERING_TRIES && !end_campagnol) {
-        /** envoi du HELLO au server */
+        /* sending HELLO to the server */
         registeringTries++;
+        if (config.debug) printf("Sending HELLO\n");
         if ((s=sendto(sockfd,&smsg,sizeof(struct message),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr))) == -1) {
             perror("sendto");
         }
-        if (config.debug) printf(".");
-        fflush(stdout);
         
-        /** initialisation du select */
+        /* fd_set used with the select call */
         FD_ZERO(&fd_select);
         FD_SET(sockfd, &fd_select);
         init_timeout(&timeout);
         select(sockfd+1, &fd_select, NULL, NULL, &timeout);
         
         if (FD_ISSET(sockfd, &fd_select)!=0 && !end_campagnol) {
-            if (config.debug) printf("\n");
-            /** message reçu du serveur */
+            /* Got a message from the server */
             socklen_t len = sizeof(struct sockaddr_in);
-            if ( (r = recvfrom(sockfd,&smsg,MESSAGE_MAX_LENGTH,0,(struct sockaddr *)&config.serverAddr,&len)) == -1) {
+            if ( (r = recvfrom(sockfd,&rmsg,sizeof(struct message),0,(struct sockaddr *)&config.serverAddr,&len)) == -1) {
                 perror("recvfrom");
             }
-            switch (smsg.type) {
+            switch (rmsg.type) {
                 case OK:
-                    /** on est accepte dans le VPN */
-                    if (config.verbose) puts("\nOn est maintenant connecté au VPN");
+                    /* Registration OK */
+                    if (config.verbose) printf("Registration complete\n");
                     notRegistered = 0;
                     return 0;
                     break;
                 case NOK:
-                    /** on est rejeté du VPN */
-                    fprintf(stderr, "\nLe serveur de rendez-vous rejete la demande de connexion\n");
-                    return 1;
+                    /* The RDV server rejected the client */
+                    fprintf(stderr, "The RDV server rejected the client\n");
+                    sleep(1);
                     break;
                 default:
-                    fprintf(stderr, "\nReçu un message autre que OK ou NOK : %d\n", smsg.type);
+                    fprintf(stderr, "The RDV server replied with something strange... (message code is %d)\n", rmsg.type);
                     break;
             }
         }
     }
 
-    /** La connexion à echouée le serveur est down */
+    /* Registration failed. The server may be down */
     if (notRegistered) {
-        fprintf(stderr, "\nLa connexion au serveur a échouée\n");
+        fprintf(stderr, "The connection with the RDV server failed\n");
         return 1;
     }
     return 0;
 }
 
 
-/** procédure pour le punch des clients distants */
+/* 
+ * Function sending the punch messages for UDP hole punching
+ * arg: struct punch_arg
+ */
 void *punch(void *arg) {
     int i;
     struct punch_arg *str = (struct punch_arg *)arg;
     struct message smsg;
     init_smsg(&smsg, PUNCH, config.vpnIP.s_addr, 0);
     str->peer->time = time(NULL);
-    /** on punch le client */
+    /* punching state */
     MUTEXLOCK;
     if (str->peer->state!=ESTABLISHED) {
         str->peer->state = PUNCHING;
     }
     MUTEXUNLOCK;
     if (config.verbose) printf("punch %s %d\n", inet_ntoa(str->peer->clientaddr.sin_addr), ntohs(str->peer->clientaddr.sin_port));
-    for (i=0; i<NOMBRE_DE_PUNCH; i++) {
+    for (i=0; i<PUNCH_NUMBER; i++) {
         sendto(*(str->sockfd),&smsg,sizeof(struct message),0,(struct sockaddr *)&(str->peer->clientaddr), sizeof(str->peer->clientaddr));
-        usleep(PAUSE_ENTRE_PUNCH);
+        usleep(PUNCH_DELAY_USEC);
     }
-    /** on attend une réponse du peer */
+    /* still waiting for an answer */
     MUTEXLOCK;
     if (str->peer->state!=ESTABLISHED) {
         str->peer->state = WAITING;
@@ -215,42 +213,44 @@ void *punch(void *arg) {
     free(arg);
     pthread_exit(NULL);
 }
-/** fin de procédure */
 
-/** procédure appelée pour lancer correctement le thread de punch */
+/*
+ * Create a thread executing "punch"
+ */
 void start_punch(struct client *peer, int *sockfd) {
-    /** structure pour rassembler les argument du thread */
     struct punch_arg *arg = malloc(sizeof(struct punch_arg));
     arg->sockfd = sockfd;
     arg->peer = peer;
-    /** creation effective du thread */
     pthread_t t;
     t = createThread(punch, (void *)arg);
 }
-/** fin de procédure */
 
-/* Thread associé à chaque flux SSL
+/*
+ * Thread associated with each SSL stream
  * 
- * Effectue la connexion SSL, 
- * puis boucle en lecture sur SSL_read
+ * Make the SSL handshake
+ * Loop over SSL_read
  * 
- * le flux SSL est "alimenté" par les appels à BIO_write sur peer->rbio
+ * The SSL stream is fed by calling BIO_write with peer->rbio
+ * 
+ * args: the connected peer (struct client *)
  */
-void * lectureSSL(void * args) {
+void * SSL_reading(void * args) {
     int r;
-    union {                                     // structure de reception des messages TUN
+    // union used to receive the messages
+    union {
         struct {
             struct iphdr ip;
         } fmt;
-        unsigned char raw[MESSAGE_MAX_LENGTH]; //65536
+        unsigned char raw[MESSAGE_MAX_LENGTH];
     } u; 
     struct client *peer = (struct client*) args;
     int tunfd = peer->tunfd;
     
-    // Connexion
+    // DTLS handshake
     r = peer->ssl->handshake_func(peer->ssl);
     if (r != 1) {
-        fprintf(stderr, "Erreur de connexion\n");
+        fprintf(stderr, "Error during DTLS handshake with peer %s\n", inet_ntoa(peer->vpnIP));
         ERR_print_errors_fp(stderr);
         MUTEXLOCK;
         remove_client(peer);
@@ -261,37 +261,37 @@ void * lectureSSL(void * args) {
         conditionSignal(&peer->cond_connected);
         return NULL;
     }
-    // Déblocage du thread en attente
+    /* Unlock the thread waiting for the connection */
     conditionSignal(&peer->cond_connected);
+    if (config.verbose) printf("new DTLS connection opened with peer %s\n", inet_ntoa(peer->vpnIP));
     
     while (!end_campagnol) {
-        // Lecture SSL puis envoi sur tun
-        
+        /* Read and uncrypt a message, send it on the TUN device */
         r = SSL_read(peer->ssl, &u, MESSAGE_MAX_LENGTH);
-        if (r < 0) { // erreur
+        if (r < 0) { // error
             int err = SSL_get_error(peer->ssl, r);
             fprintf(stderr, "SSL_read %d\n", err);
             ERR_print_errors_fp(stderr);
         }
         MUTEXLOCK;
-        if (r == 0) { // fin connexion
-            if (config.verbose) printf("connexion ssl fermée avec %s\n", inet_ntoa(peer->vpnIP));
+        if (r == 0) { // close connection
+            if (config.verbose) printf("DTLS connection closed with peer %s\n", inet_ntoa(peer->vpnIP));
             if (end_campagnol) {
                 MUTEXUNLOCK;
                 return NULL;
             }
             peer->state = TIMEOUT;
             peer->thread_running = 0;
-            //createClientSSL(peer, 1); // les structures SSL sont réinitialisées
+            //createClientSSL(peer, 1); // rather remove entirely the client structure than recreate it
             remove_client(peer);
             MUTEXUNLOCK;
             return NULL;
         }
-        else {// lecture ok
+        else {// everything's fine
             peer->time = time(NULL);
             peer->state = ESTABLISHED;
             MUTEXUNLOCK;
-            if (config.debug) printf("...\nMessage VPN reçu de taille %d de SRC = %u.%u.%u.%u pour DST = %u.%u.%u.%u\n",
+            if (config.debug) printf("<< Received a VPN message: size %d from SRC = %u.%u.%u.%u to DST = %u.%u.%u.%u\n",
                             r,
                             (ntohl(u.fmt.ip.saddr) >> 24) & 0xFF,
                             (ntohl(u.fmt.ip.saddr) >> 16) & 0xFF,
@@ -301,23 +301,25 @@ void * lectureSSL(void * args) {
                             (ntohl(u.fmt.ip.daddr) >> 16) & 0xFF,
                             (ntohl(u.fmt.ip.daddr) >> 8) & 0xFF,
                             (ntohl(u.fmt.ip.daddr) >> 0) & 0xFF);
-            // passage à la couche tun
+            // send it to the TUN device
             write(tunfd, (unsigned char *)&u, sizeof(u));
         }
     }
     return NULL;
 }
 
-/* Démarrage du thread lectureSSL
+/*
+ * Create the SSL_reading thread
  */
 void createSSL(struct client *peer) {
     peer->thread_running = 1;
-    peer->thread = createThread(lectureSSL, peer);
+    peer->thread = createThread(SSL_reading, peer);
 }
 
 
-/** Gestion des communications entrant sur la socket UDP
- * argument : struct comm_args *
+/*
+ * Manage the incoming messages from the UDP socket
+ * argument: struct comm_args *
  */
 void * comm_socket(void * argument) {
     struct comm_args * args = argument;
@@ -326,69 +328,66 @@ void * comm_socket(void * argument) {
     
     int r;
     int r_select;
-    fd_set fd_select;                           // configuration du select
-    struct timeval timeout;                     // timeout lecture sur la socket
-    union {                                     // structure de reception des messages TUN
+    fd_set fd_select;                           // for the select call
+    struct timeval timeout;                     // timeout used with select
+    union {                                     // incoming messages
         struct {
             struct iphdr ip;
         } fmt;
-        unsigned char raw[MESSAGE_MAX_LENGTH]; //65536
-    } u;                                        // lecture sur la socket UDP
-    struct sockaddr_in unknownaddr;             // découverte de l'adresse émétrice
-    //struct in_addr dest;                        // adresse envoi
+        unsigned char raw[MESSAGE_MAX_LENGTH];
+    } u;
+    struct sockaddr_in unknownaddr;             // address of the sender
     socklen_t len = sizeof(struct sockaddr_in);
-    struct message *rmsg = (struct message *) &u;   // message lu 
-    struct message *smsg = (struct message *) malloc(sizeof(struct message)); // message à envoyer
-    struct client *peer;                        // reference vers un client du vpn
+    struct message *rmsg = (struct message *) &u;   // incoming struct message
+    struct message *smsg = (struct message *) malloc(sizeof(struct message)); // outgoing message
+    struct client *peer;
     
     init_timeout(&timeout);
     
-    /** on rentre dans la boucle du programme */
     while (!end_campagnol) {
-        /** Initialisation du select */
+        /* select call initialisation */
         FD_ZERO(&fd_select);
-        FD_SET(sockfd, &fd_select);     // enregistrement de la socket
+        FD_SET(sockfd, &fd_select);
+        
         r_select = select(sockfd+1, &fd_select, NULL, NULL, &timeout);
     
-        /** MESSAGE RECU SUR LA SOCKET */
+        /* MESSAGE READ FROM THE SOCKET */
         if (r_select > 0) {
             r = recvfrom(sockfd,(unsigned char *)&u,MESSAGE_MAX_LENGTH,0,(struct sockaddr *)&unknownaddr,&len);
-            /** Message du serveur */
+            /* from the RDV server ? */
             if (config.serverAddr.sin_addr.s_addr == unknownaddr.sin_addr.s_addr
                 && config.serverAddr.sin_port == unknownaddr.sin_port) {
-                /** On analyse le message du serveur */
+                /* which type */
                 switch (rmsg->type) {
-                    /** Réception d'un rejet du serveur */
+                    /* reject a new session */
                     case REJ_CONNECTION :
                         MUTEXLOCK;
                         peer = get_client_VPN(&(rmsg->ip1));
-                        /** le client n'est pas connecté */
-                        //peer->state = NOT_CONNECTED;
                         remove_client(peer);
                         MUTEXUNLOCK;
                         break;
-                    /** Réception d'une réponse à une demande de connexion à un peer */
+                    /* positive answer */
                     case ANS_CONNECTION :
-                        /** Récuperation du client */
+                        /* get the client */
                         MUTEXLOCK;
                         peer = get_client_VPN(&(rmsg->ip2));
-                        /** On complète ses informations */
+                        /* complete its informations */
                         peer->state = PUNCHING;
                         peer->clientaddr.sin_addr = rmsg->ip1;
                         peer->clientaddr.sin_port = rmsg->port;
                         peer->time = time(NULL);
-                        /** on lance le punch */
                         MUTEXUNLOCK;
+                        /* and start punching */
                         start_punch(peer, &sockfd);
                         break;
-                    /** Réception d'une demande de connexion d'un peer */
+                    /* a client wants to open a new session with me */
                     case FWD_CONNECTION :
                         MUTEXLOCK;
                         if (get_client_VPN(&(rmsg->ip2)) == NULL) {
-                            /** Il faut creer la structure */
+                            /* Unknown client, add a new structure */
                             peer = add_client(sockfd, tunfd, PUNCHING, time(NULL), rmsg->ip1, rmsg->port, rmsg->ip2, 0);
                         }
-                        /** On complète ses informations */
+                        /* otherwise adjust the data */
                         else {
                             peer = get_client_VPN(&(rmsg->ip2));
                             peer->state = PUNCHING;
@@ -397,39 +396,40 @@ void * comm_socket(void * argument) {
                             peer->time = time(NULL);
                         }
                         MUTEXUNLOCK;
-                        /** on lance le punch */
+                        /* start punching */
                         start_punch(peer, &sockfd);
                         break;
-                    /** Réception d'une demande de reconnexion auprès du serveur de RDV
-                     * (le serveur a redémarré)
+                    /*
+                     * The RDV server want the client to perform a new registration
+                     * append if the RDV server restarted
                      */
                     case RECONNECT :
                         register_rdv(sockfd);
                         break;
-                    /** Réception d'un PONG depuis le serveur */
+                    /* a PONG from the RDV server */
                     case PONG :
-                        /** le serveur est toujours vivant */
+                        /* ... so it's still up */
                         break;
                     default :
                         break;
                 }
             }
-            /** Message d'un client */
+            /* Message from another peer */
             else {
-                // voir la structure de l'entete IP qui permettrait de différencier les types de messages
-                if (config.debug) printf("Paquet reçu d'un client du VPN de taille %d\n", r);
-                /** Le paquet est un PUNCH ou un PUNCH_ACK */
+                if (config.debug) printf("<< Received a packet from a VPN client, size %d\n", r);
+                /* UDP hole punching */
+                /* TODO: should rather check if its an IPv4 message or something other.
+                 *       And then check if it's a PUNCH message
+                 */
                 if (rmsg->type == PUNCH || rmsg->type == PUNCH_ACK) {
-                    /** On analyse le message du serveur */
                     switch (rmsg->type) {
-                        /** Réception d'un punch d'un client */
                         case PUNCH :
                         case PUNCH_ACK :
-                            /** le client est dorénavant joignable sur l'adresse et le port d'émission du punch */
+                            /* we can now reach the client */
                             MUTEXLOCK;
                             peer = get_client_VPN(&(rmsg->ip1));
-                            if (peer != NULL) { // TODO : cas d'un punch qui arrive avant un FWD_CONNECTION
-                                if (config.verbose && peer->state != ESTABLISHED) printf("connecté à %s\n", inet_ntoa(rmsg->ip1));
+                            if (peer != NULL) { // TODO: if a punch message comes before a FWD_CONNECTION ?
+                                if (config.verbose && peer->state != ESTABLISHED) printf("punch received from %s\n", inet_ntoa(rmsg->ip1));
                                 peer->time = time(NULL);
                                 peer->state = ESTABLISHED;
                                 peer->clientaddr = unknownaddr;
@@ -444,20 +444,14 @@ void * comm_socket(void * argument) {
                             break;
                     }
                 }
-                /** Le paquet contient un paquet IP à transmettre à la couche TUN */
+                /* It's an IP packet, send it to the associated SSL_reading thread using the FIFO BIO */
                 else {
                     MUTEXLOCK;
                     peer = get_client_real(&unknownaddr);
-                    if (peer != NULL) { // sinon : paquet non voulu et crash
-                        // débloquer absolument avant l'écriture pour permettre
-                        // un appel simultanné de SSL_read
-                        MUTEXUNLOCK;  
+                    MUTEXUNLOCK;
+                    if (peer != NULL) {
                         BIO_write(peer->rbio, &u, r);
                     }
-                    else {
-                        MUTEXUNLOCK;
-                    }
-                    
                 }
             }
             
@@ -465,14 +459,14 @@ void * comm_socket(void * argument) {
         }
         
         
-        /** TIMEOUT */
+        /* TIMEOUT */
         else if (r_select == 0) {
-            /** envoi d'un ping au serveur */
+            /* send a PING message to the RDV server */
             init_smsg(smsg, PING,0,0);
             init_timeout(&timeout);
             int s = sendto(sockfd,smsg,sizeof(struct message),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
             if (s == -1) perror("PING");
-            /** verifier l'etat des clients en cours */
+            /* update the state of the clients */
             MUTEXLOCK;
             peer = clients;
             while (peer != NULL) {
@@ -480,8 +474,9 @@ void * comm_socket(void * argument) {
                 if (time(NULL)-peer->time>config.timeout) {
                     peer->state = TIMEOUT;
                     if (peer->ssl != NULL) {
-                        if (config.debug) printf("peer timeout %s\n", inet_ntoa(peer->vpnIP));                      
-                        if (peer->is_dtls_client && peer->thread_running) {// Fermeture des connexions que l'on a initié
+                        if (config.debug) printf("timeout: %s\n", inet_ntoa(peer->vpnIP));
+                        /* close the connection if we started it (client) */                   
+                        if (peer->is_dtls_client && peer->thread_running) {
                             peer->thread_running = 0;
                             SSL_shutdown(peer->ssl);
                             BIO_write(peer->rbio, &u, 0);
@@ -503,8 +498,9 @@ void * comm_socket(void * argument) {
 }
 
 
-/** Gestion de la communication entrant sur le driver tun
- * argument : struct comm_args *
+/*
+ * Manage the incoming messages from the TUN device
+ * argument: struct comm_args *
  */
 void * comm_tun(void * argument) {
     struct comm_args * args = argument;
@@ -513,35 +509,32 @@ void * comm_tun(void * argument) {
     
     int r;
     int r_select;
-    fd_set fd_select;                           // configuration du select
-    struct timeval timeout;                     // timeout lecture sur tun
-    struct timespec timeout_connect;            // timeout pour attente de connexion
-    union {                                     // structure de reception des messages TUN
+    fd_set fd_select;                           // for the select call
+    struct timeval timeout;                     // timeout used with select
+    struct timespec timeout_connect;            // timeout used when opening new connections
+    union {
         struct {
             struct iphdr ip;
         } fmt;
-        unsigned char raw[MESSAGE_MAX_LENGTH]; //65536
-    } u;                                        // message lu sur tun. TODO MAX_LENGTH réelle = MTU
+        unsigned char raw[MESSAGE_MAX_LENGTH];
+    } u;
     struct in_addr dest;
     struct message *smsg = (struct message *) malloc(sizeof(struct message));
-    struct client *peer;                        // reference vers un client du vpn
+    struct client *peer;
 
 
-    /** on rentre dans la boucle du programme */
     while (!end_campagnol) {
-        /** Initialisation du select */
+        /* select call initialisation */
         init_timeout(&timeout);
         FD_ZERO(&fd_select);
-        FD_SET(tunfd, &fd_select);      // enregistrement de TUN
+        FD_SET(tunfd, &fd_select);
         r_select = select(tunfd+1, &fd_select, NULL, NULL, &timeout);
         
         
-        /** deuxième possibilité : MESSAGE RECU SUR L'INTERFACE TUN */
+        /* MESSAGE READ FROM TUN DEVICE */
         if (r_select > 0) {
-            /** Lecture du paquet IP */
             r = read(tunfd, &u, sizeof(u));
-            /** Affichage des informations concernant le paquet reçu */
-            if (config.debug) printf("...\nMessage à envoyer sur le VPN de taille %d de SRC = %u.%u.%u.%u  pour DST = %u.%u.%u.%u\n",
+            if (config.debug) printf(">> Sending a VPN message: size %d from SRC = %u.%u.%u.%u to DST = %u.%u.%u.%u\n",
                                 r,
                                 (ntohl(u.fmt.ip.saddr) >> 24) & 0xFF,
                                 (ntohl(u.fmt.ip.saddr) >> 16) & 0xFF,
@@ -553,11 +546,13 @@ void * comm_tun(void * argument) {
                                 (ntohl(u.fmt.ip.daddr) >> 0) & 0xFF);
             dest.s_addr = u.fmt.ip.daddr;
 
-            /* IP dest = ip broadcast du VPN 
-             * en réception, la couche TUN est point à point, 
-             * donc elle ne transmet pas l'IP broadcast
-             * modification de l'IP destinataire vers l'IP VPN normale, 
-             * puis recalcul du checksum IP
+            /*
+             * If dest IP = VPN broadcast VPN
+             * The TUN device creates a point to point connection which
+             * does not transmit the broadcast IP
+             * So alter the dest. IP to the normal VPN IP
+             * and compute the new checksum
+             * TODO: it should be on the receiver side
              */
             if (dest.s_addr == config.vpnBroadcastIP.s_addr) {
                 MUTEXLOCK;
@@ -566,7 +561,7 @@ void * comm_tun(void * argument) {
                     struct client *next = peer->next;
                     if (peer->state == ESTABLISHED) {
                         u.fmt.ip.daddr = peer->vpnIP.s_addr;
-                        u.fmt.ip.check = 0; // champ checksum à 0 pour le calcul
+                        u.fmt.ip.check = 0; // the checksum field is set to 0 for the calculation
                         u.fmt.ip.check = ~compute_csum((uint16_t*) &u.fmt.ip, sizeof(u.fmt.ip));
                         SSL_write(peer->ssl, &u, r);
                     }
@@ -578,38 +573,37 @@ void * comm_tun(void * argument) {
                 MUTEXLOCK;
                 peer = get_client_VPN(&dest);
                 MUTEXUNLOCK;
-                if (peer == NULL) {// état UNKNOWN
+                if (peer == NULL) {
                     MUTEXLOCK;
                     peer = add_client(sockfd, tunfd, TIMEOUT, time(NULL), (struct in_addr) { 0 }, 0, dest, 1);
                     MUTEXUNLOCK;
-                    /** Envoi d'une demande d'information au serveur */
+                    /* ask the RDV server for a new connection with peer */
                     init_smsg(smsg, ASK_CONNECTION, dest.s_addr, 0);
                     sendto(sockfd,smsg,sizeof(struct message),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
                     
                     clock_gettime(CLOCK_REALTIME, &timeout_connect);
-                    timeout_connect.tv_sec += 3;
+                    timeout_connect.tv_sec += 3; // wait 3 secs
                     MUTEXLOCK;
                     if (conditionTimedwait(&peer->cond_connected, &mutex_clients, &timeout_connect) == 0) {
                         peer = get_client_VPN(&dest);
-                        if (peer != NULL) // la connexion a réussi
+                        if (peer != NULL) // the new connection is opened
                             SSL_write(peer->ssl, &u, r);
                     }
                     MUTEXUNLOCK;
                     
                 }
                 else switch (peer->state) {
-                    /** Le client est connecté */
+                    /* Already connected */
                     case ESTABLISHED :
-                        /** Récupération du client */
                         SSL_write(peer->ssl, &u, r);
                         break;
-                    /** Le client est anciennement connu */
+                    /* Lost connection */
                     case TIMEOUT :
-                        /** on sait jamais le message peut être reçu tout de même */
+                        /* try to reopen the connection */
                         MUTEXLOCK;
                         peer->time = time(NULL);
                         MUTEXUNLOCK;
-                        /** Envoi d'une demande d'information au serveur */
+                        /* ask the RDV server for a new connection with peer */
                         init_smsg(smsg, ASK_CONNECTION, dest.s_addr, 0);
                         sendto(sockfd,smsg,sizeof(struct message),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
                         
@@ -618,29 +612,31 @@ void * comm_tun(void * argument) {
                         MUTEXLOCK;
                         if (conditionTimedwait(&peer->cond_connected, &mutex_clients, &timeout_connect) == 0) {
                             peer = get_client_VPN(&dest);
-                            if (peer != NULL) // la connexion a réussi
+                            if (peer != NULL) // the new connection is opened
                                 SSL_write(peer->ssl, &u, r);
                         }
                         MUTEXUNLOCK;
                         break;
-                    /** Le client n'est pas connecté mais la structure existe pour ce client */
+                    /* TODO: clean old unused states */
+                    /* the client is not connected, but we have a structure */
                     case NOT_CONNECTED :
                         if (time(NULL)-peer->time>config.timeout) {
                             MUTEXLOCK;
+                            // give the peer another chance
                             peer->state = TIMEOUT;
                             MUTEXUNLOCK;
-                            // relancer le punch
                         }
                         break;
-                    /** Le client est en cours de connexion */
+                    /* PUNCHING or WAITING
+                     * The connection is in progress
+                     */
                     default :
-                        /** On est en train de puncher on peut toujours essayer */
                         clock_gettime(CLOCK_REALTIME, &timeout_connect);
-                        timeout_connect.tv_sec += 2;
+                        timeout_connect.tv_sec += 2; // wait another 2 secs
                         MUTEXLOCK;
                         if (conditionTimedwait(&peer->cond_connected, &mutex_clients, &timeout_connect) == 0) {
                             peer = get_client_VPN(&dest);
-                            if (peer != NULL) // la connexion a réussi
+                            if (peer != NULL) // the new connection is opened
                                 SSL_write(peer->ssl, &u, r);
                         }
                         MUTEXUNLOCK;
@@ -656,12 +652,13 @@ void * comm_tun(void * argument) {
 }
 
 
-/** Démarrer le VPN :
- * lance un thread sur comm_tun et un sur comm_socket
+/*
+ * Start the VPN:
+ * start a thread running comm_tun and another one running comm_socket
  * 
- * positionner end_campagnol pour arrêter les threads et retourner
+ * set end_campagnol to 1 un order to stop both threads (and others)
  */
-void lancer_vpn(int sockfd, int tunfd) {
+void start_vpn(int sockfd, int tunfd) {
     struct message smsg;
     struct comm_args *args = (struct comm_args*) malloc(sizeof(struct comm_args));
     args->sockfd = sockfd;
@@ -672,7 +669,7 @@ void lancer_vpn(int sockfd, int tunfd) {
     
     pthread_t th_socket, th_tun;
     th_socket = createThread(comm_socket, args);
-    th_tun = createThread(comm_tun, args); // réutilisation des arguments
+    th_tun = createThread(comm_tun, args);
     
     pthread_join(th_socket, NULL);
     pthread_join(th_tun, NULL);
@@ -683,7 +680,7 @@ void lancer_vpn(int sockfd, int tunfd) {
     peer = clients;
     while (peer != NULL) {
         next = peer->next;
-        remove_client(peer); // attend la terminaison du thread de lecture SSL puis détruit
+        remove_client(peer); // wait for the end of the SSL_reading thread and free the structure
         peer = next;
     }
     

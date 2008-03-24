@@ -38,7 +38,6 @@
 #include "communication.h"
 #include "configuration.h"
 
-int verbose = 0;
 int end_campagnol = 0;
 
 void handler_term(int s) {
@@ -150,35 +149,50 @@ int main (int argc, char **argv) {
     if (config.daemonize) daemonize();
     
     parseConfFile(configFile);
-    // Affichage d'erreur OpenSSL éventuelles (fichier CRL incorrect)
-    // vide la pile d'erreurs OpenSSL
+    /* Print the current OpenSSL error stack (missing CRL file)
+     * Empty the error stack
+     */
     ERR_print_errors_fp(stderr);
     
-    printf("Utilisation de l'adresse locale : %s\n", inet_ntoa (config.localIP));
-    if (strlen(config.iface) != 0) printf("Utilisation de l'interface : %s\n", config.iface);
     if (config.verbose) {
-        printf("Initialisation...\n");
-        printf("Adresse serveur : %s\n", inet_ntoa (config.serverAddr.sin_addr));
-        printf("Adresse VPN : %s\n", inet_ntoa (config.vpnIP));
-        printf("Adresse Broadcast VPN : %s\n", inet_ntoa(config.vpnBroadcastIP));
-        if (config.localport != 0) printf("Port local : %d\n", config.localport);
+        puts("Configuration:");
+        printf("  Local IP address: %s\n", inet_ntoa (config.localIP));
+        if (strlen(config.iface) != 0) printf("  Using interface: %s\n", config.iface);
+        if (config.localport != 0) printf("  Using local port: %d\n", config.localport);
+        printf("  RDV server IP address: %s\n", inet_ntoa (config.serverAddr.sin_addr));
+        printf("  RDV server port: %d\n", ntohs(config.serverAddr.sin_port));
+        printf("  VPN IP addres: %s\n", inet_ntoa(config.vpnIP));
+        printf("  VPN broadcast IP: %s\n", inet_ntoa(config.vpnBroadcastIP));
+        printf("  VPN subnetwork: %s\n", config.network);
+        printf("  DTLS certificate file: %s\n", config.certificate_pem);
+        printf("  DTLS private key file: %s\n", config.key_pem);
+        printf("  DTLS root certificates chain file: %s\n", config.verif_pem);
+        if (strlen(config.cipher_list) != 0) printf("  DTLS cipher list: %s\n", config.cipher_list);
+        if (config.crl) printf("  Using a certificate revocation list (%d entries)\n", sk_num(X509_CRL_get_REVOKED(config.crl)));
+        printf("  FIFO size: %d\n", config.FIFO_size);
+        printf("  Timeout: %d sec.\n\n", config.timeout);
     }
-    sockfd = create_socket(&config.localIP, config.localport, config.iface);
     
+    sockfd = create_socket();
+    if (sockfd < 0) {
+        exit(1);
+    }
     
-    
-    /** la socket est configuree
-        il faut maintenant s'enregistrer auprès du server de randez-vous */
+    /* The UDP socket is configured
+     * Now, register to the rendezvous server
+     */
     if (register_rdv(sockfd)) {
         exit(1);
     }
 
-    tunfd = init_tun(&config.vpnIP, 1);
-    
-    if (config.verbose) {
-        printf("Démarrage du VPN\n");
+    tunfd = init_tun(1);
+    if (tunfd < 0) {
+        exit(1);
     }
-    lancer_vpn(sockfd, tunfd);
+    
+    puts("Starting VPN");
+    
+    start_vpn(sockfd, tunfd);
     
     close_tun(tunfd);
     close(sockfd);

@@ -21,12 +21,10 @@
  */
  
 /*
- * Lecture et analyse du fichier de configuration
- * Vérification de la configuration
- * Création de la structure "config" contenant toutes les 
- * variables de configuration
+ * Parse the configuration file
+ * Check the configuration
+ * Create the "config" structure containing all the configuration variables
  */
-
 #include "campagnol.h"
 #include "configuration.h"
 
@@ -37,12 +35,12 @@
 
 struct configuration config;
 
-/* Obtenir l'adresse IP associée soit à l'interface
- * donnée dans iface, soit à la première interface trouvée
- * différente de lo si strlen(iface) == 0
- * positionne localIPSet si IP trouvée
+/*
+ * Search the local IP address to use. Copy it into "ip" and set "localIPset".
+ * If strlen(iface) != 0, get the IP associated with the given interface
+ * Otherweise search the IP of the first interface different from lo or lo0
  * 
- * voir http://groups.google.com/group/comp.os.linux.development.apps/msg/10f14dda86ee351a
+ * see http://groups.google.com/group/comp.os.linux.development.apps/msg/10f14dda86ee351a
  */
 #define IFRSIZE   ((int)(size * sizeof (struct ifreq)))
 void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
@@ -90,18 +88,20 @@ void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
     free(ifc.ifc_req);
 }
 
-/* Obtenir l'IP "broadcast" pour le réseau VPN
- * vpnip : ipv4 VPN du client
- * len : nombre de bits du netmask
- * broadcast (out) : adresse broadcast
- * vpnip et broadcast sont en network byte order
+/*
+ * Get the broadcast IP for the VPN subnetwork
+ * vpnip: IPv4 address of the client
+ * len: number of bits in the netmask
+ * broadcast (out): broadcast address
+ * 
+ * vpnIP and broadcast are in network byte order
  */
 int get_ipv4_broadcast(uint32_t vpnip, int len, uint32_t *broadcast) {
     uint32_t netmask;
-    if ( len<0 || len > 32 ) {// nombre de bits du netmask non valide
+    if ( len<0 || len > 32 ) {// validity of len
         return -1;
     }
-    // calcul du netmask
+    // compute the netmask
     if (len == 32) {
         netmask = 0xffffffff;
     }
@@ -115,9 +115,9 @@ int get_ipv4_broadcast(uint32_t vpnip, int len, uint32_t *broadcast) {
 }
 
 
-/* Charger la liste de révocation de certificats si
- * elle est donnée
- * Résultat placé dans config.crl
+/*
+ * Load the CRL file
+ * Store the resulting X509_CRL structure in config.crl
  */
 int load_CRL(char *crl_file) {
     X509_CRL *crl = NULL;
@@ -141,7 +141,9 @@ int load_CRL(char *crl_file) {
     return 0;
 }
 
-
+/*
+ * Main parsing function
+ */
 void parseConfFile(char *confFile) {
     FILE *conf = fopen(confFile, "r");
     if (conf == NULL) {
@@ -149,15 +151,15 @@ void parseConfFile(char *confFile) {
         exit(1);
     }
     
-    char line[1000];                    // ligne lue
-    char *token;                        // mot lu
-    char name[CONF_NAME_LENGTH];        // nom d'option
-    char value[CONF_VALUE_LENGTH];      // valeur d'option
+    char line[1000];                    // last read line
+    char *token;                        // word
+    char name[CONF_NAME_LENGTH];        // option name
+    char value[CONF_VALUE_LENGTH];      // option value
     
     int res;
     char *commentaire;
     
-    // Initialisation de config
+    /* set default values in config */
     memset(&config.localIP, 0, sizeof(config.localIP));
     config.localIP_set = 0;
     config.localport = 0;
@@ -177,22 +179,22 @@ void parseConfFile(char *confFile) {
     config.FIFO_size = 50;
     config.timeout = 120;
     
-    // Lecture ligne par ligne du fichier de conf
+    /* Read the configuration file */
     while (fgets(line, sizeof(line), conf) != NULL) {
-        // Commentaire sur la ligne
+        // comment
         commentaire = strchr(line, '#');
         if (commentaire != NULL) {
             *commentaire = '\0';
         }
         
-        // Lecture du nom de l'option
+        // Read the name of the option
         token = strtok(line, " \t=\r\n");
         if (token != NULL) {
             strncpy(name, token, CONF_NAME_LENGTH);
         }
         else continue;
         
-        // Lecture de la valeur
+        // Read the value
         token = strtok(NULL, " \t=\r\n");
         if (token != NULL) {
             strncpy(value, token, CONF_VALUE_LENGTH);
@@ -200,13 +202,12 @@ void parseConfFile(char *confFile) {
         else continue;
         
         
-        // Cas par cas
         if (strncmp(name, "local_host", CONF_NAME_LENGTH) == 0) {
             res = inet_aton(value, &config.localIP);
             if (res == 0) {
                 struct hostent *host = gethostbyname(value);
                 if (host==NULL) {
-                    fprintf(stderr, "[%s:local_host] Adresse IP locale non valide\n", confFile);
+                    fprintf(stderr, "[%s:local_host] Local IP address or hostname is not valid: \"%s\"\n", confFile, value);
                     exit(1);
                 }
                 memcpy(&(config.localIP.s_addr), host->h_addr_list[0], sizeof(struct in_addr));
@@ -221,7 +222,7 @@ void parseConfFile(char *confFile) {
             if (res == 0) {
                 struct hostent *host = gethostbyname(value);
                 if (host==NULL) {
-                    fprintf(stderr, "[%s:server_host] Adresse IP serveur non comprise \"%s\"\n", confFile, value);
+                    fprintf(stderr, "[%s:server_host] RDV server IP address or hostname is not valid: \"%s\"\n", confFile, value);
                     exit(1);
                 }
                 memcpy(&(config.serverAddr.sin_addr.s_addr), host->h_addr_list[0], sizeof(struct in_addr));
@@ -229,16 +230,16 @@ void parseConfFile(char *confFile) {
             config.serverIP_set = 1;
         }
         else if (strncmp(name, "local_port", CONF_NAME_LENGTH) == 0) {
-            /** Recuperation du port local */
+            /* get the local port */
             if ( sscanf(value, "%d", &config.localport) != 1) {
-                fprintf(stderr, "[%s:local_port] Port local non valide\n", confFile);
+                fprintf(stderr, "[%s:local_port] Local UDP port is not valid: \"%s\"\n", confFile, value);
                 exit(1);
             }
         }
         else if (strncmp(name, "vpn_ip", CONF_NAME_LENGTH) == 0) {
-            /** Recuperation de l'adresse VPN */
+            /* Get the VPN IP address */
             if ( inet_aton(value, &config.vpnIP) == 0) {
-                fprintf(stderr, "[%s:vpn_ip] Adresse IP VPN non comprise\n", confFile);
+                fprintf(stderr, "[%s:vpn_ip] VPN IP address is not valid: \"%s\"\n", confFile, value);
                 exit(1);
             }
             config.vpnIP_set = 1;
@@ -260,95 +261,100 @@ void parseConfFile(char *confFile) {
         }
         else if (strncmp(name, "crl_file", CONF_NAME_LENGTH) == 0) {
             if (load_CRL(value)) {
-                fprintf(stderr, "[%s:crl_file] Erreur lors du chargement du fichier\n", confFile);
-                //erreur non fatale
+                fprintf(stderr, "[%s:crl_file] Error while loading the CRL file \"%s\"\n", confFile, value);
+                //non fatal error
             }
         }
         else if (strncmp(name, "fifo_size", CONF_NAME_LENGTH) == 0) {
             if ( sscanf(value, "%d", &config.FIFO_size) != 1) {
-                fprintf(stderr, "[%s:fifo_size] Taille FIFO non valide\n", confFile);
+                fprintf(stderr, "[%s:fifo_size] Internal FIFO size is not valid: \"%s\"\n", confFile, value);
                 exit(1);
             }
             if (config.FIFO_size <= 0) {
-                fprintf(stderr, "[%s:fifo_size] La taille de la FIFO doit être > 0\n", confFile);
+                fprintf(stderr, "[%s:fifo_size] Internal FIFO size %d must be > 0\n", confFile, config.FIFO_size);
                 exit(1);
             }
         }
         else if (strncmp(name, "timeout", CONF_NAME_LENGTH) == 0) {
             if ( sscanf(value, "%d", &config.timeout) != 1) {
-                fprintf(stderr, "[%s:timeout] Timeout non valide\n", confFile);
+                fprintf(stderr, "[%s:timeout] Timeout value is not valid: \"%s\"\n", confFile, value);
                 exit(1);
             }
             if (config.timeout < 5) {
-                fprintf(stderr, "[%s:timeout] Timeout doit être >= 5\n", confFile);
+                fprintf(stderr, "[%s:timeout] Timeout value %d must be >= 5\n", confFile, config.timeout);
                 exit(1);
             }
         }
         
     }
     
-    // Si aucune adresse IP locale n'a été donnée, on tente de l'obtenir avec get_local_IP
-    if (config.localIP_set == 0) // pas d'IP locale passée en argument
+    /* If no local IP address was given in the configuration file, 
+     * try to get one with get_local_IP
+     */
+    if (config.localIP_set == 0)
        get_local_IP(&config.localIP, &config.localIP_set, config.iface);
     
-    // Si toujours rien
-    if (!config.localIP_set) { // non connecté, ou nom d'interface incorrect
-        fprintf(stderr, "Aucune adresse IP locale trouvée\n");
+    /* Still nothing :(
+     * No connection, or wrong interface name
+     */
+    if (!config.localIP_set) {
+        fprintf(stderr, "Could not find a valid local IP address. Please check %s\n", confFile);
         exit(1);
     }
     
     
-    // Vérification des paramètres obligatoires
+    /* Check the mandatory parameters */
     if (!config.serverIP_set) {
-        fprintf(stderr, "[%s] Paramètre \"server_host\" obligatoire\n", confFile);
+        fprintf(stderr, "[%s] Parameter \"server_host\" is mandatory\n", confFile);
         exit(1);
     }
     if (!config.vpnIP_set) {
-        fprintf(stderr, "[%s] Paramètre \"vpn_ip\" obligatoire\n", confFile);
+        fprintf(stderr, "[%s] Parameter \"vpn_ip\" is mandatory\n", confFile);
         exit(1);
     }
     if (strlen(config.network) == 0) {
-        fprintf(stderr, "[%s] Paramètre \"network\" obligatoire\n", confFile);
+        fprintf(stderr, "[%s] Parameter \"network\" is mandatory\n", confFile);
         exit(1);
     }
     if (strlen(config.certificate_pem) == 0) {
-        fprintf(stderr, "[%s] Paramètre \"certificate\" obligatoire\n", confFile);
+        fprintf(stderr, "[%s] Parameter \"certificate\" is mandatory\n", confFile);
         exit(1);
     }
     if (strlen(config.key_pem) == 0) {
-        fprintf(stderr, "[%s] Paramètre \"key\" obligatoire\n", confFile);
+        fprintf(stderr, "[%s] Parameter \"key\" is mandatory\n", confFile);
         exit(1);
     }
     if (strlen(config.verif_pem) == 0) {
-        fprintf(stderr, "[%s] Paramètre \"ca_certificates\" obligatoire\n", confFile);
+        fprintf(stderr, "[%s] Parameter \"ca_certificates\" is mandatory\n", confFile);
         exit(1);
     }
     
-    // Calculer l'adresse de broadcast
+    /* compute the broadcast address */
     char * search, * end;
     int len;
-    // pas de netmask : 32 bits par défaut
+    /* no netmask len? */
     if (!(search = strstr(config.network, "/"))) {
-        len = 32;
+        fprintf(stderr, "[%s] Parameter \"network\" is not valid. Please give a netmask length (CIDR notation)\n", confFile);
+        exit(1);
     }
     else {
         search++;
-        // valeur nulle ou de taille bizarre
+        /* weird value */
         if (*search == '\0' || strlen(search) > 2) {
-            fprintf(stderr, "[%s] Paramère \"network\" : netmask mal formé (1 ou 2 chiffres)\n", confFile);
+            fprintf(stderr, "[%s] Parameter \"network\": ill-formed netmask (1 or 2 figures)\n", confFile);
             exit(1);
         }
-        // lire le netmask
+        /* read the netmask */
         len = strtol(search, &end, 10);
-        if ((end-search) != strlen(search)) {// un caractère n'est pas un nombre
-            fprintf(stderr, "[%s] Paramère \"network\" : netmask mal formé (1 ou 2 chiffres)\n", confFile);
+        if ((end-search) != strlen(search)) {// A character is not a figure
+            fprintf(stderr, "[%s] Parameter \"network\": ill-formed netmask (1 or 2 figures)\n", confFile);
             perror("strtol:");
             exit(1);
         }
     }
-    // obtenir ip broadcast
+    /* get the broadcast IP */
     if (get_ipv4_broadcast(config.vpnIP.s_addr, len, &config.vpnBroadcastIP.s_addr)) {
-        fprintf(stderr, "[%s] Paramère \"network\" : netmask mal formé (entre 0 et 32)\n", confFile);
+        fprintf(stderr, "[%s] Parameter \"network\": ill-formed netmask, should be between 0 and 32\n", confFile);
         exit(1);
     }
 
