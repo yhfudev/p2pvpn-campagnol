@@ -22,46 +22,50 @@
  */
 
 #include <net/if.h>
+#include <arpa/inet.h>
 
 #include "campagnol.h"
 #include "communication.h"
 #include "net_socket.h"
 
-/* Création socket liée à IP+port donnés, 
- * et éventuellement à l'interface donnée si strlen(iface) > 0
+/* Create the UDP socket
+ * Bind it to config.localIP
+ *            config.localport (localport > 0)
+ *            config.iface (strlen(iface) > 0)
  */
-int create_socket(struct in_addr *localIP, int localport, char *iface) {
+int create_socket(void) {
     int sockfd;
     struct sockaddr_in localaddr;
     
-    /** creation de la socket */
-    if (config.debug) printf("Création de la socket...\n");
+    /* Socket creation */
+    if (config.debug) printf("Create the UDP socket...\n");
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd<0) {
-        if (config.debug) printf("Erreur d'ouverture de socket\n");
-        exit(1);
+        if (config.debug) printf("Error: creating socket\n");
+        return -1;
     }
     
-    if (strlen(iface) != 0) {
+    if (strlen(config.iface) != 0) {
         struct ifreq ifr;
         memset(&ifr, 0, sizeof(ifr));
-        strncpy(ifr.ifr_ifrn.ifrn_name, iface, IFNAMSIZ);
+        strncpy(ifr.ifr_ifrn.ifrn_name, config.iface, IFNAMSIZ);
         if(setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, &ifr, sizeof(ifr))) {
-            perror("Erreur en liant la socket à l'interface donnée");
-            fprintf(stderr, "%s\n", iface);
-            exit(1);
+            perror("Error: binding socket to interface");
+            fprintf(stderr, "interface: %s\n", config.iface);
+            return -1;
         }
     }
     
     bzero(&localaddr, sizeof(localaddr));
     localaddr.sin_family = AF_INET;
-    localaddr.sin_addr.s_addr=localIP->s_addr;
-    if (localport != 0) localaddr.sin_port=htons(localport);
+    localaddr.sin_addr.s_addr=config.localIP.s_addr;
+    if (config.localport != 0) localaddr.sin_port=htons(config.localport);
     if (bind(sockfd,(struct sockaddr *)&localaddr,sizeof(localaddr))<0) {
-        perror("Erreur d'ouverture de socket");
-        exit(1);
+        perror("Error: binding socket to local IP address");
+        fprintf(stderr, "address: %s\n", inet_ntoa(config.localIP));
+        return -1;
     }
-    if (config.verbose) printf("Socket configuree\n");
+    if (config.verbose) printf("Socket opened\n");
     
     return sockfd;
 }

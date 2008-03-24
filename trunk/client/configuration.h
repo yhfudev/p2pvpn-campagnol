@@ -26,33 +26,32 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
-// Longueur d'un champ et d'une valeur dans le fichier de conf
+/* Option name and value lengths in the configuration value */
 #define CONF_NAME_LENGTH 20
 #define CONF_VALUE_LENGTH 200
 
 struct configuration {
-    int verbose;                                // verbeux
-    int debug;                                  // plus verbeux
+    int verbose;                                // verbose
+    int debug;                                  // more verbose
     int daemonize;                              // daemonize the client
-    struct in_addr localIP;                     // adresse IP locale
-    int localIP_set;                            // localIP est défini
-    int localport;                              // port local
-    struct sockaddr_in serverAddr;              // adresse du serveur de RDV
-    int serverIP_set;                           // serverAddr est défini
-    struct in_addr vpnIP;                       // adresse vpn
-    int vpnIP_set;                              // vpnIP est défini
-    char network[CONF_VALUE_LENGTH];            // réseau vpn
-    struct in_addr vpnBroadcastIP;              // IP de "broadcast", calculée avec vpnIP et network
-    char iface[CONF_VALUE_LENGTH];              // interface réseau spécifique
-    char certificate_pem[CONF_VALUE_LENGTH];    // fichier certificat client au format PEM
-    char key_pem[CONF_VALUE_LENGTH];            // fichier clé client au format PEM
-    char verif_pem[CONF_VALUE_LENGTH];          // fichier contenant la chaine de certificats
-                                                // pour la vérification au format PEM
-    char cipher_list[CONF_VALUE_LENGTH];        // liste d'algos pour SSL_CTX_set_cipher_list
-                                                // voir man d'openssl ciphers pour la syntaxe
-    X509_CRL *crl;                              // la CRL décodée ou NULL si pas de CRL
-    int FIFO_size;                              // Taille des FIFO de réception SSL, doit être > 10
-    int timeout;                                // Délais d'inactivité (secondes) avant fermeture session
+    struct in_addr localIP;                     // local IP address
+    int localIP_set;                            // localIP is defined
+    int localport;                              // local UDP port
+    struct sockaddr_in serverAddr;              // rendezvous server inet address
+    int serverIP_set;                           // serverAddr is defined
+    struct in_addr vpnIP;                       // VPN IP address
+    int vpnIP_set;                              // vpnIP is defined
+    char network[CONF_VALUE_LENGTH];            // VPN subnetwork
+    struct in_addr vpnBroadcastIP;              // "broadcast" IP, computed from vpnIP and network
+    char iface[CONF_VALUE_LENGTH];              // bind to a specific network interface
+    char certificate_pem[CONF_VALUE_LENGTH];    // PEM formated file containing the client certificate
+    char key_pem[CONF_VALUE_LENGTH];            // PEM formated file containing the client private key
+    char verif_pem[CONF_VALUE_LENGTH];          // PEM formated file containing the root certificates
+    char cipher_list[CONF_VALUE_LENGTH];        // ciphers list for SSL_CTX_set_cipher_list
+                                                // see openssl ciphers man page
+    X509_CRL *crl;                              // The parsed CRL or NULL
+    int FIFO_size;                              // Size of the FIFO list for the incoming packets
+    int timeout;                                // wait timeout secs before closing a session for inactivity
 };
 
 extern void parseConfFile(char *file);

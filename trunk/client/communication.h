@@ -24,8 +24,7 @@
 #ifndef COMMUNICATION_H_
 #define COMMUNICATION_H_
 
-/** definitions des constantes utilisees */
-// ID des paquets de structure
+/* Message types */
 #define HELLO 0
 #define PING 1
 #define ASK_CONNECTION 2
@@ -41,41 +40,57 @@
 #define RECONNECT 12
 #define CLOSE_CONNECTION 13
 
-// duree de blocage du select, frequence des pings au serveur
-#define ATTENTE_SECONDES 2
-#define ATTENTE_MICROSECONDES 0
+/*
+ * duration of the timeout used with the select calls
+ * give the period of the PING messages when the client is inactive*/
+#define SELECT_DELAY_SEC 2
+#define SELECT_DELAY_USEC 0
 
+/*
+ * Number of tries when registering to the rendezvous server
+ */
 #define MAX_REGISTERING_TRIES 4
 
+/*
+ * Max UDP message length
+ * the MTU on the TUN device is 1400
+ * the overhead is (surely...) less than 100 bytes
+ */
 #define MESSAGE_MAX_LENGTH 1500
-#define NOMBRE_DE_PUNCH 5
-#define PAUSE_ENTRE_PUNCH 1000000
+/*
+ * Number of punch messages
+ */
+#define PUNCH_NUMBER 5
+/*
+ * Duration between two punch messages
+ */
+#define PUNCH_DELAY_USEC 1000000
 
-/** fin des definitions des constantes utilisees */
 
 
-/** structure d'un message echange avec le server et de controle entre clients */
+/*
+ * The structure of the UDP messages between a client and the RDV server
+ */
 struct message {
-    unsigned char type;             // byte : type du message
+    unsigned char type;           // 1 byte : message type
     uint16_t port;                // 2 bytes : port
-    struct in_addr ip1;           // 4 bytes : address IP 1 (IPv4)
-    struct in_addr ip2;           // 4 bytes : address IP 2 (IPv4)
-}  __attribute__ ((packed));
-/** fin structure */
+    struct in_addr ip1;           // 4 bytes : IP address 1 (IPv4)
+    struct in_addr ip2;           // 4 bytes : IP address 2 (IPv4)
+}  __attribute__ ((packed)); // important
 
-/** structure argument pour le thread de punch */
+/* arguments for the punch thread */
 struct punch_arg {
     struct client *peer;
     int *sockfd;
 };
-/** fin de structure */
 
+/* arguments for the comm_tun and comm_socket threads */
 struct comm_args {
     int sockfd;
     int tunfd;
 };
 
 extern int register_rdv(int sockfd);
-extern void lancer_vpn(int sockfd, int tunfd);
+extern void start_vpn(int sockfd, int tunfd);
 
 #endif /*COMMUNICATION_H_*/

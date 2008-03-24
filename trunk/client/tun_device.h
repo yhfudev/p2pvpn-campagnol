@@ -24,7 +24,7 @@
 #ifndef TUN_DEVICE_H_
 #define TUN_DEVICE_H_
 
-extern int init_tun(struct in_addr *vpnIP, int istun);
+extern int init_tun(int istun);
 extern int close_tun(int fd);
 
 #endif /*TUN_DEVICE_H_*/
