@@ -171,18 +171,18 @@ class ClientsTableModel extends AbstractTableModel {
     }
     
     public void updateData() {
-    	this.data = new Object[clients.size()][this.getColumnCount()];
-    	int n=0;
+        this.data = new Object[clients.size()][this.getColumnCount()];
+        int n=0;
         Iterator it = clients.iterator();
-    	while (it.hasNext()) {
-    		ClientStruct cl = (ClientStruct) it.next();
-    		data[n][0] = cl.vpnIPString;
-    		data[n][1] = MsgServStruct.unMapAddress(cl.realIP);
-    		data[n][2] = new Integer(cl.port);
+        while (it.hasNext()) {
+            ClientStruct cl = (ClientStruct) it.next();
+            data[n][0] = cl.vpnIPString;
+            data[n][1] = MsgServStruct.unMapAddress(cl.realIP);
+            data[n][2] = new Integer(cl.port);
                 data[n][3] = cl.getStartTime();
-    		data[n][4] = new Boolean(cl.isTimeout());
-    		n++;
-    	}
+            data[n][4] = new Boolean(cl.isTimeout());
+            n++;
+        }
         this.fireTableDataChanged();
     }
 }
@@ -236,16 +236,16 @@ class ConnectionsTableModel extends AbstractTableModel {
     }
     
     public void updateData() {
-    	this.data = new Object[connections.size()][this.getColumnCount()];
-    	int n=0;
+        this.data = new Object[connections.size()][this.getColumnCount()];
+        int n=0;
         Iterator it = connections.iterator();
-    	while (it.hasNext()) {
-    		Connection ct = (Connection) it.next();
-    		data[n][0] = ct.client1.vpnIPString;
-    		data[n][1] = ct.client2.vpnIPString;
-    		data[n][2] = ct.getStartTime();
-    		n++;
-    	}
+        while (it.hasNext()) {
+            Connection ct = (Connection) it.next();
+            data[n][0] = ct.client1.vpnIPString;
+            data[n][1] = ct.client2.vpnIPString;
+            data[n][2] = ct.getStartTime();
+            n++;
+        }
         this.fireTableDataChanged();
     }
 }

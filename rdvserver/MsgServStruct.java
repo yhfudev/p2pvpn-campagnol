@@ -27,7 +27,7 @@ import java.net.UnknownHostException;
 
 public class MsgServStruct {
     
-    /**	different types of messages */
+    /**    different types of messages */
     public static final byte HELLO = 0;                                         // registered to server
     public static final byte PING = 1;                                          // keep alive
     public static final byte ASK_CONNECTION = 2;                                // ask for a peer connection
@@ -72,9 +72,8 @@ public class MsgServStruct {
         }
     }
     
-    /**	return the msgServStruct from the packet's byte array */
+    /**    return the msgServStruct from the packet's byte array */
     public static MsgServStruct get(byte[] data) {
-//		System.out.println(data.length);
         if (data.length<MSG_LENGTH) return null;
         MsgServStruct message = new MsgServStruct();
         java.nio.ByteBuffer bb = java.nio.ByteBuffer.wrap(data);
@@ -82,7 +81,7 @@ public class MsgServStruct {
         message.port = bb.getShort();
         bb.get(message.ip1);
         bb.get(message.ip2);
-        System.out.println(message);
+        if (CampagnolServer.debug) System.out.println(message);
         return message;
     }
     
@@ -94,7 +93,7 @@ public class MsgServStruct {
         bb.putShort((short) message.port);
         bb.put(message.ip1);
         bb.put(message.ip2);
-        System.out.println(message);
+        if (CampagnolServer.debug) System.out.println(message);
         return array;
     }
     
@@ -153,7 +152,7 @@ public class MsgServStruct {
         while (d.length()<18) d+=" ";
         e = "| "+unMapAddress(this.ip2);
         while (e.length()<18) e+=" ";
-        return (s+a+c+d+e+"|\n*****************************************************\n");
+        return (s+a+c+d+e+"|\n*****************************************************");
     }
     
 }

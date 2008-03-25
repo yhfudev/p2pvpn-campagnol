@@ -27,7 +27,7 @@ import java.text.DateFormat;
 import java.util.*;
 import java.net.*;
 
-/**	represents the client : public address and port
+/**    represents the client : public address and port
  * and the peer : vpn address and vpn id */
 public class ClientStruct {
     

@@ -23,39 +23,39 @@
 
 import java.text.DateFormat;
 import java.util.Date;
-	
+    
 //package Campagnol;
 
 /** represent a peer to peer connection */
 public class Connection {
 
-	public ClientStruct client1;				// the one who asked
-	public ClientStruct client2;				// the one who is targeted
-	private long initTime;					// date of creation
-	private int nbTries = 0;					// numbers of tries -> (connection not possible)
-//	private final static int TIMEOUT = 15000;	// 15 seconds
-	
-	
-	public Connection(ClientStruct client1, ClientStruct client2) {
-		this.client1 = client1;
-		this.client2 = client2;
-		this.initTime = System.currentTimeMillis();
-	}
-	
-	public void updateTime() {
-		this.initTime = System.currentTimeMillis();
-		this.nbTries++;
-	}
-	
+    public ClientStruct client1;                // the one who asked
+    public ClientStruct client2;                // the one who is targeted
+    private long initTime;                    // date of creation
+    private int nbTries = 0;                    // numbers of tries -> (connection not possible)
+//    private final static int TIMEOUT = 15000;    // 15 seconds
+    
+    
+    public Connection(ClientStruct client1, ClientStruct client2) {
+        this.client1 = client1;
+        this.client2 = client2;
+        this.initTime = System.currentTimeMillis();
+    }
+    
+    public void updateTime() {
+        this.initTime = System.currentTimeMillis();
+        this.nbTries++;
+    }
+    
         public String getStartTime() {
             Date date = new Date(this.initTime);
             return DateFormat.getDateTimeInstance().format(date);
         }
         
-//	public boolean isTimeout() {
-//		return (System.currentTimeMillis() - this.initTime > Connection.TIMEOUT);
-//	}
-	
-	public int getTries() {return this.nbTries;}
+//    public boolean isTimeout() {
+//        return (System.currentTimeMillis() - this.initTime > Connection.TIMEOUT);
+//    }
+    
+    public int getTries() {return this.nbTries;}
 
 }
