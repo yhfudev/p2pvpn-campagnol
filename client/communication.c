@@ -201,7 +201,7 @@ void *punch(void *arg) {
     MUTEXUNLOCK;
     if (config.verbose) printf("punch %s %d\n", inet_ntoa(str->peer->clientaddr.sin_addr), ntohs(str->peer->clientaddr.sin_port));
     for (i=0; i<PUNCH_NUMBER; i++) {
-        sendto(*(str->sockfd),&smsg,sizeof(struct message),0,(struct sockaddr *)&(str->peer->clientaddr), sizeof(str->peer->clientaddr));
+        sendto(str->sockfd,&smsg,sizeof(struct message),0,(struct sockaddr *)&(str->peer->clientaddr), sizeof(str->peer->clientaddr));
         usleep(PUNCH_DELAY_USEC);
     }
     /* still waiting for an answer */
@@ -217,7 +217,7 @@ void *punch(void *arg) {
 /*
  * Create a thread executing "punch"
  */
-void start_punch(struct client *peer, int *sockfd) {
+void start_punch(struct client *peer, int sockfd) {
     struct punch_arg *arg = malloc(sizeof(struct punch_arg));
     arg->sockfd = sockfd;
     arg->peer = peer;
@@ -378,7 +378,7 @@ void * comm_socket(void * argument) {
                         peer->time = time(NULL);
                         MUTEXUNLOCK;
                         /* and start punching */
-                        start_punch(peer, &sockfd);
+                        start_punch(peer, sockfd);
                         break;
                     /* a client wants to open a new session with me */
                     case FWD_CONNECTION :
@@ -397,7 +397,7 @@ void * comm_socket(void * argument) {
                         }
                         MUTEXUNLOCK;
                         /* start punching */
-                        start_punch(peer, &sockfd);
+                        start_punch(peer, sockfd);
                         break;
                     /*
                      * The RDV server want the client to perform a new registration
@@ -416,7 +416,7 @@ void * comm_socket(void * argument) {
             }
             /* Message from another peer */
             else {
-                if (config.debug) printf("<< Received a packet from a VPN client, size %d\n", r);
+                if (config.debug) printf("<  Received a UDP packet: size %d from %s\n", r, inet_ntoa(unknownaddr.sin_addr));
                 /* UDP hole punching */
                 /* TODO: should rather check if its an IPv4 message or something other.
                  *       And then check if it's a PUNCH message

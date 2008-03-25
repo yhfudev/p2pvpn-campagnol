@@ -24,27 +24,27 @@
 #ifndef BSS_FIFO_H_
 #define BSS_FIFO_H_
 
-// Type du BIO
+/* BIO type: source/sink */
 #define BIO_TYPE_FIFO (23|BIO_TYPE_SOURCE_SINK)
 
-// création du BIO
+/* Create a new BIO */
 extern BIO_METHOD *BIO_s_fifo(void);
 
-// structure de donnée du BIO
+/* Data structure used by the BIO */
 struct fifo_data {
-    struct fifo_item *fifo;         // Un élément de la pile
-    struct fifo_item *first;        // Premier élément de la pile si non vide
-    struct fifo_item *queue;        // Dernier élément de la pile si non vide
-    int len;                        // Nombre d'éléments dans la pile
-    pthread_cond_t cond;            // Condition pour accès bloquant
-    pthread_mutex_t mutex;          // Mutex d'accès
-    int waiting;                    // Bloqué en lecture ou écriture
+    struct fifo_item *fifo;         // One item in the list
+    struct fifo_item *first;        // First item in the queue if it is not empty
+    struct fifo_item *queue;        // Last item in the queue if it is not empty
+    int len;                        // Size of the FIFO queue
+    pthread_cond_t cond;            // Pthread condition used to create a blocking BIO
+    pthread_mutex_t mutex;          // Mutex used to protect the queue
+    int waiting;                    // The FIFO is locked during an I/O operation
 };
 
-// élément de la pile
+/* An item in the queue */
 struct fifo_item {
-    int size;                       // taille du paquet
-    char data[2000];                // Voir comment la découpe des paquets se fait. ssl->mtu ?
+    int size;                       // Size of the packet
+    char data[2000];                // Contains the data
     struct fifo_item *next;
 };
 

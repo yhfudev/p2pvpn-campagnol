@@ -81,7 +81,7 @@ struct message {
 /* arguments for the punch thread */
 struct punch_arg {
     struct client *peer;
-    int *sockfd;
+    int sockfd;
 };
 
 /* arguments for the comm_tun and comm_socket threads */
