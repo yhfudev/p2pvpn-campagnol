@@ -30,12 +30,12 @@ import javax.swing.table.AbstractTableModel;
  */
 public class CampagnolGUI extends javax.swing.JFrame {
     public ClientsTableModel clients;
-    public ConnexionsTableModel connexions;
+    public ConnectionsTableModel connections;
     
     /** Creates new form CampagnolGUI */
     public CampagnolGUI(Vector clientsVector, Vector connexionsVector) {
         this.clients = new ClientsTableModel(clientsVector);
-        this.connexions = new ConnexionsTableModel(connexionsVector);
+        this.connections = new ConnectionsTableModel(connexionsVector);
         initComponents();
     }
     
@@ -52,13 +52,13 @@ public class CampagnolGUI extends javax.swing.JFrame {
         jScrollPaneClients = new javax.swing.JScrollPane();
         jTableClients = new javax.swing.JTable();
         jScrollPaneConnexions = new javax.swing.JScrollPane();
-        jTableConnexions = new javax.swing.JTable();
+        jTableConnections = new javax.swing.JTable();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("Campagnol RDV");
         jPanel.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT));
 
-        jButtonRefresh.setText("Rafra\u00eechir");
+        jButtonRefresh.setText("Refresh");
         jButtonRefresh.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButtonRefreshActionPerformed(evt);
@@ -79,8 +79,8 @@ public class CampagnolGUI extends javax.swing.JFrame {
         jSplitPane.setLeftComponent(jScrollPaneClients);
 
         jScrollPaneConnexions.setPreferredSize(new java.awt.Dimension(800, 200));
-        jTableConnexions.setModel(this.connexions);
-        jScrollPaneConnexions.setViewportView(jTableConnexions);
+        jTableConnections.setModel(this.connections);
+        jScrollPaneConnexions.setViewportView(jTableConnections);
 
         jSplitPane.setRightComponent(jScrollPaneConnexions);
 
@@ -101,20 +101,20 @@ public class CampagnolGUI extends javax.swing.JFrame {
     private javax.swing.JScrollPane jScrollPaneConnexions;
     private javax.swing.JSplitPane jSplitPane;
     private javax.swing.JTable jTableClients;
-    private javax.swing.JTable jTableConnexions;
+    private javax.swing.JTable jTableConnections;
     // End of variables declaration//GEN-END:variables
     
     public void update() {
         this.clients.updateData();
-        this.connexions.updateData();
+        this.connections.updateData();
     }
 }
 
 /**
- * Modèle pour l'affichage des clients
+ * Table model used to show the registered clients
  */
 class ClientsTableModel extends AbstractTableModel {
-    private String[] columnNames = {"IP VPN", "IP réelle", "Port", "Date création", "timeout"};
+    private String[] columnNames = {"VPN IP", "Real IP", "Port", "Registration date", "timeout"};
     private Object[][]data = null;
     private Vector clients;
     
@@ -189,16 +189,16 @@ class ClientsTableModel extends AbstractTableModel {
 
 
 /**
- * Modèle pour l'affichage des connexions
+ * Table model used to show the connections
  */
-class ConnexionsTableModel extends AbstractTableModel {
-    private String[] columnNames = {"IP VPN client", "IP VPN serveur", "Date création"};
+class ConnectionsTableModel extends AbstractTableModel {
+    private String[] columnNames = {"DTLS client", "DTLS server", "Creation date"};
     private Object[][] data = null;
-    private Vector connexions;
+    private Vector connections;
     
-    public ConnexionsTableModel(Vector connexions) {
+    public ConnectionsTableModel(Vector connections) {
         super();
-        this.connexions = connexions;
+        this.connections = connections;
     }
     
     public int getRowCount() {
@@ -236,9 +236,9 @@ class ConnexionsTableModel extends AbstractTableModel {
     }
     
     public void updateData() {
-    	this.data = new Object[connexions.size()][this.getColumnCount()];
+    	this.data = new Object[connections.size()][this.getColumnCount()];
     	int n=0;
-        Iterator it = connexions.iterator();
+        Iterator it = connections.iterator();
     	while (it.hasNext()) {
     		Connection ct = (Connection) it.next();
     		data[n][0] = ct.client1.vpnIPString;

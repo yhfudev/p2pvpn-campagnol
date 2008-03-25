@@ -62,7 +62,7 @@ void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
         }
         ifc.ifc_len = IFRSIZE;
         if (ioctl(sockfd, SIOCGIFCONF, &ifc)) {
-            perror("ioctl SIOCFIFCONF");
+            perror("ioctl SIOCGIFCONF");
             exit(EXIT_FAILURE);
         }
     } while  (IFRSIZE <= ifc.ifc_len);

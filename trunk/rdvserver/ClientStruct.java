@@ -37,7 +37,6 @@ public class ClientStruct {
     public long timeoutMillis;
     public long createTime;
     public InetSocketAddress sAddr;             // socket address
-//    public Hashtable askConnections;            // liste des demandes effectuee
     public String vpnIPString;
     public byte[] vpnIP;                        // client VPN IP
     

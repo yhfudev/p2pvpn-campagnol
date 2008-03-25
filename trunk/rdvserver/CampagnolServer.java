@@ -166,7 +166,7 @@ public class CampagnolServer {
             switch (message.type) {
                 case MsgServStruct.HELLO :
                     /**	connection request from peer */
-                    System.out.println("HELLO receive from "+packet.getSocketAddress().toString());
+                    System.out.println("HELLO received from "+packet.getSocketAddress().toString());
                     if (client == null) {
                         /**	client isn't yet registered */
                         client = new ClientStruct(packet.getSocketAddress(), message.ip1);
@@ -203,20 +203,20 @@ public class CampagnolServer {
                             }
                         } else {
                             /** a PC is already connected on this socket (IPv4 address + port) */
-                            System.out.println("Machine already connected");
+                            System.out.println("A client is already connected with this IP/port");
                             sendOK(false, packet.getSocketAddress());
                         }
                     }
                     break;
                 case MsgServStruct.BYE:
-                    System.out.println("BYE receive from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
+                    System.out.println("BYE received from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
                     if (client != null) {
                         removeConnectionsWithClient(client.vpnIPString);
                         clients.remove(client);
                     }
                 case MsgServStruct.PING :
                     /**	ping from a peer */
-                    System.out.println("PING receive from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
+                    System.out.println("PING received from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
                     if (client != null) {
                         sendPONG(packet.getSocketAddress());
                         client.updateTime();
@@ -224,7 +224,7 @@ public class CampagnolServer {
                     break;
                 case MsgServStruct.PONG :
                     /**	pong from the server */
-                    System.out.println("PONG receive from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
+                    System.out.println("PONG received from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
                     break;
 //                case MsgServStruct.OK :
 //                    //TODO: ce message sert-il à qqchose ?
@@ -240,11 +240,11 @@ public class CampagnolServer {
 //                    break;
                 case MsgServStruct.NOK :
                     /**	message not ok */
-                    System.out.println("NOK receive from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
+                    System.out.println("NOK received from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
                     break;
                 case MsgServStruct.ASK_CONNECTION :
                     /**	peer2peer connection request */
-                    System.out.println("ASK_CONNECTION receive from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
+                    System.out.println("ASK_CONNECTION received from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
                     requestedClient = getClientFromId(MsgServStruct.unMapAddress(message.ip1));
                     if (requestedClient == null) {
                         /** unknown peer */
@@ -305,7 +305,7 @@ public class CampagnolServer {
                     }
                     break;
                 case MsgServStruct.CLOSE_CONNECTION :
-                    System.out.println("CLOSE_CONNECTION receive from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
+                    System.out.println("CLOSE_CONNECTION received from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
                     requestedClient = getClientFromId(MsgServStruct.unMapAddress(message.ip1));
                     if (client != null && requestedClient != null) {
                         removeConnection(client.vpnIPString, requestedClient.vpnIPString);
@@ -313,15 +313,15 @@ public class CampagnolServer {
                     break;
                 case MsgServStruct.FWD_CONNECTION :
                     /**	peer2peer connection forward */
-                    System.out.println("FWD_CONNECTION receive from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
+                    System.out.println("FWD_CONNECTION received from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
                     break;
                 case MsgServStruct.REJ_CONNECTION :
                     /**	peer2peer connection forward */
-                    System.out.println("REJ_CONNECTION receive from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
+                    System.out.println("REJ_CONNECTION received from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
                     break;
                 case MsgServStruct.ANS_CONNECTION :
                     /**	peer2peer connection answer */
-                    System.out.println("ANS_CONNECTION receive from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
+                    System.out.println("ANS_CONNECTION received from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
                     
                     break;
                 default : break;

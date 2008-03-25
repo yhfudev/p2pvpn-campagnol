@@ -42,7 +42,7 @@ int end_campagnol = 0;
 
 void handler_term(int s) {
     end_campagnol = 1;
-    printf("signal %d, termine...\n", s);
+    printf("received signal %d, exiting...\n", s);
     signal(SIGTERM, SIG_DFL);
     signal(SIGINT, SIG_DFL);
 }
@@ -52,8 +52,8 @@ void usage(void) {
     fprintf(stderr, "Usage: campagnol [OPTION]... configuration_file\n\n");
     fprintf(stderr, "Options\n");
     fprintf(stderr, " -v, --verbose\t\t\tverbose mode\n");
-    fprintf(stderr, " -d, --daemon\t\t\tfork in background\n");
-    fprintf(stderr, " -D, --debug\t\t\tdebug mode\n");
+    fprintf(stderr, " -D, --daemon\t\t\tfork in background\n");
+    fprintf(stderr, " -d, --debug\t\t\tdebug mode\n");
     fprintf(stderr, " -h, --help\t\t\tthis help message\n");
     exit(1);
 }
@@ -66,8 +66,8 @@ int parse_args(int argc, char **argv, char **configFile) {
     config.debug = 0;
     struct option long_options[] = {
         {"verbose", 0, NULL, 'v'},
-        {"daemon", 0, NULL, 'd'},
-        {"debug", 0, NULL, 'D'},
+        {"daemon", 0, NULL, 'D'},
+        {"debug", 0, NULL, 'd'},
         {"help", 0, NULL, 'h'}
     };
     while ((opt = getopt_long(argc, argv, "vdDh", long_options, NULL)) >= 0) {
@@ -75,10 +75,10 @@ int parse_args(int argc, char **argv, char **configFile) {
             case 'v':
                 config.verbose = 1;
                 break;
-            case 'd' :
+            case 'D' :
                 config.daemonize = 1;
                 break;
-            case 'D' :
+            case 'd' :
                 config.debug = 1;
                 config.verbose = 1;
                 break;
@@ -95,7 +95,7 @@ int parse_args(int argc, char **argv, char **configFile) {
         return 1;
     }
     
-    /** Recuperation du fichier de conf*/
+    /* the configuration file */
     *configFile = argv[0];
     
     return 0;

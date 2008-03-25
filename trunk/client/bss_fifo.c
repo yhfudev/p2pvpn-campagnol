@@ -79,7 +79,8 @@
 #include "bss_fifo.h"
 #include "pthread_wrap.h"
 
-/* fonctions internes
+/*
+ * Internal functions
  */
 static int fifo_write(BIO *h, const char *buf, int num);
 static int fifo_read(BIO *h, char *buf, int size);
@@ -88,43 +89,43 @@ static long fifo_ctrl(BIO *h, int cmd, long arg1, void *arg2);
 static int fifo_new(BIO *h);
 static int fifo_free(BIO *data);
 
-/* Méthodes associées au BIO
- */
+/* BIO_METHOD structure describing the BIO */
 static BIO_METHOD fifo_method = {
     BIO_TYPE_FIFO,      // type
-    "fifo buffer",      // nom
-    fifo_write,         // méthode d'écriture
-    fifo_read,          // méthode de lecture
-    fifo_puts,          // implantée, mais non utilisé
-    NULL,               // méthode gets, non implantée
-    fifo_ctrl,          // contrôle du BIO
-    fifo_new,           // création
-    fifo_free,          // destruction
-    NULL,               // Callback, non utilisé
+    "fifo buffer",      // name
+    fifo_write,         // write function
+    fifo_read,          // read function
+    fifo_puts,          // implemented but not used
+    NULL,               // gets function, not implemented
+    fifo_ctrl,          // BIO control function
+    fifo_new,           // creation
+    fifo_free,          // free
+    NULL,               // callback function, not used
 };
 
-/* Retourne les méthodes
- * (fonction exportée)
+/*
+ * Return the methods
+ * (exported function)
  */
 BIO_METHOD *BIO_s_fifo(void) {
     return(&fifo_method);
 }
 
-/* Allocation des structures associées au BIO
- * fifo_data + liste de fifo_item
+/*
+ * Create the structures associated to a new BIO
+ * fifo_data and the fifo_item list
  */
 static int fifo_new(BIO *bi) {
-    bi->shutdown=1;         // le "close flag" (voir BIO_set_close(3))
+    bi->shutdown=1;         // the "close flag" (see BIO_set_close(3))
     bi->init=1;
-    bi->num= -1;            // non utilisé
+    bi->num= -1;            // not used
     bi->ptr = malloc(sizeof(struct fifo_data));
     struct fifo_data * d = (struct fifo_data *) bi->ptr;
     d->len = 0;
     d->queue = NULL;
     d->first = NULL;
     
-    // Pile de longueur BIO_FIFO_LENGTH
-    // Éléments chaînés en boucle
+    /* Circularly-linked list of length config.FIO_size */
     d->fifo = malloc(sizeof(struct fifo_item));
     struct fifo_item *prec = d->fifo;
     int i;
@@ -133,7 +134,7 @@ static int fifo_new(BIO *bi) {
         prec->next = new;
         prec = new;
     }
-    prec->next = d->fifo; // fermeture de la boucle
+    prec->next = d->fifo; // close the loop
     
     d->cond = createCondition();
     d->mutex = (pthread_mutex_t) PTHREAD_MUTEX_INITIALIZER;
@@ -141,14 +142,14 @@ static int fifo_new(BIO *bi) {
 }
 
 static int fifo_free (BIO *bi) {
-    if (bi == NULL) return(0); // verifications d'usage
+    if (bi == NULL) return(0); // we have to check
     if (bi->shutdown) {
         if ((bi->init) && (bi->ptr != NULL)) {
             struct fifo_data *d = (struct fifo_data *) bi->ptr;
             struct fifo_item *item = d->fifo;
             struct fifo_item *next;
             int i;
-            // destruction de la fifo
+            // free the queue
             for (i=0; i<config.FIFO_size; i++) {
                 next = item->next;
                 free(item);
@@ -162,7 +163,7 @@ static int fifo_free (BIO *bi) {
     return(1);
 }
 
-/* Lecture bloquante de la FIFO
+/* Blocking read from the FIFO
  */
 static int fifo_read(BIO *b, char *out, int outl) {
     int ret = -1, len;
@@ -172,20 +173,21 @@ static int fifo_read(BIO *b, char *out, int outl) {
     d = (struct fifo_data *) b->ptr;
     mutexLock(&d->mutex);
     BIO_clear_retry_flags(b);
-    if (d->len == 0) { // pile vide : attente
+    if (d->len == 0) { // the queue is empty, wait
         d->waiting = 1;
         conditionWait(&d->cond, &d->mutex);
     }
     
-    // pile non vide maintenant
+    // now it's not empty anymore
     item = d->first;
     len = item->size;
-    ret=(outl >= len)?len:outl; // buffer assez grand pour accueuillir le paquet ?
+    ret=(outl >= len)?len:outl; // is "out" big enough to store the packet
     if ((out != NULL)) {
-        memcpy(out,item->data,ret); // copie dans out, puis décalage dans la liste chaînée
+        memcpy(out,item->data,ret); // copy the data into "out" and update the queue
         d->len --;
         d->first = item->next;
         if (d->waiting) {
+            // unlock a thread that could be waiting in fifo_write
             d->waiting = 0;
             conditionSignal(&d->cond);
         }
@@ -194,8 +196,8 @@ static int fifo_read(BIO *b, char *out, int outl) {
     return(ret);
 }
 
-/* Écriture sur la FIFO, 
- * bloque si la FIFO est pleine
+/*
+ * Blocking write to the FIFO
  */
 static int fifo_write(BIO *b, const char *in, int inl) {
     struct fifo_data *d;
@@ -217,16 +219,16 @@ static int fifo_write(BIO *b, const char *in, int inl) {
     
     BIO_clear_retry_flags(b);
     
-    if (d->len == 0) { // fifo vide, 
-        item = d->fifo; // on prend fifo pour le premier élément
+    if (d->len == 0) { // empty FIFO
+        item = d->fifo; // take d->fifo for the first element
         d->first = item;
     }
     else {
-        item = d->queue->next; // sinon, on prend le suivant du dernier
+        item = d->queue->next; // otherwise take the next element
     }
     item->size = inl;
     memcpy(item->data, in, inl);
-    d->queue = item; // nouveau dernier
+    d->queue = item; // new last element
     ret = inl;
     d->len ++;
     if (d->waiting) {
@@ -239,8 +241,10 @@ end:
 
 }
 
-// Adapté du BIO_MEM d'OpenSSL
-// Tous les contrôles ne sont pas implantés
+/*
+ * Large parts of this functions come from OpenSSL's BIO_MEM
+ * All the controls options are not implemented
+ */
 static long fifo_ctrl(BIO *b, int cmd, long num, void *ptr)
     {
     long ret=1;
