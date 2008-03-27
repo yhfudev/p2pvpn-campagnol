@@ -35,7 +35,6 @@ public class CampagnolServer {
     public static boolean debug = false;
     
     /** constants */
-    final int PORT_NUMBER = 57888;
     final int BUFFSIZE = MsgServStruct.MSG_LENGTH;
     /**    time to wait before forwarding the connection request to the peer
      * use to connect in a second try if one peer is behind a symmetric NAT */
@@ -44,7 +43,9 @@ public class CampagnolServer {
      * if connection cannot be established then the peer requested start first)
      * consider the connection is impossible after this number of tries */
     final int MAX_CONNECTION_TRIES = 4;
+    
     /** local variables */
+    private int portNumber = 57888;
     private DatagramSocket socket;
     private DatagramPacket packet;
     private byte[] buff;
@@ -119,16 +120,17 @@ public class CampagnolServer {
         }
     }
     
-    private CampagnolServer(boolean withGui) {
+    private CampagnolServer(int portNumber, boolean withGui) {
         /**    instantiating the datagram socket */
         try {
-            this.socket = new DatagramSocket(PORT_NUMBER);
+            this.socket = new DatagramSocket(portNumber);
             this.socket.setSoTimeout(5000);
         } catch (SocketException ex) {
             System.err.println("Error while opening the socket:");
             ex.printStackTrace();
             System.exit(0);
         }
+        this.portNumber = portNumber;
         this.buff = new byte[BUFFSIZE];
         this.packet = new DatagramPacket(buff, BUFFSIZE);
         this.clients = new Vector();
@@ -140,7 +142,7 @@ public class CampagnolServer {
     }
     
     public void run() {
-        System.out.println("Server listening on port "+PORT_NUMBER);
+        System.out.println("Server listening on port "+portNumber);
 
         /** listening for incomming messages */
         while (true) {
@@ -446,11 +448,12 @@ public class CampagnolServer {
     public static void main(String args[]) {
         CampagnolServer server = null;
         boolean withGui = false;
+        int portNumber = 57888;
         
         ArrayList options = null;
         ArrayList arguments = null;
         try {
-            ArrayList[] opt_args = OptionParser.getopt(args, "gvdh", new String[] {"gui", "verbose", "debug", "help"});
+            ArrayList[] opt_args = OptionParser.getopt(args, "gvdhp:", new String[] {"gui", "verbose", "debug", "help", "port:"});
             options = opt_args[0];
             arguments = opt_args[1];
         } catch (OptionParser.GetoptException e) {
@@ -475,6 +478,9 @@ public class CampagnolServer {
                 CampagnolServer.usage();
                 System.exit(1);
             }
+            else if (opt[0].equals("-p") || opt[0].equals("--port")) {
+                portNumber = Integer.parseInt(opt[1]);
+            }
         }
 
         if (arguments.size() != 0) {
@@ -482,7 +488,7 @@ public class CampagnolServer {
             System.exit(1);
         }
         
-        server = new CampagnolServer(withGui);
+        server = new CampagnolServer(portNumber, withGui);
         server.run();
     }
     
