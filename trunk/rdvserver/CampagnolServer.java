@@ -447,27 +447,39 @@ public class CampagnolServer {
         CampagnolServer server = null;
         boolean withGui = false;
         
-        for (int i = 0; i < args.length; i++) {
-            String arg = args[i];
-            if (arg.equals("-g") || arg.equals("--gui")) {
+        ArrayList options = null;
+        ArrayList arguments = null;
+        try {
+            ArrayList[] opt_args = OptionParser.getopt(args, "gvdh", new String[] {"gui", "verbose", "debug", "help"});
+            options = opt_args[0];
+            arguments = opt_args[1];
+        } catch (OptionParser.GetoptException e) {
+            System.err.println(e.getMessage());
+            CampagnolServer.usage();
+            System.exit(1);
+        }
+        
+        for (int i = 0; i < options.size(); i++) {
+            String[] opt = (String[]) options.get(i);
+            if (opt[0].equals("-g") || opt[0].equals("--gui")) {
                 withGui = true;
             }
-            else if (arg.equals("-v") || arg.equals("--verbose")) {
+            else if (opt[0].equals("-v") || opt[0].equals("--verbose")) {
                 CampagnolServer.verbose = true;
             }
-            else if (arg.equals("-d") || arg.equals("--debug")) {
+            else if (opt[0].equals("-d") || opt[0].equals("--debug")) {
                 CampagnolServer.verbose = true;
                 CampagnolServer.debug = true;
             }
-            else if (arg.equals("-h") || arg.equals("--help")) {
+            else if (opt[0].equals("-h") || opt[0].equals("--help")) {
                 CampagnolServer.usage();
                 System.exit(1);
             }
-            else {
-                System.err.println("Unknown option: "+arg);
-                CampagnolServer.usage();
-                System.exit(1);
-            }
+        }
+
+        if (arguments.size() != 0) {
+            CampagnolServer.usage();
+            System.exit(1);
         }
         
         server = new CampagnolServer(withGui);
@@ -475,3 +487,4 @@ public class CampagnolServer {
     }
     
 }
+
