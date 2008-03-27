@@ -68,7 +68,8 @@ int parse_args(int argc, char **argv, char **configFile) {
         {"verbose", 0, NULL, 'v'},
         {"daemon", 0, NULL, 'D'},
         {"debug", 0, NULL, 'd'},
-        {"help", 0, NULL, 'h'}
+        {"help", 0, NULL, 'h'},
+        {0, 0, 0, 0}
     };
     while ((opt = getopt_long(argc, argv, "vdDh", long_options, NULL)) >= 0) {
         switch(opt) {

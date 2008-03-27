@@ -35,7 +35,7 @@
 
 #include "configuration.h"
 
-#define SERVER_PORT 57888
+#define SERVER_PORT_DEFAULT 57888
 
 extern int end_campagnol;
 extern struct configuration config;

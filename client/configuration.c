@@ -165,7 +165,7 @@ void parseConfFile(char *confFile) {
     config.localport = 0;
     memset(&config.serverAddr, 0, sizeof(config.serverAddr));
     config.serverAddr.sin_family = AF_INET;
-    config.serverAddr.sin_port=htons(SERVER_PORT);
+    config.serverAddr.sin_port=htons(SERVER_PORT_DEFAULT);
     config.serverIP_set = 0;
     memset(&config.vpnIP, 0, sizeof(config.localIP));
     config.vpnIP_set = 0;
@@ -228,6 +228,15 @@ void parseConfFile(char *confFile) {
                 memcpy(&(config.serverAddr.sin_addr.s_addr), host->h_addr_list[0], sizeof(struct in_addr));
             }
             config.serverIP_set = 1;
+        }
+        else if (strncmp(name, "server_port", CONF_NAME_LENGTH) == 0) {
+            /* get the server port */
+            int port_tmp;
+            if ( sscanf(value, "%ud", &port_tmp) != 1) {
+                fprintf(stderr, "[%s:server_port] Server UDP port is not valid: \"%s\"\n", confFile, value);
+                exit(1);
+            }
+            config.serverAddr.sin_port = htons(port_tmp);
         }
         else if (strncmp(name, "local_port", CONF_NAME_LENGTH) == 0) {
             /* get the local port */
