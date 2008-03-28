@@ -332,8 +332,10 @@ void * comm_socket(void * argument) {
     struct timeval timeout;                     // timeout used with select
     union {                                     // incoming messages
         struct {
-            struct iphdr ip;
-        } fmt;
+            unsigned char contentType;          // same as struct message's type (unsigned char)
+            unsigned char protocolVersionMaj;
+            unsigned char protocolVersionMin;
+        } dtlsheader;
         unsigned char raw[MESSAGE_MAX_LENGTH];
     } u;
     struct sockaddr_in unknownaddr;             // address of the sender
@@ -417,11 +419,21 @@ void * comm_socket(void * argument) {
             /* Message from another peer */
             else {
                 if (config.debug) printf("<  Received a UDP packet: size %d from %s\n", r, inet_ntoa(unknownaddr.sin_addr));
-                /* UDP hole punching */
-                /* TODO: should rather check if its an IPv4 message or something other.
-                 *       And then check if it's a PUNCH message
-                 */
-                if (rmsg->type == PUNCH || rmsg->type == PUNCH_ACK) {
+                /* check the first byte to find the message type */
+                if (u.dtlsheader.contentType == DTLS_APPLICATION_DATA
+                        || u.dtlsheader.contentType == DTLS_HANDSHAKE
+                        || u.dtlsheader.contentType == DTLS_ALERT
+                        || u.dtlsheader.contentType == DTLS_CHANGE_CIPHER_SPEC) {
+                    /* It's a DTLS packet, send it to the associated SSL_reading thread using the FIFO BIO */
+                    MUTEXLOCK;
+                    peer = get_client_real(&unknownaddr);
+                    MUTEXUNLOCK;
+                    if (peer != NULL) {
+                        BIO_write(peer->rbio, &u, r);
+                    }
+                }
+                else if (r == sizeof(struct message)) {
+                    /* UDP hole punching */
                     switch (rmsg->type) {
                         case PUNCH :
                         case PUNCH_ACK :
@@ -442,15 +454,6 @@ void * comm_socket(void * argument) {
                             break;
                         default :
                             break;
-                    }
-                }
-                /* It's an IP packet, send it to the associated SSL_reading thread using the FIFO BIO */
-                else {
-                    MUTEXLOCK;
-                    peer = get_client_real(&unknownaddr);
-                    MUTEXUNLOCK;
-                    if (peer != NULL) {
-                        BIO_write(peer->rbio, &u, r);
                     }
                 }
             }

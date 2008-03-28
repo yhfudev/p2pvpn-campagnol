@@ -24,7 +24,10 @@
 #ifndef COMMUNICATION_H_
 #define COMMUNICATION_H_
 
-/* Message types */
+/* 
+ * Message types (1 byte)
+ * Must be different from the DTLS content type values
+ */
 #define HELLO 0
 #define PING 1
 #define ASK_CONNECTION 2
@@ -39,6 +42,11 @@
 #define BYE 11
 #define RECONNECT 12
 #define CLOSE_CONNECTION 13
+/*DTLS content types */
+#define DTLS_CHANGE_CIPHER_SPEC 20
+#define DTLS_ALERT 21
+#define DTLS_HANDSHAKE 22
+#define DTLS_APPLICATION_DATA 23
 
 /*
  * duration of the timeout used with the select calls
