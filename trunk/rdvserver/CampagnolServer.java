@@ -441,6 +441,7 @@ public class CampagnolServer {
         System.err.println("Options");
         System.err.println(" -v, --verbose\t\t\tverbose mode");
         System.err.println(" -d, --debug\t\t\tdebug mode");
+        System.err.println(" -p, --port=PORT\t\t\tlistening port");
         System.err.println(" -g, --gui\t\t\tstart the GUI with the server");
         System.err.println(" -h, --help\t\t\tthis help message");
     }
