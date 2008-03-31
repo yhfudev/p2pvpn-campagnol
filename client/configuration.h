@@ -52,6 +52,7 @@ struct configuration {
     X509_CRL *crl;                              // The parsed CRL or NULL
     int FIFO_size;                              // Size of the FIFO list for the incoming packets
     int timeout;                                // wait timeout secs before closing a session for inactivity
+    int max_clients;                            // maximum number of clients
 };
 
 extern void parseConfFile(char *file);

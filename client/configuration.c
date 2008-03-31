@@ -178,6 +178,7 @@ void parseConfFile(char *confFile) {
     config.crl = NULL;
     config.FIFO_size = 50;
     config.timeout = 120;
+    config.max_clients = 100;
     
     /* Read the configuration file */
     while (fgets(line, sizeof(line), conf) != NULL) {
@@ -291,6 +292,16 @@ void parseConfFile(char *confFile) {
             }
             if (config.timeout < 5) {
                 fprintf(stderr, "[%s:timeout] Timeout value %d must be >= 5\n", confFile, config.timeout);
+                exit(1);
+            }
+        }
+        else if (strncmp(name, "max_clients", CONF_NAME_LENGTH) == 0) {
+            if ( sscanf(value, "%d", &config.max_clients) != 1) {
+                fprintf(stderr, "[%s:max_clients] Max number of clients is not valid: \"%s\"\n", confFile, value);
+                exit(1);
+            }
+            if (config.max_clients < 0) {
+                fprintf(stderr, "[%s:max_clients] Max number of clients %d must be >= 1\n", confFile, config.timeout);
                 exit(1);
             }
         }
