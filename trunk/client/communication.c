@@ -239,9 +239,7 @@ void * SSL_reading(void * args) {
     int r;
     // union used to receive the messages
     union {
-        struct {
-            struct iphdr ip;
-        } fmt;
+        struct iphdr ip;
         unsigned char raw[MESSAGE_MAX_LENGTH];
     } u; 
     struct client *peer = (struct client*) args;
@@ -293,14 +291,26 @@ void * SSL_reading(void * args) {
             MUTEXUNLOCK;
             if (config.debug) printf("<< Received a VPN message: size %d from SRC = %u.%u.%u.%u to DST = %u.%u.%u.%u\n",
                             r,
-                            (ntohl(u.fmt.ip.saddr) >> 24) & 0xFF,
-                            (ntohl(u.fmt.ip.saddr) >> 16) & 0xFF,
-                            (ntohl(u.fmt.ip.saddr) >> 8) & 0xFF,
-                            (ntohl(u.fmt.ip.saddr) >> 0) & 0xFF,
-                            (ntohl(u.fmt.ip.daddr) >> 24) & 0xFF,
-                            (ntohl(u.fmt.ip.daddr) >> 16) & 0xFF,
-                            (ntohl(u.fmt.ip.daddr) >> 8) & 0xFF,
-                            (ntohl(u.fmt.ip.daddr) >> 0) & 0xFF);
+                            (ntohl(u.ip.saddr) >> 24) & 0xFF,
+                            (ntohl(u.ip.saddr) >> 16) & 0xFF,
+                            (ntohl(u.ip.saddr) >> 8) & 0xFF,
+                            (ntohl(u.ip.saddr) >> 0) & 0xFF,
+                            (ntohl(u.ip.daddr) >> 24) & 0xFF,
+                            (ntohl(u.ip.daddr) >> 16) & 0xFF,
+                            (ntohl(u.ip.daddr) >> 8) & 0xFF,
+                            (ntohl(u.ip.daddr) >> 0) & 0xFF);
+            /*
+             * If dest IP = VPN broadcast VPN
+             * The TUN device creates a point to point connection which
+             * does not transmit the broadcast IP
+             * So alter the dest. IP to the normal VPN IP
+             * and compute the new checksum
+             */
+            if (u.ip.daddr == config.vpnBroadcastIP.s_addr) {
+                u.ip.daddr = config.vpnIP.s_addr;
+                u.ip.check = 0; // the checksum field is set to 0 for the calculation
+                u.ip.check = ~compute_csum((uint16_t*) &u.ip, sizeof(u.ip));
+            }
             // send it to the TUN device
             write(tunfd, (unsigned char *)&u, sizeof(u));
         }
@@ -367,6 +377,7 @@ void * comm_socket(void * argument) {
                         peer = get_client_VPN(&(rmsg->ip1));
                         remove_client(peer);
                         MUTEXUNLOCK;
+                        conditionSignal(&peer->cond_connected);
                         break;
                     /* positive answer */
                     case ANS_CONNECTION :
@@ -388,6 +399,11 @@ void * comm_socket(void * argument) {
                         if (get_client_VPN(&(rmsg->ip2)) == NULL) {
                             /* Unknown client, add a new structure */
                             peer = add_client(sockfd, tunfd, PUNCHING, time(NULL), rmsg->ip1, rmsg->port, rmsg->ip2, 0);
+                            if (peer == NULL) {
+                                /* max number of clients */
+                                MUTEXUNLOCK;
+                                break;
+                            }
                         }
                         /* otherwise adjust the data */
                         else {
@@ -480,11 +496,16 @@ void * comm_socket(void * argument) {
                         if (config.debug) printf("timeout: %s\n", inet_ntoa(peer->vpnIP));
                         /* close the connection if we started it (client) */                   
                         if (peer->is_dtls_client && peer->thread_running) {
+                            init_smsg(smsg, CLOSE_CONNECTION, peer->vpnIP.s_addr, 0);
+                            s = sendto(sockfd, smsg, sizeof(struct message), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
                             peer->thread_running = 0;
                             SSL_shutdown(peer->ssl);
                             BIO_write(peer->rbio, &u, 0);
+                        }
+                        else if (peer->is_dtls_client) {
                             init_smsg(smsg, CLOSE_CONNECTION, peer->vpnIP.s_addr, 0);
                             s = sendto(sockfd, smsg, sizeof(struct message), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
+                            remove_client(peer);
                         }
                     }
                 }
@@ -516,9 +537,7 @@ void * comm_tun(void * argument) {
     struct timeval timeout;                     // timeout used with select
     struct timespec timeout_connect;            // timeout used when opening new connections
     union {
-        struct {
-            struct iphdr ip;
-        } fmt;
+        struct iphdr ip;
         unsigned char raw[MESSAGE_MAX_LENGTH];
     } u;
     struct in_addr dest;
@@ -539,23 +558,18 @@ void * comm_tun(void * argument) {
             r = read(tunfd, &u, sizeof(u));
             if (config.debug) printf(">> Sending a VPN message: size %d from SRC = %u.%u.%u.%u to DST = %u.%u.%u.%u\n",
                                 r,
-                                (ntohl(u.fmt.ip.saddr) >> 24) & 0xFF,
-                                (ntohl(u.fmt.ip.saddr) >> 16) & 0xFF,
-                                (ntohl(u.fmt.ip.saddr) >> 8) & 0xFF,
-                                (ntohl(u.fmt.ip.saddr) >> 0) & 0xFF,
-                                (ntohl(u.fmt.ip.daddr) >> 24) & 0xFF,
-                                (ntohl(u.fmt.ip.daddr) >> 16) & 0xFF,
-                                (ntohl(u.fmt.ip.daddr) >> 8) & 0xFF,
-                                (ntohl(u.fmt.ip.daddr) >> 0) & 0xFF);
-            dest.s_addr = u.fmt.ip.daddr;
+                                (ntohl(u.ip.saddr) >> 24) & 0xFF,
+                                (ntohl(u.ip.saddr) >> 16) & 0xFF,
+                                (ntohl(u.ip.saddr) >> 8) & 0xFF,
+                                (ntohl(u.ip.saddr) >> 0) & 0xFF,
+                                (ntohl(u.ip.daddr) >> 24) & 0xFF,
+                                (ntohl(u.ip.daddr) >> 16) & 0xFF,
+                                (ntohl(u.ip.daddr) >> 8) & 0xFF,
+                                (ntohl(u.ip.daddr) >> 0) & 0xFF);
+            dest.s_addr = u.ip.daddr;
 
             /*
              * If dest IP = VPN broadcast VPN
-             * The TUN device creates a point to point connection which
-             * does not transmit the broadcast IP
-             * So alter the dest. IP to the normal VPN IP
-             * and compute the new checksum
-             * TODO: it should be on the receiver side
              */
             if (dest.s_addr == config.vpnBroadcastIP.s_addr) {
                 MUTEXLOCK;
@@ -563,9 +577,6 @@ void * comm_tun(void * argument) {
                 while (peer != NULL) {
                     struct client *next = peer->next;
                     if (peer->state == ESTABLISHED) {
-                        u.fmt.ip.daddr = peer->vpnIP.s_addr;
-                        u.fmt.ip.check = 0; // the checksum field is set to 0 for the calculation
-                        u.fmt.ip.check = ~compute_csum((uint16_t*) &u.fmt.ip, sizeof(u.fmt.ip));
                         SSL_write(peer->ssl, &u, r);
                     }
                     peer = next;
@@ -580,6 +591,9 @@ void * comm_tun(void * argument) {
                     MUTEXLOCK;
                     peer = add_client(sockfd, tunfd, TIMEOUT, time(NULL), (struct in_addr) { 0 }, 0, dest, 1);
                     MUTEXUNLOCK;
+                    if (peer == NULL) {
+                        continue;
+                    }
                     /* ask the RDV server for a new connection with peer */
                     init_smsg(smsg, ASK_CONNECTION, dest.s_addr, 0);
                     sendto(sockfd,smsg,sizeof(struct message),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));

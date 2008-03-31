@@ -171,7 +171,8 @@ int main (int argc, char **argv) {
         if (strlen(config.cipher_list) != 0) printf("  DTLS cipher list: %s\n", config.cipher_list);
         if (config.crl) printf("  Using a certificate revocation list (%d entries)\n", sk_num(X509_CRL_get_REVOKED(config.crl)));
         printf("  FIFO size: %d\n", config.FIFO_size);
-        printf("  Timeout: %d sec.\n\n", config.timeout);
+        printf("  Timeout: %d sec.\n", config.timeout);
+        printf("  Maximum number of connections: %d\n\n", config.max_clients);
     }
     
     sockfd = create_socket();

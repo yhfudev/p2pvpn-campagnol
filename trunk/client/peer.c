@@ -33,11 +33,19 @@
 
 /* List of known clients */
 struct client *clients = NULL;
+int n_clients = 0;
 /* mutex used to manipulate 'clients' */
 pthread_mutex_t mutex_clients = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
 
 /* Add a client to the list */
 struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct in_addr clientIP, u_int16_t clientPort, struct in_addr vpnIP, int is_dtls_client) {
+    if (n_clients >= config.max_clients) {
+        if (config.debug) {
+            printf("Cannot open a new connection: maximum number of connections reached\n");
+        }
+        return NULL;
+    }
+    
     struct client *peer = malloc(sizeof(struct client));
     peer->time = time;
     bzero(&(peer->clientaddr), sizeof(peer->clientaddr));
@@ -60,6 +68,7 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct
     if (peer->next) peer->next->prev = peer;
     clients = peer;
     if (config.debug) printf("Adding new client %s\n", inet_ntoa(vpnIP));
+    n_clients ++;
     return peer;
 }
 
@@ -99,6 +108,7 @@ void remove_client(struct client *peer) {
     free(peer);
     cache_client_VPN = NULL;
     cache_client_real = NULL;
+    n_clients --;
 }
 
 /*
