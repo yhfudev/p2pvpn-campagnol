@@ -250,6 +250,7 @@ void * SSL_reading(void * args) {
     if (r != 1) {
         fprintf(stderr, "Error during DTLS handshake with peer %s\n", inet_ntoa(peer->vpnIP));
         ERR_print_errors_fp(stderr);
+        if (!peer->thread_running) return NULL; // remove_client has already been called
         MUTEXLOCK;
         remove_client(peer);
         MUTEXUNLOCK;
@@ -396,6 +397,7 @@ void * comm_socket(void * argument) {
                     /* a client wants to open a new session with me */
                     case FWD_CONNECTION :
                         MUTEXLOCK;
+                        // TODO: the client exists: destroy it and recreate
                         if (get_client_VPN(&(rmsg->ip2)) == NULL) {
                             /* Unknown client, add a new structure */
                             peer = add_client(sockfd, tunfd, PUNCHING, time(NULL), rmsg->ip1, rmsg->port, rmsg->ip2, 0);
@@ -456,7 +458,7 @@ void * comm_socket(void * argument) {
                             /* we can now reach the client */
                             MUTEXLOCK;
                             peer = get_client_VPN(&(rmsg->ip1));
-                            if (peer != NULL) { // TODO: if a punch message comes before a FWD_CONNECTION ?
+                            if (peer != NULL) {
                                 if (config.verbose && peer->state != ESTABLISHED) printf("punch received from %s\n", inet_ntoa(rmsg->ip1));
                                 peer->time = time(NULL);
                                 peer->state = ESTABLISHED;
@@ -612,6 +614,9 @@ void * comm_tun(void * argument) {
                 else switch (peer->state) {
                     /* Already connected */
                     case ESTABLISHED :
+                        MUTEXLOCK;
+                        peer->time = time(NULL);
+                        MUTEXUNLOCK;
                         SSL_write(peer->ssl, &u, r);
                         break;
                     /* Lost connection */
@@ -634,20 +639,11 @@ void * comm_tun(void * argument) {
                         }
                         MUTEXUNLOCK;
                         break;
-                    /* TODO: clean old unused states */
-                    /* the client is not connected, but we have a structure */
-                    case NOT_CONNECTED :
-                        if (time(NULL)-peer->time>config.timeout) {
-                            MUTEXLOCK;
-                            // give the peer another chance
-                            peer->state = TIMEOUT;
-                            MUTEXUNLOCK;
-                        }
-                        break;
                     /* PUNCHING or WAITING
                      * The connection is in progress
                      */
-                    default :
+                    case PUNCHING:
+                    case WAITING:
                         clock_gettime(CLOCK_REALTIME, &timeout_connect);
                         timeout_connect.tv_sec += 2; // wait another 2 secs
                         MUTEXLOCK;

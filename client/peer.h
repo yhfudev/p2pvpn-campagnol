@@ -24,12 +24,7 @@
 #define PEER_H_
 
 /* clients states */
-#define PUNCHING 0
-#define WAITING 1
-#define ESTABLISHED 2
-#define UNKNOWN 3
-#define TIMEOUT 4
-#define NOT_CONNECTED 5
+enum client_type {PUNCHING, WAITING, ESTABLISHED, TIMEOUT};
 
 /* client storage structure */
 struct client {
