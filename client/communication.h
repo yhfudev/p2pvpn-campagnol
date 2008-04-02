@@ -49,10 +49,15 @@
 #define DTLS_APPLICATION_DATA 23
 
 /*
- * duration of the timeout used with the select calls
- * give the period of the PING messages when the client is inactive*/
+ * duration of the timeout used with the select calls*/
 #define SELECT_DELAY_SEC 2
 #define SELECT_DELAY_USEC 0
+
+/*
+ * time between two PING messages
+ */
+#define TIMER_PING_SEC 3
+#define TIMER_PING_USEC 0
 
 /*
  * Number of tries when registering to the rendezvous server

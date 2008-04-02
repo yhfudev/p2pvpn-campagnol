@@ -28,6 +28,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <sys/time.h>
+#include <signal.h>
 
 #include "campagnol.h"
 #include "communication.h"
@@ -91,6 +93,18 @@ inline void init_timeout(struct timeval *timeout) {
     timeout->tv_usec = SELECT_DELAY_USEC;
 }
 
+/* 
+ * Handler for SIGALRM
+ * send a PING message
+ */
+static int sockfd_global;
+void handler_sigTimerPing(int sig) {
+    struct message smsg;
+    /* send a PING message to the RDV server */
+    init_smsg(&smsg, PING,0,0);
+    int s = sendto(sockfd_global,&smsg,sizeof(struct message),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
+    if (s == -1) perror("PING");
+}
 
 /*
  * Compute the internet checksum
@@ -116,7 +130,6 @@ uint16_t compute_csum(uint16_t *addr, size_t count){
 
     return sum;
 }
-
 
 /*
  * Perform the registration of the client to the RDV server
@@ -160,7 +173,6 @@ int register_rdv(int sockfd) {
                     /* Registration OK */
                     if (config.verbose) printf("Registration complete\n");
                     notRegistered = 0;
-                    return 0;
                     break;
                 case NOK:
                     /* The RDV server rejected the client */
@@ -179,6 +191,17 @@ int register_rdv(int sockfd) {
         fprintf(stderr, "The connection with the RDV server failed\n");
         return 1;
     }
+    
+    /* set a timer for the ping messages */
+    struct itimerval timer_ping;
+    timer_ping.it_interval.tv_sec = TIMER_PING_SEC;
+    timer_ping.it_interval.tv_usec = TIMER_PING_USEC;
+    timer_ping.it_value.tv_sec = TIMER_PING_SEC;
+    timer_ping.it_value.tv_usec = TIMER_PING_USEC;
+    sockfd_global = sockfd;
+    signal(SIGALRM, &handler_sigTimerPing);
+    setitimer(ITIMER_REAL, &timer_ping, NULL);
+    
     return 0;
 }
 
@@ -337,7 +360,7 @@ void * comm_socket(void * argument) {
     int sockfd = args->sockfd;
     int tunfd = args->tunfd;
     
-    int r;
+    int r, s;
     int r_select;
     fd_set fd_select;                           // for the select call
     struct timeval timeout;                     // timeout used with select
@@ -482,11 +505,7 @@ void * comm_socket(void * argument) {
         
         /* TIMEOUT */
         else if (r_select == 0) {
-            /* send a PING message to the RDV server */
-            init_smsg(smsg, PING,0,0);
             init_timeout(&timeout);
-            int s = sendto(sockfd,smsg,sizeof(struct message),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
-            if (s == -1) perror("PING");
             /* update the state of the clients */
             MUTEXLOCK;
             peer = clients;
