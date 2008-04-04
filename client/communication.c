@@ -280,7 +280,7 @@ void * SSL_reading(void * args) {
         struct message smsg;
         init_smsg(&smsg, CLOSE_CONNECTION, peer->vpnIP.s_addr, 0);
         sendto(peer->sockfd, &smsg, sizeof(struct message), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
-        conditionSignal(&peer->cond_connected);
+//        conditionSignal(&peer->cond_connected); // condition is freed... TODO: create a CLOSED state ?
         return NULL;
     }
     /* Unlock the thread waiting for the connection */
@@ -512,22 +512,37 @@ void * comm_socket(void * argument) {
             while (peer != NULL) {
                 struct client *next = peer->next;
                 if (time(NULL)-peer->time>config.timeout) {
+                    if (config.debug && peer->state != TIMEOUT ) printf("timeout: %s\n", inet_ntoa(peer->vpnIP));
                     peer->state = TIMEOUT;
-                    if (peer->ssl != NULL) {
-                        if (config.debug) printf("timeout: %s\n", inet_ntoa(peer->vpnIP));
+                    if (peer->is_dtls_client) {
                         /* close the connection if we started it (client) */                   
-                        if (peer->is_dtls_client && peer->thread_running) {
+                        if (peer->thread_running) {
                             init_smsg(smsg, CLOSE_CONNECTION, peer->vpnIP.s_addr, 0);
                             s = sendto(sockfd, smsg, sizeof(struct message), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
                             peer->thread_running = 0;
                             SSL_shutdown(peer->ssl);
                             BIO_write(peer->rbio, &u, 0);
                         }
-                        else if (peer->is_dtls_client) {
+                        else {
                             init_smsg(smsg, CLOSE_CONNECTION, peer->vpnIP.s_addr, 0);
                             s = sendto(sockfd, smsg, sizeof(struct message), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
                             remove_client(peer);
                         }
+                    }
+                }
+                if (time(NULL) - peer->time > config.timeout+10) {
+                    if (config.debug) printf("Is the peer %s dead ? cleaning connection\n", inet_ntoa(peer->vpnIP));
+                    if (peer->thread_running) {
+                        init_smsg(smsg, CLOSE_CONNECTION, peer->vpnIP.s_addr, 0);
+                        s = sendto(sockfd, smsg, sizeof(struct message), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
+                        peer->thread_running = 0;
+                        SSL_shutdown(peer->ssl);
+                        BIO_write(peer->rbio, &u, 0);
+                    }
+                    else {
+                        init_smsg(smsg, CLOSE_CONNECTION, peer->vpnIP.s_addr, 0);
+                        s = sendto(sockfd, smsg, sizeof(struct message), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
+                        remove_client(peer);
                     }
                 }
                 peer = next;
