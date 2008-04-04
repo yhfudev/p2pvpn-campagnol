@@ -32,8 +32,6 @@ public class Connection {
     public ClientStruct client1;                // the one who asked
     public ClientStruct client2;                // the one who is targeted
     private long initTime;                    // date of creation
-    private int nbTries = 0;                    // numbers of tries -> (connection not possible)
-//    private final static int TIMEOUT = 15000;    // 15 seconds
     
     
     public Connection(ClientStruct client1, ClientStruct client2) {
@@ -44,18 +42,11 @@ public class Connection {
     
     public void updateTime() {
         this.initTime = System.currentTimeMillis();
-        this.nbTries++;
     }
     
-        public String getStartTime() {
-            Date date = new Date(this.initTime);
-            return DateFormat.getDateTimeInstance().format(date);
-        }
-        
-//    public boolean isTimeout() {
-//        return (System.currentTimeMillis() - this.initTime > Connection.TIMEOUT);
-//    }
+    public String getStartTime() {
+        Date date = new Date(this.initTime);
+        return DateFormat.getDateTimeInstance().format(date);
+    }
     
-    public int getTries() {return this.nbTries;}
-
 }

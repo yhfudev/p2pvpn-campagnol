@@ -227,25 +227,6 @@ public class CampagnolServer {
                         client.updateTime();
                     }
                     break;
-//                case MsgServStruct.PONG :
-//                    /**    pong from the server */
-//                    if (CampagnolServer.verbose) System.out.println("<< PONG received from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
-//                    break;
-//                case MsgServStruct.OK :
-//                    /**    message ok */
-//                    if (CampagnolServer.verbose) System.out.println("<< OK received from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
-//                    requestedClient = (ClientStruct) getClientFromId(MsgServStruct.unMapAddress(message.ip1));
-//                    /** FWD_CONNECTION or ANS_CONNECTION answer -> remove reference -> peers are connected */
-//                    if (requestedClient != null) {
-//                        /** remove references */
-////                        connections.remove(client.vpnIPString+":"+requestedClient.vpnIPString);
-////                        connections.remove(requestedClient.vpnIPString+":"+client.vpnIPString);
-//                    }
-//                    break;
-//                case MsgServStruct.NOK :
-//                    /**    message not ok */
-//                    if (CampagnolServer.verbose) System.out.println("<< NOK received from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
-//                    break;
                 case MsgServStruct.ASK_CONNECTION :
                     /**    peer2peer connection request */
                     if (CampagnolServer.verbose) System.out.println("<< ASK_CONNECTION received from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
@@ -268,7 +249,6 @@ public class CampagnolServer {
                             break;
                         }
                         if (connection == null) {
-                            // TODO rejet dans tous les cas
                             /** test if the reverse connection exist */
                             Connection reverseConnection = getConnection(requestedClient.vpnIPString, client.vpnIPString);
                             if (reverseConnection == null) {
@@ -277,7 +257,7 @@ public class CampagnolServer {
                                 connections.add(connection);
                                 sendANS(client, requestedClient);
                                 sendFWD(requestedClient, client);
-                            } else/* if (reverseConnection.isTimeout())*/ {
+                            } else {
                                 connections.remove(reverseConnection);
                                 reverseConnection = null;
                                 connection = new Connection(client, requestedClient);    // instantiating the connection
@@ -287,23 +267,8 @@ public class CampagnolServer {
                             }
                         } else {
                             /** connection demand already exists */
-//                            if (connection.getTries()>MAX_CONNECTION_TRIES-2) {
-//                                /** after it tries consider connection connot be established */
-//                                connections.remove(client.vpnIPString+":"+requestedClient.vpnIPString);
-//                                sendREJECT(client.sAddr, requestedClient.vpnIP);
-//                                sendREJECT(requestedClient.sAddr, client.vpnIP);
-//                                connection = null;
-//                            }
-//                            if (connection.getTries()%2 == 0) {
                             sendANS(connection.client1, connection.client2);
-//                                pause();    // wait before forwarding connection request
                             sendFWD(connection.client2, connection.client1);
-//                            }
-//                            else {
-//                                sendFWD(connection.client2, connection.client1);
-//                                pause();    // wait before forwarding connection request
-//                                sendANS(connection.client1, connection.client2);
-//                            }
                             connection.updateTime();
                         }
                     }
@@ -315,18 +280,6 @@ public class CampagnolServer {
                         removeConnection(client.vpnIPString, requestedClient.vpnIPString);
                     }
                     break;
-//                case MsgServStruct.FWD_CONNECTION :
-//                    /**    peer2peer connection forward */
-//                    if (CampagnolServer.verbose) System.out.println("<< FWD_CONNECTION received from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
-//                    break;
-//                case MsgServStruct.REJ_CONNECTION :
-//                    /**    peer2peer connection forward */
-//                    if (CampagnolServer.verbose) System.out.println("<< REJ_CONNECTION received from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
-//                    break;
-//                case MsgServStruct.ANS_CONNECTION :
-//                    /**    peer2peer connection answer */
-//                    if (CampagnolServer.verbose) System.out.println("<< ANS_CONNECTION received from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
-//                    break;
                 default:
                     if (CampagnolServer.verbose) {
                         System.out.println("Received unexpected message from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
@@ -336,15 +289,6 @@ public class CampagnolServer {
             }
         } else {
             if (CampagnolServer.verbose) System.out.println("Message err : received message too short");
-        }
-    }
-    
-    public void pause() {
-        try {
-            wait(WAIT_MILLIS_FWD);
-        } catch (Exception e) {
-            System.err.println("Wait err:");
-            e.printStackTrace();
         }
     }
     
