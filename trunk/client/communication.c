@@ -223,7 +223,7 @@ void *punch(void *arg) {
     }
     MUTEXUNLOCK;
     if (config.verbose) printf("punch %s %d\n", inet_ntoa(str->peer->clientaddr.sin_addr), ntohs(str->peer->clientaddr.sin_port));
-    for (i=0; i<PUNCH_NUMBER; i++) {
+    for (i=0; i<PUNCH_NUMBER && str->peer->state != CLOSED; i++) {
         sendto(str->sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&(str->peer->clientaddr), sizeof(str->peer->clientaddr));
         usleep(PUNCH_DELAY_USEC);
     }
@@ -440,11 +440,11 @@ void * comm_socket(void * argument) {
                                 MUTEXUNLOCK;
                                 break;
                             }
+                            /* start punching */
+                            start_punch(peer, sockfd);
+                            decr_ref(peer);
                         }
                         MUTEXUNLOCK;
-                        /* start punching */
-                        start_punch(peer, sockfd);
-                        decr_ref(peer);
                         break;
                     /*
                      * The RDV server want the client to perform a new registration
