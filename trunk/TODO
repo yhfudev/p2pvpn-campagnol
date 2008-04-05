@@ -4,14 +4,12 @@ TODO LIST
 
 Known issues
 ------------
-- When trying to open a session between two peers, one using a revoked
-  certificate, both peers will eventually crash.
 - Client do not handle the loss of DLTS shutdown packets.
 
 
 Plans
 -----
-- Program and source code translation.
+- Try to cope with the loss of important DTLS datagrams.
 - Rewrite the rendezvous server in C, which would allow to use DLTS
   between the peers and the server. Or wait for a good and flexible Java
   DTLS implementation.

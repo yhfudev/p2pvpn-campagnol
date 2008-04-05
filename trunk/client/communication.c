@@ -102,7 +102,7 @@ void handler_sigTimerPing(int sig) {
     struct message smsg;
     /* send a PING message to the RDV server */
     init_smsg(&smsg, PING,0,0);
-    int s = sendto(sockfd_global,&smsg,sizeof(struct message),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
+    int s = sendto(sockfd_global,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
     if (s == -1) perror("PING");
 }
 
@@ -152,7 +152,7 @@ int register_rdv(int sockfd) {
         /* sending HELLO to the server */
         registeringTries++;
         if (config.debug) printf("Sending HELLO\n");
-        if ((s=sendto(sockfd,&smsg,sizeof(struct message),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr))) == -1) {
+        if ((s=sendto(sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr))) == -1) {
             perror("sendto");
         }
         
@@ -224,14 +224,15 @@ void *punch(void *arg) {
     MUTEXUNLOCK;
     if (config.verbose) printf("punch %s %d\n", inet_ntoa(str->peer->clientaddr.sin_addr), ntohs(str->peer->clientaddr.sin_port));
     for (i=0; i<PUNCH_NUMBER; i++) {
-        sendto(str->sockfd,&smsg,sizeof(struct message),0,(struct sockaddr *)&(str->peer->clientaddr), sizeof(str->peer->clientaddr));
+        sendto(str->sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&(str->peer->clientaddr), sizeof(str->peer->clientaddr));
         usleep(PUNCH_DELAY_USEC);
     }
     /* still waiting for an answer */
     MUTEXLOCK;
-    if (str->peer->state!=ESTABLISHED) {
+    if (str->peer->state!=ESTABLISHED && str->peer->state!=CLOSED) {
         str->peer->state = WAITING;
     }
+    decr_ref(str->peer);
     MUTEXUNLOCK;
     free(arg);
     pthread_exit(NULL);
@@ -245,6 +246,7 @@ void start_punch(struct client *peer, int sockfd) {
     arg->sockfd = sockfd;
     arg->peer = peer;
     pthread_t t;
+    incr_ref(peer);
     t = createThread(punch, (void *)arg);
 }
 
@@ -273,17 +275,21 @@ void * SSL_reading(void * args) {
     if (r != 1) {
         fprintf(stderr, "Error during DTLS handshake with peer %s\n", inet_ntoa(peer->vpnIP));
         ERR_print_errors_fp(stderr);
-        if (!peer->thread_running) return NULL; // remove_client has already been called
-        MUTEXLOCK;
-        remove_client(peer);
-        MUTEXUNLOCK;
         struct message smsg;
         init_smsg(&smsg, CLOSE_CONNECTION, peer->vpnIP.s_addr, 0);
-        sendto(peer->sockfd, &smsg, sizeof(struct message), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
-//        conditionSignal(&peer->cond_connected); // condition is freed... TODO: create a CLOSED state ?
+        sendto(peer->sockfd, &smsg, sizeof(smsg), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
+        MUTEXLOCK;
+        peer->state = CLOSED;
+        conditionSignal(&peer->cond_connected);
+        decr_ref(peer);
+        decr_ref(peer);
+        MUTEXUNLOCK;
         return NULL;
     }
     /* Unlock the thread waiting for the connection */
+    MUTEXLOCK;
+    peer->state = ESTABLISHED;
+    MUTEXUNLOCK;
     conditionSignal(&peer->cond_connected);
     if (config.verbose) printf("new DTLS connection opened with peer %s\n", inet_ntoa(peer->vpnIP));
     
@@ -299,13 +305,14 @@ void * SSL_reading(void * args) {
         if (r == 0) { // close connection
             if (config.verbose) printf("DTLS connection closed with peer %s\n", inet_ntoa(peer->vpnIP));
             if (end_campagnol) {
+                decr_ref(peer);
                 MUTEXUNLOCK;
                 return NULL;
             }
-            peer->state = TIMEOUT;
             peer->thread_running = 0;
-            //createClientSSL(peer, 1); // rather remove entirely the client structure than recreate it
-            remove_client(peer);
+            peer->state = CLOSED;
+            decr_ref(peer);
+            decr_ref(peer);
             MUTEXUNLOCK;
             return NULL;
         }
@@ -339,6 +346,7 @@ void * SSL_reading(void * args) {
             write(tunfd, (unsigned char *)&u, sizeof(u));
         }
     }
+    decr_ref(peer);
     return NULL;
 }
 
@@ -347,6 +355,7 @@ void * SSL_reading(void * args) {
  */
 void createSSL(struct client *peer) {
     peer->thread_running = 1;
+    incr_ref(peer);
     peer->thread = createThread(SSL_reading, peer);
 }
 
@@ -375,7 +384,7 @@ void * comm_socket(void * argument) {
     struct sockaddr_in unknownaddr;             // address of the sender
     socklen_t len = sizeof(struct sockaddr_in);
     struct message *rmsg = (struct message *) &u;   // incoming struct message
-    struct message *smsg = (struct message *) malloc(sizeof(struct message)); // outgoing message
+    struct message smsg; // outgoing message
     struct client *peer;
     
     init_timeout(&timeout);
@@ -399,9 +408,11 @@ void * comm_socket(void * argument) {
                     case REJ_CONNECTION :
                         MUTEXLOCK;
                         peer = get_client_VPN(&(rmsg->ip1));
-                        remove_client(peer);
-                        MUTEXUNLOCK;
+                        peer->state = CLOSED;
                         conditionSignal(&peer->cond_connected);
+                        decr_ref(peer);
+                        decr_ref(peer);
+                        MUTEXUNLOCK;
                         break;
                     /* positive answer */
                     case ANS_CONNECTION :
@@ -416,11 +427,11 @@ void * comm_socket(void * argument) {
                         MUTEXUNLOCK;
                         /* and start punching */
                         start_punch(peer, sockfd);
+                        decr_ref(peer);
                         break;
                     /* a client wants to open a new session with me */
                     case FWD_CONNECTION :
                         MUTEXLOCK;
-                        // TODO: the client exists: destroy it and recreate
                         if (get_client_VPN(&(rmsg->ip2)) == NULL) {
                             /* Unknown client, add a new structure */
                             peer = add_client(sockfd, tunfd, PUNCHING, time(NULL), rmsg->ip1, rmsg->port, rmsg->ip2, 0);
@@ -430,17 +441,10 @@ void * comm_socket(void * argument) {
                                 break;
                             }
                         }
-                        /* otherwise adjust the data */
-                        else {
-                            peer = get_client_VPN(&(rmsg->ip2));
-                            peer->state = PUNCHING;
-                            peer->clientaddr.sin_addr = rmsg->ip1;
-                            peer->clientaddr.sin_port = rmsg->port;
-                            peer->time = time(NULL);
-                        }
                         MUTEXUNLOCK;
                         /* start punching */
                         start_punch(peer, sockfd);
+                        decr_ref(peer);
                         break;
                     /*
                      * The RDV server want the client to perform a new registration
@@ -470,7 +474,10 @@ void * comm_socket(void * argument) {
                     peer = get_client_real(&unknownaddr);
                     MUTEXUNLOCK;
                     if (peer != NULL) {
-                        BIO_write(peer->rbio, &u, r);
+                        if (peer->state != CLOSED) {
+                            BIO_write(peer->rbio, &u, r);
+                        }
+                        decr_ref(peer);
                     }
                 }
                 else if (r == sizeof(struct message)) {
@@ -484,12 +491,12 @@ void * comm_socket(void * argument) {
                             if (peer != NULL) {
                                 if (config.verbose && peer->state != ESTABLISHED) printf("punch received from %s\n", inet_ntoa(rmsg->ip1));
                                 peer->time = time(NULL);
-                                peer->state = ESTABLISHED;
                                 peer->clientaddr = unknownaddr;
                                 if (peer->thread_running == 0) {
                                     BIO_ctrl(peer->wbio, BIO_CTRL_DGRAM_SET_PEER, 0, &peer->clientaddr);
                                     createSSL(peer);
                                 }
+                                decr_ref(peer);
                             }
                             MUTEXUNLOCK;
                             break;
@@ -511,38 +518,40 @@ void * comm_socket(void * argument) {
             peer = clients;
             while (peer != NULL) {
                 struct client *next = peer->next;
-                if (time(NULL)-peer->time>config.timeout) {
-                    if (config.debug && peer->state != TIMEOUT ) printf("timeout: %s\n", inet_ntoa(peer->vpnIP));
-                    peer->state = TIMEOUT;
-                    if (peer->is_dtls_client) {
-                        /* close the connection if we started it (client) */                   
-                        if (peer->thread_running) {
-                            init_smsg(smsg, CLOSE_CONNECTION, peer->vpnIP.s_addr, 0);
-                            s = sendto(sockfd, smsg, sizeof(struct message), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
-                            peer->thread_running = 0;
-                            SSL_shutdown(peer->ssl);
-                            BIO_write(peer->rbio, &u, 0);
-                        }
-                        else {
-                            init_smsg(smsg, CLOSE_CONNECTION, peer->vpnIP.s_addr, 0);
-                            s = sendto(sockfd, smsg, sizeof(struct message), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
-                            remove_client(peer);
-                        }
-                    }
-                }
                 if (time(NULL) - peer->time > config.timeout+10) {
                     if (config.debug) printf("Is the peer %s dead ? cleaning connection\n", inet_ntoa(peer->vpnIP));
                     if (peer->thread_running) {
-                        init_smsg(smsg, CLOSE_CONNECTION, peer->vpnIP.s_addr, 0);
-                        s = sendto(sockfd, smsg, sizeof(struct message), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
+                        init_smsg(&smsg, CLOSE_CONNECTION, peer->vpnIP.s_addr, 0);
+                        s = sendto(sockfd, &smsg, sizeof(smsg), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
                         peer->thread_running = 0;
                         SSL_shutdown(peer->ssl);
                         BIO_write(peer->rbio, &u, 0);
                     }
                     else {
-                        init_smsg(smsg, CLOSE_CONNECTION, peer->vpnIP.s_addr, 0);
-                        s = sendto(sockfd, smsg, sizeof(struct message), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
-                        remove_client(peer);
+                        init_smsg(&smsg, CLOSE_CONNECTION, peer->vpnIP.s_addr, 0);
+                        s = sendto(sockfd, &smsg, sizeof(smsg), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
+                        peer->state = CLOSED;
+                        decr_ref(peer);
+                    }
+                }
+                else if (time(NULL)-peer->time>config.timeout) {
+                    if (config.debug && peer->state != TIMEOUT ) printf("timeout: %s\n", inet_ntoa(peer->vpnIP));
+                    peer->state = TIMEOUT;
+                    if (peer->is_dtls_client) {
+                        /* close the connection if we started it (client) */                   
+                        if (peer->thread_running) {
+                            init_smsg(&smsg, CLOSE_CONNECTION, peer->vpnIP.s_addr, 0);
+                            s = sendto(sockfd, &smsg, sizeof(smsg), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
+                            peer->thread_running = 0;
+                            SSL_shutdown(peer->ssl);
+                            BIO_write(peer->rbio, &u, 0);
+                        }
+                        else {
+                            init_smsg(&smsg, CLOSE_CONNECTION, peer->vpnIP.s_addr, 0);
+                            s = sendto(sockfd, &smsg, sizeof(smsg), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
+                            peer->state = CLOSED;
+                            decr_ref(peer);
+                        }
                     }
                 }
                 peer = next;
@@ -553,7 +562,6 @@ void * comm_socket(void * argument) {
     
     }
     
-    free(smsg);
     return NULL;
 }
 
@@ -577,7 +585,7 @@ void * comm_tun(void * argument) {
         unsigned char raw[MESSAGE_MAX_LENGTH];
     } u;
     struct in_addr dest;
-    struct message *smsg = (struct message *) malloc(sizeof(struct message));
+    struct message smsg;
     struct client *peer;
 
 
@@ -631,16 +639,24 @@ void * comm_tun(void * argument) {
                         continue;
                     }
                     /* ask the RDV server for a new connection with peer */
-                    init_smsg(smsg, ASK_CONNECTION, dest.s_addr, 0);
-                    sendto(sockfd,smsg,sizeof(struct message),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
+                    init_smsg(&smsg, ASK_CONNECTION, dest.s_addr, 0);
+                    sendto(sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
                     
                     clock_gettime(CLOCK_REALTIME, &timeout_connect);
                     timeout_connect.tv_sec += 3; // wait 3 secs
                     MUTEXLOCK;
                     if (conditionTimedwait(&peer->cond_connected, &mutex_clients, &timeout_connect) == 0) {
+                        decr_ref(peer);
                         peer = get_client_VPN(&dest);
-                        if (peer != NULL) // the new connection is opened
-                            SSL_write(peer->ssl, &u, r);
+                        if (peer != NULL) {// the new connection is opened
+                            if (peer->state == ESTABLISHED) {
+                                SSL_write(peer->ssl, &u, r);
+                            }
+                            decr_ref(peer);
+                        }
+                    }
+                    else {
+                        decr_ref(peer);
                     }
                     MUTEXUNLOCK;
                     
@@ -652,6 +668,7 @@ void * comm_tun(void * argument) {
                         peer->time = time(NULL);
                         MUTEXUNLOCK;
                         SSL_write(peer->ssl, &u, r);
+                        decr_ref(peer);
                         break;
                     /* Lost connection */
                     case TIMEOUT :
@@ -660,16 +677,24 @@ void * comm_tun(void * argument) {
                         peer->time = time(NULL);
                         MUTEXUNLOCK;
                         /* ask the RDV server for a new connection with peer */
-                        init_smsg(smsg, ASK_CONNECTION, dest.s_addr, 0);
-                        sendto(sockfd,smsg,sizeof(struct message),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
+                        init_smsg(&smsg, ASK_CONNECTION, dest.s_addr, 0);
+                        sendto(sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
                         
                         clock_gettime(CLOCK_REALTIME, &timeout_connect);
                         timeout_connect.tv_sec += 3;
                         MUTEXLOCK;
                         if (conditionTimedwait(&peer->cond_connected, &mutex_clients, &timeout_connect) == 0) {
+                            decr_ref(peer);
                             peer = get_client_VPN(&dest);
-                            if (peer != NULL) // the new connection is opened
-                                SSL_write(peer->ssl, &u, r);
+                            if (peer != NULL) {// the new connection is opened
+                                if (peer->state == ESTABLISHED) {
+                                    SSL_write(peer->ssl, &u, r);
+                                }
+                                decr_ref(peer);
+                            }
+                        }
+                        else {
+                            decr_ref(peer);
                         }
                         MUTEXUNLOCK;
                         break;
@@ -682,19 +707,28 @@ void * comm_tun(void * argument) {
                         timeout_connect.tv_sec += 2; // wait another 2 secs
                         MUTEXLOCK;
                         if (conditionTimedwait(&peer->cond_connected, &mutex_clients, &timeout_connect) == 0) {
+                            decr_ref(peer);
                             peer = get_client_VPN(&dest);
-                            if (peer != NULL) // the new connection is opened
-                                SSL_write(peer->ssl, &u, r);
+                            if (peer != NULL) {// the new connection is opened
+                                if (peer->state == ESTABLISHED) {
+                                    SSL_write(peer->ssl, &u, r);
+                                }
+                                decr_ref(peer);
+                            }
+                        }
+                        else {
+                            decr_ref(peer);
                         }
                         MUTEXUNLOCK;
                         break;
+                    default:
+                        decr_ref(peer);
                 }
             }
         }
     
     }
     
-    free(smsg);
     return NULL;
 }
 
@@ -727,14 +761,24 @@ void start_vpn(int sockfd, int tunfd) {
     peer = clients;
     while (peer != NULL) {
         next = peer->next;
-        remove_client(peer); // wait for the end of the SSL_reading thread and free the structure
+        if (peer->thread_running) {
+            peer->thread_running = 0;
+            SSL_shutdown(peer->ssl);
+            BIO_write(peer->rbio, &smsg, 0);
+            peer->state = CLOSED;
+            decr_ref(peer);
+        }
+        else {
+            peer->state = CLOSED;
+            decr_ref(peer);
+        }
         peer = next;
     }
     
     
     init_smsg(&smsg, BYE, config.vpnIP.s_addr, 0);
     if (config.debug) printf("Sending BYE\n");
-    if (sendto(sockfd,&smsg,sizeof(struct message),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr)) == -1) {
+    if (sendto(sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr)) == -1) {
         perror("sendto");
     }
 }

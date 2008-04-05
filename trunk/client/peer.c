@@ -37,7 +37,43 @@ int n_clients = 0;
 /* mutex used to manipulate 'clients' */
 pthread_mutex_t mutex_clients = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
 
-/* Add a client to the list */
+
+/*
+ * Safely increment the reference counter of peer
+ */
+void incr_ref(struct client *peer) {
+    pthread_mutex_lock(&peer->mutex_ref);
+    peer->ref_count++;
+//    fprintf(stderr, "incr %s [%d]\n", inet_ntoa(peer->vpnIP), peer->ref_count);
+    pthread_mutex_unlock(&peer->mutex_ref);
+}
+
+/*
+ * Safely decrement the reference counter of peer
+ * If the count reaches 0, the peer is freed
+ */
+void decr_ref(struct client *peer) {
+    pthread_mutex_lock(&peer->mutex_ref);
+    peer->ref_count--;
+//    fprintf(stderr, "decr %s [%d]\n", inet_ntoa(peer->vpnIP), peer->ref_count);
+    if (peer->ref_count == 0) {
+        pthread_mutex_unlock(&peer->mutex_ref);
+        remove_client(peer);
+    }
+    else {
+        pthread_mutex_unlock(&peer->mutex_ref);
+    }
+}
+
+/*
+ * Add a client to the list
+ * 
+ * !! The reference counter of the new client is 2:
+ * one reference in the linked list "clients" plus the returned reference
+ * 
+ * just call decr_ref to remove the last reference from "clients":
+ * This will remove the client from the linked list and free it's memory
+ */
 struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct in_addr clientIP, u_int16_t clientPort, struct in_addr vpnIP, int is_dtls_client) {
     if (n_clients >= config.max_clients) {
         if (config.debug) {
@@ -46,6 +82,7 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct
         return NULL;
     }
     
+    if (config.debug) printf("Adding new client %s\n", inet_ntoa(vpnIP));
     struct client *peer = malloc(sizeof(struct client));
     peer->time = time;
     bzero(&(peer->clientaddr), sizeof(peer->clientaddr));
@@ -60,6 +97,8 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct
     
     peer->is_dtls_client = is_dtls_client;
     peer->thread_running = 0;
+    pthread_mutex_init(&(peer->mutex_ref), NULL);
+    peer->ref_count = 2;
     
     createClientSSL(peer, 0);
     
@@ -67,7 +106,6 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct
     peer->prev = NULL;
     if (peer->next) peer->next->prev = peer;
     clients = peer;
-    if (config.debug) printf("Adding new client %s\n", inet_ntoa(vpnIP));
     n_clients ++;
     return peer;
 }
@@ -86,14 +124,8 @@ struct client *cache_client_real = NULL;
 void remove_client(struct client *peer) {
     if (config.debug) printf("Deleting the client %s\n", inet_ntoa(peer->vpnIP));
     
-    if (peer->thread_running) {
-        peer->thread_running = 0;
-        SSL_shutdown(peer->ssl);
-        BIO_write(peer->rbio, peer, 0);
-        pthread_join(peer->thread, NULL);
-    }
-    
     destroyCondition(&peer->cond_connected);
+    pthread_mutex_destroy(&peer->mutex_ref);
     SSL_free(peer->ssl);
     SSL_CTX_free(peer->ctx);
     
@@ -112,12 +144,13 @@ void remove_client(struct client *peer) {
 }
 
 /*
- * Get a client by its VPN IP address
+ * Get a client by its VPN IP address and increments its ref. counter
  * return NULL if the client is unknown
  */
 struct client * get_client_VPN(struct in_addr *address) {
     if (cache_client_VPN != NULL
         && cache_client_VPN->vpnIP.s_addr == address->s_addr) {
+        incr_ref(cache_client_VPN);
         return cache_client_VPN;
     }
     if (config.debug) printf("get %s\n", inet_ntoa(*address));
@@ -126,6 +159,7 @@ struct client * get_client_VPN(struct in_addr *address) {
         if (peer->vpnIP.s_addr == address->s_addr) {
             /* found */
             cache_client_VPN = peer;
+            incr_ref(peer);
             return peer;
         }
         peer = peer->next;
@@ -134,13 +168,14 @@ struct client * get_client_VPN(struct in_addr *address) {
 }
 
 /*
- * Get a client by its real IP address and UDP port
+ * Get a client by its real IP address and UDP port and increments its ref. counter
  * return NULL if the client is unknown
  */
 struct client * get_client_real(struct sockaddr_in *cl_address) {
     if (cache_client_real != NULL
         && cache_client_real->clientaddr.sin_addr.s_addr == cl_address->sin_addr.s_addr
         && cache_client_real->clientaddr.sin_port == cl_address->sin_port) {
+        incr_ref(cache_client_real);
         return cache_client_real;
     }
     if (config.debug) printf("get by client IP %s\n", inet_ntoa(cl_address->sin_addr));
@@ -150,6 +185,7 @@ struct client * get_client_real(struct sockaddr_in *cl_address) {
             && peer->clientaddr.sin_port == cl_address->sin_port) {
             /* found */
             cache_client_real = peer;
+            incr_ref(peer);
             return peer;
         }
         peer = peer->next;
@@ -208,17 +244,20 @@ void createClientSSL(struct client *peer, int recreate) {
     peer->ctx = SSL_CTX_new(meth);
     
     if (!SSL_CTX_use_certificate_chain_file(peer->ctx, config.certificate_pem)) {
+        ERR_print_errors_fp(stderr);
         perror("SSL_CTX_use_certificate_chain_file");
         fprintf(stderr, "%s\n", config.certificate_pem);
         exit(1);
     }
     if (!SSL_CTX_use_PrivateKey_file(peer->ctx, config.key_pem, SSL_FILETYPE_PEM)) {
+        ERR_print_errors_fp(stderr);
         perror("SSL_CTX_use_PrivateKey_file");
         exit(1);
     }
     SSL_CTX_set_verify(peer->ctx, SSL_VERIFY_PEER, verify_crl);
     SSL_CTX_set_verify_depth(peer->ctx, 1);
     if (!SSL_CTX_load_verify_locations(peer->ctx, config.verif_pem, NULL)) {
+        ERR_print_errors_fp(stderr);
         perror("SSL_CTX_load_verify_locations");
         exit(1);
     }

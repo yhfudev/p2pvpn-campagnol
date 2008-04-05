@@ -24,7 +24,7 @@
 #define PEER_H_
 
 /* clients states */
-enum client_type {PUNCHING, WAITING, ESTABLISHED, TIMEOUT};
+enum client_type {PUNCHING, WAITING, ESTABLISHED, TIMEOUT, CLOSED};
 
 /* client storage structure */
 struct client {
@@ -44,6 +44,9 @@ struct client {
     int is_dtls_client;             // DTLS client or server ?
     int thread_running;             // the thread from SSL_reading is running
     pthread_t thread;               // SSL_reading thread
+    
+    pthread_mutex_t mutex_ref;      // mutex used to change the reference counter
+    unsigned int ref_count;         // reference counter
 };
 
 
@@ -60,5 +63,8 @@ extern void createClientSSL(struct client *peer, int recreate);
 extern void remove_client(struct client *peer);
 extern struct client * get_client_VPN(struct in_addr *address);
 extern struct client * get_client_real(struct sockaddr_in *cl_address);
+
+extern void incr_ref(struct client *peer);
+extern void decr_ref(struct client *peer);
 
 #endif /*PEER_H_*/
