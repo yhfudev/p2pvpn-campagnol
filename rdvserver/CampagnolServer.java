@@ -30,6 +30,8 @@ import java.net.*;
  * and of all operation on the client objects */
 public class CampagnolServer {
     
+    public static String VERSION = "0.1";
+    
     /** flags */
     public static boolean verbose = false;
     public static boolean debug = false;
@@ -388,6 +390,13 @@ public class CampagnolServer {
         System.err.println(" -p, --port=PORT\t\tlistening port");
         System.err.println(" -g, --gui\t\t\tstart the GUI with the server");
         System.err.println(" -h, --help\t\t\tthis help message");
+        System.err.println(" -V, --version\t\t\tshow version information and exit\n");
+    }
+    
+    public static void version() {
+        System.err.println("Campagnol VPN | Server | Version "+VERSION);
+        System.err.println("Copyright (c) 2007 Antoine Vianey");
+        System.err.println("              2008 Florent Bondoux");
     }
     
     public static void main(String args[]) {
@@ -398,7 +407,7 @@ public class CampagnolServer {
         ArrayList options = null;
         ArrayList arguments = null;
         try {
-            ArrayList[] opt_args = OptionParser.getopt(args, "gvdhp:", new String[] {"gui", "verbose", "debug", "help", "port:"});
+            ArrayList[] opt_args = OptionParser.getopt(args, "gvVdhp:", new String[] {"gui", "verbose", "version", "debug", "help", "port:"});
             options = opt_args[0];
             arguments = opt_args[1];
         } catch (OptionParser.GetoptException e) {
@@ -425,6 +434,10 @@ public class CampagnolServer {
             }
             else if (opt[0].equals("-p") || opt[0].equals("--port")) {
                 portNumber = Integer.parseInt(opt[1]);
+            }
+            else if (opt[0].equals("-V") || opt[0].equals("--version")) {
+                CampagnolServer.version();
+                System.exit(0);
             }
         }
 
