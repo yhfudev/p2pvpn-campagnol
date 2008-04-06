@@ -4,7 +4,7 @@ README
 
 Campagnol VPN - distributed VPN over UDP/DTLS
 Copyright © 2007 Antoine Vianey
-            2008 Florent Bondoux
+            2008 Florent Bondoux <fbondoux@resel.fr>
 
 Campagnol is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -24,6 +24,16 @@ In order to compile Campagnol you need:
 - Java SDK >= 1.4 to build the rendezvous server
 - OpenSSL library version >= 0.9.8g http://www.openssl.org/
 - Universal TUN/TAP driver          http://vtun.sourceforge.net/tun
+
+To build the server, build every .java file in the rdvserver directory:
+  javac *.java
+or if you have Ant installed:
+  ant compile
+
+To build the client, go in the 'client' directory and run:
+  make
+You may edit the Makefile if you have installed OpenSSL in a non standard
+directory.
 
 
 Creating the certificates
@@ -88,21 +98,20 @@ needed by the openssl configuration file. The index.txt file keep a
 trace of every certificates generated with the key and the serial file
 contains the serial number of the next certificate.
 
-mkdir -p certs private
-touch index.txt
-echo "01" > serial
-openssl req -new -x509 -days 365 -extensions v3_ca -keyout ./private/cakey.pem -out cacert.pem -config ./openssl.cnf
+  mkdir -p certs private
+  touch index.txt
+  echo "01" > serial
+  openssl req -new -x509 -days 365 -extensions v3_ca -keyout ./private/cakey.pem -out cacert.pem -config ./openssl.cnf
 
 When you want to create a new certificate for a new client, first generate
 a certificate request and a private key for the client.
 
-mkdir client1
-openssl req -new -nodes -keyout "./client1/key.pem" -out "client1_req.pem" -config ./openssl.cnf
+  mkdir client1
+  openssl req -new -nodes -keyout "./client1/key.pem" -out "client1_req.pem" -config ./openssl.cnf
 
 Then we can create and sign the new certificate:
 
-openssl ca -config openssl.cnf -in "client1_req.pem" -out "client1/certificat.pem"
-
+  openssl ca -config openssl.cnf -in "client1_req.pem" -out "client1/certificat.pem"
 
 
 Configuration
@@ -110,3 +119,31 @@ Configuration
 
 You have to edit the sample campagnol configuration file for each
 client. A few options are mandatory.
+
+Be sure to set the same values for the following options on every clients:
+  server_host
+  server_port
+  network
+  cipher_list
+  timeout
+
+
+Running
+-------
+
+Run the rendezvous server on a publicly accessible computer (for every
+clients of the VPN). The server uses the default UDP port 57888. Be sure
+that this port is reachable. The main Java class is "CampagnolServer". The
+server doesn't require superuser privileges.
+  java CampagnolServer
+To start the server on another port:
+  java CampagnolServer --port=34567
+You can also start a small GUI to check if everything is in order:
+  java CampagnolServer --gui
+
+To start a client, run:
+  campagnol conf_file.conf
+To start the client as a daemon:
+  campagnol --daemon conf_file.conf
+Send a SIGTERM ou SIGINT signal to the client to kill it cleanly.
+
