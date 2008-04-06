@@ -34,8 +34,11 @@
 /* List of known clients */
 struct client *clients = NULL;
 int n_clients = 0;
-/* mutex used to manipulate 'clients' */
-pthread_mutex_t mutex_clients = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
+/* 
+ * mutex used to manipulate 'clients'
+ * It needs to be recursive since decr_ref may lock it
+ */
+pthread_mutex_t mutex_clients = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 
 
 /*
@@ -58,7 +61,9 @@ void decr_ref(struct client *peer) {
 //    fprintf(stderr, "decr %s [%d]\n", inet_ntoa(peer->vpnIP), peer->ref_count);
     if (peer->ref_count == 0) {
         pthread_mutex_unlock(&peer->mutex_ref);
+        MUTEXLOCK;
         remove_client(peer);
+        MUTEXUNLOCK;
     }
     else {
         pthread_mutex_unlock(&peer->mutex_ref);
