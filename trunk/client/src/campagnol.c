@@ -55,7 +55,15 @@ void usage(void) {
     fprintf(stderr, " -D, --daemon\t\t\tfork in background\n");
     fprintf(stderr, " -d, --debug\t\t\tdebug mode\n");
     fprintf(stderr, " -h, --help\t\t\tthis help message\n");
+    fprintf(stderr, " -V, --version\t\t\tshow version information and exit\n");
     exit(1);
+}
+
+void version(void) {
+    fprintf(stderr, "Campagnol VPN | Client | Version %s\n", VERSION);
+    fprintf(stderr, "Copyright (c) 2007 Antoine Vianey\n");
+    fprintf(stderr, "              2008 Florent Bondoux\n");
+    exit(0);
 }
 
 int parse_args(int argc, char **argv, char **configFile) {
@@ -68,10 +76,11 @@ int parse_args(int argc, char **argv, char **configFile) {
         {"verbose", 0, NULL, 'v'},
         {"daemon", 0, NULL, 'D'},
         {"debug", 0, NULL, 'd'},
+        {"version", 0, NULL, 'V'},
         {"help", 0, NULL, 'h'},
         {0, 0, 0, 0}
     };
-    while ((opt = getopt_long(argc, argv, "vdDh", long_options, NULL)) >= 0) {
+    while ((opt = getopt_long(argc, argv, "vVdDh", long_options, NULL)) >= 0) {
         switch(opt) {
             case 'v':
                 config.verbose = 1;
@@ -83,6 +92,8 @@ int parse_args(int argc, char **argv, char **configFile) {
                 config.debug = 1;
                 config.verbose = 1;
                 break;
+            case 'V' :
+                return 2;
             case 'h' :
                 return 1;
             default : return 1;
@@ -138,13 +149,17 @@ void daemonize(void) {
 int main (int argc, char **argv) {
     char *configFile;
     int sockfd, tunfd;
+    int pa;
     
     signal(SIGTERM, handler_term);
     signal(SIGINT, handler_term);
     
-
-    if (parse_args(argc, argv, &configFile) != 0) {
+    pa = parse_args(argc, argv, &configFile);
+    if (pa == 1) {
         usage();
+    }
+    else if (pa == 2) {
+        version();
     }
     
     if (config.daemonize) daemonize();
