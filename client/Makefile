@@ -1,35 +1,47 @@
 CC=gcc
-ifdef NODEBUG
-CFLAGS=-O3 -D_GNU_SOURCE -Wall -Wstrict-prototypes
-else
-CFLAGS=-g3 -O0 -D_GNU_SOURCE -Wall -Wstrict-prototypes
-endif
 
+SRC=src/
+OBJ=obj/
+INCLUDE=-Iinclude/
+DEP=.dep/
+BIN=bin/
+
+FLAGS=-D_GNU_SOURCE -Wall -Wstrict-prototypes $(INCLUDE)
+ifdef NODEBUG
+CFLAGS=-O3 $(FLAGS)
+else
+CFLAGS=-g3 -O0 $(FLAGS)
+endif
 LDFLAGS=-L/usr/local/lib -lpthread -lrt -lssl -lcrypto
 
-SRCS=$(wildcard *.c)
-OBJETS=$(SRCS:%.c=%.o)
+CSOURCES=bss_fifo.c campagnol.c communication.c configuration.c net_socket.c peer.c pthread_wrap.c tun_device.c
+OBJFILES=$(CSOURCES:%.c=$(OBJ)%.o)
+DEPFILES=$(OBJFILES:$(OBJ)%.o=$(DEP)%.d)
+BINFILE=$(BIN)campagnol
 
-all: campagnol
+.PHONY: all clean
 
-campagnol: $(OBJETS)
-	$(CC) $(LDFLAGS) $(OBJETS) -o $@
+
+$(DEP)%.d: $(SRC)%.c
+	@echo "Calculating dependencies for $<"
+	@$(CC) -MM -MP -MF"$@" -MT"$(@:$(DEP)%.d=$(OBJ)%.o)" $(FLAGS) $< 
+
+$(OBJ)%.o: $(SRC)%.c
+	@echo "[CC] $<"
+	@$(CC) $(CFLAGS) -c -o $@ $<
+
+$(BINFILE): $(DEPFILES) $(OBJFILES)
+	@echo "[LNK] $@"
+	@$(CC) $(LDFLAGS) -o $@ $(OBJFILES)
+
+all: $(BINFILE)
+
+test:
+	echo $(findstring clean,$(MAKECMDGOALS))
 
 clean:
-	rm -f campagnol *~ *.o
+	rm -f $(OBJFILES) $(DEPFILES) $(BINFILE)
 
-depend:
-	makedepend -m -Y. $(SRCS)
-
-# DO NOT DELETE
-
-bss_fifo.o: campagnol.h configuration.h bss_fifo.h pthread_wrap.h
-campagnol.o: campagnol.h configuration.h tun_device.h net_socket.h
-campagnol.o: communication.h
-communication.o: campagnol.h configuration.h communication.h pthread_wrap.h
-communication.o: net_socket.h peer.h
-configuration.o: campagnol.h configuration.h
-net_socket.o: campagnol.h configuration.h communication.h net_socket.h
-peer.o: campagnol.h configuration.h peer.h pthread_wrap.h bss_fifo.h
-pthread_wrap.o: campagnol.h configuration.h pthread_wrap.h
-tun_device.o: campagnol.h configuration.h tun_device.h
+ifneq ($(firstword $(MAKECMDGOALS)),clean)
+-include $(DEPFILES)
+endif
