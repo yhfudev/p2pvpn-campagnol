@@ -147,7 +147,7 @@ void daemonize(void) {
 
 
 int main (int argc, char **argv) {
-    char *configFile;
+    char *configFile = NULL;
     int sockfd, tunfd;
     int pa;
     
