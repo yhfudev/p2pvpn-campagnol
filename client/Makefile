@@ -36,9 +36,6 @@ $(BINFILE): $(DEPFILES) $(OBJFILES)
 
 all: $(BINFILE)
 
-test:
-	echo $(findstring clean,$(MAKECMDGOALS))
-
 clean:
 	rm -f $(OBJFILES) $(DEPFILES) $(BINFILE)
 
