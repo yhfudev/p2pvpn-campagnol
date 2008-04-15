@@ -221,6 +221,7 @@ public class CampagnolServer {
                         removeConnectionsWithClient(client.vpnIPString);
                         clients.remove(client);
                     }
+                    break;
                 case MsgServStruct.PING :
                     /**    ping from a peer */
                     if (CampagnolServer.verbose) System.out.println("<< PING received from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
