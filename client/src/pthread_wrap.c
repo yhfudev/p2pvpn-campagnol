@@ -26,17 +26,18 @@
  */
 #include "campagnol.h"
 #include "pthread_wrap.h"
+#include "log.h"
 
 
 void mutexLock(pthread_mutex_t *mutex) {
     if (mutex) {
         if ( pthread_mutex_lock(mutex) != 0 ) {
-            perror("Error pthread_mutex_lock()");
+            log_error("Error pthread_mutex_lock()");
             exit(1);
         }
     }
     else {
-        fprintf(stderr, "Call mutexLock with a NULL mutex\n");
+        log_message("Call mutexLock with a NULL mutex");
         exit(1);
     }
 };
@@ -45,12 +46,12 @@ void mutexLock(pthread_mutex_t *mutex) {
 void mutexUnlock(pthread_mutex_t *mutex) {
     if (mutex) {
         if ( pthread_mutex_unlock(mutex) != 0 ) {
-            perror("Error pthread_mutex_unlock()");
+            log_error("Error pthread_mutex_unlock()");
             exit(1);
         }
     }
     else {
-        fprintf(stderr, "Call mutexUnlock with a NULL mutex\n");
+        log_message("Call mutexUnlock with a NULL mutex");
         exit(1);
     }
 };
@@ -59,7 +60,7 @@ void mutexUnlock(pthread_mutex_t *mutex) {
 pthread_cond_t createCondition(void) {
     pthread_cond_t cond;
     if ( pthread_cond_init(&cond, NULL) != 0 ) {
-        perror("Error pthread_cond_init()");
+        log_error("Error pthread_cond_init()");
         exit(1);
     }
     return cond;
@@ -76,13 +77,13 @@ int conditionWait(pthread_cond_t *cond, pthread_mutex_t *mutex) {
         int retval;
         retval =  pthread_cond_wait(cond, mutex);
         if ( retval != 0) {
-            perror("Error pthread_cond_wait()");
+            log_error("Error pthread_cond_wait()");
             exit(1);
         }
         return retval;
     }
     else {
-        fprintf(stderr, "Call conditionWait with a NULL condition\n");
+        log_message("Call conditionWait with a NULL condition");
         exit(1);
     }
 }
@@ -92,13 +93,13 @@ int conditionTimedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, const struc
         int retval;
         retval =  pthread_cond_timedwait(cond, mutex, abs_timeout);
         if ( retval != 0 && retval != ETIMEDOUT) {
-            perror("Error pthread_cond_timedwait()");
+            log_error("Error pthread_cond_timedwait()");
             exit(1);
         }
         return retval;
     }
     else {
-        fprintf(stderr, "Call conditionTimedwait with a NULL condition\n");
+        log_message("Call conditionTimedwait with a NULL condition");
         exit(1);
     }
 }
@@ -108,13 +109,13 @@ int conditionBroadcast(pthread_cond_t *cond) {
         int retval;
         retval =  pthread_cond_broadcast(cond);
         if ( retval != 0) {
-            perror("Error pthread_cond_broadcast()");
+            log_error("Error pthread_cond_broadcast()");
             exit(1);
         }
         return retval;
     }
     else {
-        fprintf(stderr, "Call conditionBroadcat with a NULL semaphore\n");
+        log_message("Call conditionBroadcat with a NULL semaphore");
         exit(1);
     }
 }
@@ -124,13 +125,13 @@ int conditionSignal(pthread_cond_t *cond) {
         int retval;
         retval =  pthread_cond_signal(cond);
         if ( retval != 0) {
-            perror("Error pthread_cond_signal()");
+            log_error("Error pthread_cond_signal()");
             exit(1);
         }
         return retval;
     }
     else {
-        fprintf(stderr, "Call conditionSignal with a NULL semaphore\n");
+        log_message("Call conditionSignal with a NULL semaphore");
         exit(1);
     }
 }
@@ -142,7 +143,7 @@ int conditionSignal(pthread_cond_t *cond) {
 pthread_t createThread(void * (*start_routine)(void *), void * arg) {
     pthread_t thread;
     if ( pthread_create(&thread, NULL, start_routine, arg) != 0 ) {
-        perror("Error pthread_create()");
+        log_error("Error pthread_create()");
         exit(1);
     }
     return thread;

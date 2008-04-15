@@ -28,6 +28,7 @@
 #include "peer.h"
 #include "pthread_wrap.h"
 #include "bss_fifo.h"
+#include "log.h"
 
 #include <arpa/inet.h>
 
@@ -213,7 +214,7 @@ int verify_crl(int preverify_ok, X509_STORE_CTX *x509_ctx) {
     if (config.crl) {
         /* Check the name of the certificate issuer */
         if (X509_NAME_cmp(X509_CRL_get_issuer(config.crl), X509_get_issuer_name(x509_ctx->current_cert)) != 0) {
-            fprintf(stderr, "The received certificate and the CRL have different issuers!\n");
+            log_message("The received certificate and the CRL have different issuers!");
             ERR_print_errors_fp(stderr);
             return 0;
         }
@@ -225,7 +226,7 @@ int verify_crl(int preverify_ok, X509_STORE_CTX *x509_ctx) {
         for (i = 0; i < n; i++) {
             revoked = (X509_REVOKED *)sk_value(X509_CRL_get_REVOKED(config.crl), i);
             if (ASN1_INTEGER_cmp(revoked->serialNumber, X509_get_serialNumber(x509_ctx->current_cert)) == 0) {
-              fprintf(stderr, "The received certificate is revoked!\n");
+              log_message("The received certificate is revoked!");
               ERR_print_errors_fp(stderr);
               return 0;
             }
@@ -250,20 +251,20 @@ void createClientSSL(struct client *peer, int recreate) {
     
     if (!SSL_CTX_use_certificate_chain_file(peer->ctx, config.certificate_pem)) {
         ERR_print_errors_fp(stderr);
-        perror("SSL_CTX_use_certificate_chain_file");
-        fprintf(stderr, "%s\n", config.certificate_pem);
+        log_error("SSL_CTX_use_certificate_chain_file");
+        log_message("%s", config.certificate_pem);
         exit(1);
     }
     if (!SSL_CTX_use_PrivateKey_file(peer->ctx, config.key_pem, SSL_FILETYPE_PEM)) {
         ERR_print_errors_fp(stderr);
-        perror("SSL_CTX_use_PrivateKey_file");
+        log_error("SSL_CTX_use_PrivateKey_file");
         exit(1);
     }
     SSL_CTX_set_verify(peer->ctx, SSL_VERIFY_PEER, verify_crl);
     SSL_CTX_set_verify_depth(peer->ctx, 1);
     if (!SSL_CTX_load_verify_locations(peer->ctx, config.verif_pem, NULL)) {
         ERR_print_errors_fp(stderr);
-        perror("SSL_CTX_load_verify_locations");
+        log_error("SSL_CTX_load_verify_locations");
         exit(1);
     }
     
@@ -280,7 +281,7 @@ void createClientSSL(struct client *peer, int recreate) {
     /* Algorithms */
     if (strlen(config.cipher_list) != 0) {
         if (! SSL_CTX_set_cipher_list(peer->ssl->ctx, config.cipher_list)){
-            perror("SSL_CTX_set_cipher_list");
+            log_error("SSL_CTX_set_cipher_list");
             ERR_print_errors_fp(stderr);
             exit(1);
         }

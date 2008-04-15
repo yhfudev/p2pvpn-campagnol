@@ -36,6 +36,7 @@
 #include "pthread_wrap.h"
 #include "net_socket.h"
 #include "peer.h"
+#include "log.h"
 
 
 /*
@@ -103,7 +104,7 @@ void handler_sigTimerPing(int sig) {
     /* send a PING message to the RDV server */
     init_smsg(&smsg, PING,0,0);
     int s = sendto(sockfd_global,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
-    if (s == -1) perror("PING");
+    if (s == -1) log_error("PING");
 }
 
 /*
@@ -145,7 +146,7 @@ int register_rdv(int sockfd) {
     fd_set fd_select;
     
     /* Create a HELLO message */
-    if (config.verbose) printf("Registering with the RDV server...\n");
+    log_message_verb("Registering with the RDV server...");
     init_smsg(&smsg, HELLO, config.vpnIP.s_addr, 0);
     
     while (notRegistered && registeringTries<MAX_REGISTERING_TRIES && !end_campagnol) {
@@ -153,7 +154,7 @@ int register_rdv(int sockfd) {
         registeringTries++;
         if (config.debug) printf("Sending HELLO\n");
         if ((s=sendto(sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr))) == -1) {
-            perror("sendto");
+            log_error("sendto");
         }
         
         /* fd_set used with the select call */
@@ -166,21 +167,21 @@ int register_rdv(int sockfd) {
             /* Got a message from the server */
             socklen_t len = sizeof(struct sockaddr_in);
             if ( (r = recvfrom(sockfd,&rmsg,sizeof(struct message),0,(struct sockaddr *)&config.serverAddr,&len)) == -1) {
-                perror("recvfrom");
+                log_error("recvfrom");
             }
             switch (rmsg.type) {
                 case OK:
                     /* Registration OK */
-                    if (config.verbose) printf("Registration complete\n");
+                    log_message_verb("Registration complete");
                     notRegistered = 0;
                     break;
                 case NOK:
                     /* The RDV server rejected the client */
-                    fprintf(stderr, "The RDV server rejected the client\n");
+                    log_message("The RDV server rejected the client");
                     sleep(1);
                     break;
                 default:
-                    fprintf(stderr, "The RDV server replied with something strange... (message code is %d)\n", rmsg.type);
+                    log_message("The RDV server replied with something strange... (message code is %d)", rmsg.type);
                     break;
             }
         }
@@ -188,7 +189,7 @@ int register_rdv(int sockfd) {
 
     /* Registration failed. The server may be down */
     if (notRegistered) {
-        fprintf(stderr, "The connection with the RDV server failed\n");
+        log_message_verb("The connection with the RDV server failed");
         return 1;
     }
     
@@ -273,7 +274,7 @@ void * SSL_reading(void * args) {
     // DTLS handshake
     r = peer->ssl->handshake_func(peer->ssl);
     if (r != 1) {
-        fprintf(stderr, "Error during DTLS handshake with peer %s\n", inet_ntoa(peer->vpnIP));
+        log_message("Error during DTLS handshake with peer %s", inet_ntoa(peer->vpnIP));
         ERR_print_errors_fp(stderr);
         struct message smsg;
         init_smsg(&smsg, CLOSE_CONNECTION, peer->vpnIP.s_addr, 0);
@@ -291,19 +292,19 @@ void * SSL_reading(void * args) {
     peer->state = ESTABLISHED;
     MUTEXUNLOCK;
     conditionSignal(&peer->cond_connected);
-    if (config.verbose) printf("new DTLS connection opened with peer %s\n", inet_ntoa(peer->vpnIP));
+    log_message_verb("new DTLS connection opened with peer %s", inet_ntoa(peer->vpnIP));
     
     while (!end_campagnol) {
         /* Read and uncrypt a message, send it on the TUN device */
         r = SSL_read(peer->ssl, &u, MESSAGE_MAX_LENGTH);
         if (r < 0) { // error
             int err = SSL_get_error(peer->ssl, r);
-            fprintf(stderr, "SSL_read %d\n", err);
+            log_message("SSL_read %d\n", err);
             ERR_print_errors_fp(stderr);
         }
         MUTEXLOCK;
         if (r == 0) { // close connection
-            if (config.verbose) printf("DTLS connection closed with peer %s\n", inet_ntoa(peer->vpnIP));
+            log_message_verb("DTLS connection closed with peer %s", inet_ntoa(peer->vpnIP));
             if (end_campagnol) {
                 decr_ref(peer);
                 MUTEXUNLOCK;
@@ -519,7 +520,7 @@ void * comm_socket(void * argument) {
             while (peer != NULL) {
                 struct client *next = peer->next;
                 if (time(NULL) - peer->time > config.timeout+10) {
-                    if (config.debug) printf("Is the peer %s dead ? cleaning connection\n", inet_ntoa(peer->vpnIP));
+                    log_message_verb("Is the peer %s dead ? cleaning connection", inet_ntoa(peer->vpnIP));
                     if (peer->thread_running) {
                         init_smsg(&smsg, CLOSE_CONNECTION, peer->vpnIP.s_addr, 0);
                         s = sendto(sockfd, &smsg, sizeof(smsg), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
@@ -723,6 +724,7 @@ void * comm_tun(void * argument) {
                         break;
                     default:
                         decr_ref(peer);
+                        break;
                 }
             }
         }
@@ -779,7 +781,7 @@ void start_vpn(int sockfd, int tunfd) {
     init_smsg(&smsg, BYE, config.vpnIP.s_addr, 0);
     if (config.debug) printf("Sending BYE\n");
     if (sendto(sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr)) == -1) {
-        perror("sendto");
+        log_error("sendto");
     }
 }
 

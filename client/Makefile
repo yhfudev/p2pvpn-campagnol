@@ -15,7 +15,7 @@ endif
 LDFLAGS ?= -L/usr/local/lib
 LDLIBS ?= -lpthread -lrt -lssl -lcrypto
 
-CSOURCES = bss_fifo.c campagnol.c communication.c configuration.c net_socket.c peer.c pthread_wrap.c tun_device.c
+CSOURCES = bss_fifo.c campagnol.c communication.c configuration.c log.c net_socket.c peer.c pthread_wrap.c tun_device.c
 OBJFILES = $(CSOURCES:%.c=$(OBJ)%.o)
 DEPFILES = $(CSOURCES:%.c=$(DEP)%.d)
 BINFILE = $(BIN)campagnol
