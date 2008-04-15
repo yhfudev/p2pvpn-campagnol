@@ -114,32 +114,15 @@ int parse_args(int argc, char **argv, char **configFile) {
 }
 
 void daemonize(void) {
-    pid_t pid;
-    
-    if (getppid() == 1) { // parent process
-        return;        
-    }
-    
-    pid = fork();
-    if (pid < 0) {
-        perror("fork");
+    int r;
+
+    printf("Going in background...\n");
+    r = daemon(1, 0);
+    if (r != 0) {
+        perror("Unable to daemonize");
         exit(1);
     }
-    if (pid > 0) {
-        printf("Going in background with pid %d\n", pid);
-        exit(0);
-    }
-    
-    umask(0);
-    
-    if (setsid() < 0) {
-        perror("setsid");
-        exit(1);
-    }
-    
-    freopen( "/dev/null", "r", stdin);
-    freopen( "/dev/null", "w", stdout);
-    freopen( "/dev/null", "w", stderr);
+
     config.verbose = 0;
     config.debug = 0;
 }
