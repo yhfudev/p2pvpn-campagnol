@@ -37,12 +37,13 @@
 #include "net_socket.h"
 #include "communication.h"
 #include "configuration.h"
+#include "log.h"
 
 int end_campagnol = 0;
 
 void handler_term(int s) {
     end_campagnol = 1;
-    printf("received signal %d, exiting...\n", s);
+    log_message("received signal %d, exiting...", s);
     signal(SIGTERM, SIG_DFL);
     signal(SIGINT, SIG_DFL);
 }
@@ -119,7 +120,7 @@ void daemonize(void) {
     printf("Going in background...\n");
     r = daemon(1, 0);
     if (r != 0) {
-        perror("Unable to daemonize");
+        log_error("Unable to daemonize");
         exit(1);
     }
 
@@ -146,6 +147,7 @@ int main (int argc, char **argv) {
     }
     
     if (config.daemonize) daemonize();
+    log_init(config.daemonize, "campagnol");
     
     parseConfFile(configFile);
     /* Print the current OpenSSL error stack (missing CRL file)
@@ -190,10 +192,11 @@ int main (int argc, char **argv) {
         exit(1);
     }
     
-    puts("Starting VPN");
+    log_message("Starting VPN");
     
     start_vpn(sockfd, tunfd);
     
+    log_close();
     close_tun(tunfd);
     close(sockfd);
     return 0;

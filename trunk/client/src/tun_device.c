@@ -29,6 +29,7 @@
 
 #include "campagnol.h"
 #include "tun_device.h"
+#include "log.h"
 
 /*
  * Open a new TUN virtual interface
@@ -43,7 +44,7 @@ int init_tun(int istun) {
     /* Open TUN interface */
     if (config.verbose) printf("TUN interface initialization\n");
     if( (tunfd = open("/dev/net/tun", O_RDWR)) < 0 ) {
-         perror("Could not open /dev/net/tun");
+         log_error("Could not open /dev/net/tun");
          return -1;
     }
 
@@ -57,12 +58,12 @@ int init_tun(int istun) {
     
     if ((ioctl(tunfd, TUNSETIFF, (void *) &ifr)) < 0) {
         close(tunfd);
-        perror("Error: ioctl TUNSETIFF");
+        log_error("Error: ioctl TUNSETIFF");
         return -1;
     }
     if ((ioctl(tunfd, TUNSETNOCSUM, 1)) < 0) {
         close(tunfd);
-        perror("Error: ioctl TUNSETNOCSUM");
+        log_error("Error: ioctl TUNSETNOCSUM");
         return -1;
     }
     
@@ -85,7 +86,7 @@ int init_tun(int istun) {
         r = system(systemcall);
     }
     if (r != 0) {
-        fprintf(stderr, "Error while configuring the TUN interface\n");
+        log_message_verb("Error while configuring the TUN interface");
         return -1;
     }
         
