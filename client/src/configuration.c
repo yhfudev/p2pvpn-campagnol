@@ -301,7 +301,7 @@ void parseConfFile(char *confFile) {
                 log_message("[%s:max_clients] Max number of clients is not valid: \"%s\"", confFile, value);
                 exit(1);
             }
-            if (config.max_clients < 0) {
+            if (config.max_clients < 1) {
                 log_message("[%s:max_clients] Max number of clients %d must be >= 1", confFile, config.timeout);
                 exit(1);
             }
