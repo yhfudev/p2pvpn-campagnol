@@ -298,9 +298,12 @@ void * SSL_reading(void * args) {
         /* Read and uncrypt a message, send it on the TUN device */
         r = SSL_read(peer->ssl, &u, MESSAGE_MAX_LENGTH);
         if (r < 0) { // error
+            if (BIO_should_read(peer->rbio)) {
+                continue;
+            }
             int err = SSL_get_error(peer->ssl, r);
-            log_message("SSL_read %d\n", err);
-            ERR_print_errors_fp(stderr);
+            log_message("SSL_read %d %d", err, errno);
+            continue;
         }
         MUTEXLOCK;
         if (r == 0) { // close connection
