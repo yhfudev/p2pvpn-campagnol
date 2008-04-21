@@ -1,37 +1,46 @@
+About
+-----
+
 This directory contains samples configuration files and X.509
 certificates. The certificates are intended for testing purpose
 only. Those files allow you to quickly test Campagnol and see if the
 UDP hole punching is working with your NAT/firewall.
 
 You will have to edit the configurations file at least to change the
-“server_host” configuration variable with your rendezvous server
-host. The
+"server_host" configuration variable with your rendezvous server
+host.
 
-Description of the files:
+The two configuration files use relative path for the keys and
+certificates. So you have to run the client from this directory unless
+you change the paths.
+
+
+Description of the files
+------------------------
 
 cacert.pem
 	The root certificate used to sign the other certificates
 crl.pem
 	A certificate revocation list revoking the certificate in
-	“cert_revoked”
+	"./cert_revoked/certificate.pem"
 cert1/certificate.pem
-	A client certificate signed with cacert.pem
+	A client certificate signed with "./cacert.pem"
 cert1/key.pem
-	The private key associated with cert1/certificate.pem
+	The private key associated with "./cert1/certificate.pem"
 cert2/certificate.pem
-	A client certificate signed with cacert.pem
+	A client certificate signed with "./cacert.pem"
 cert2/key.pem
-	The private key associated with cert2/certificate.pem
+	The private key associated with "./cert2/certificate.pem"
 cert_revoked/certificate.pem
-	A client certificate signed with cacert.pem. This certificate
-	is revoked by crl.pem
+	A client certificate signed with "./cacert.pem". This certificate
+	is revoked by "./crl.pem"
 cert_revoked/key.pem
-	The private key associated with cert_revoked/certificate.pem
+	The private key associated with "./cert_revoked/certificate.pem"
 client1.conf
-	A configuration file using the certificate and key in cert1,
-	cacert.pem and crl.pem. It will connect to the VPN with the
-	IP 10.0.0.1
+	A configuration file using the certificate and key in "./cert1/",
+	"./cacert.pem" and "./crl.pem". It will connect to the VPN
+	with the IP 10.0.0.1
 client2.conf
-	A configuration file using the certificate and key in cert2,
-	cacert.pem and crl.pem. It will connect to the VPN with the
-	IP 10.0.0.2
+	A configuration file using the certificate and key in "./cert2/",
+	"./cacert.pem" and "./crl.pem". It will connect to the VPN
+	with the IP 10.0.0.2

@@ -16,6 +16,9 @@ If you have any ideas, suggestions or if you need help,
 you can use the forums on the SourceForge project page:
 http://sourceforge.net/projects/campagnol/
 
+Feel free to mail me any questions/comments that you may have at
+fbondoux@resel.fr especially since Campagnol is a young project.
+
 
 Compilation
 -----------
@@ -101,17 +104,20 @@ contains the serial number of the next certificate.
   mkdir -p certs private
   touch index.txt
   echo "01" > serial
-  openssl req -new -x509 -days 365 -extensions v3_ca -keyout ./private/cakey.pem -out cacert.pem -config ./openssl.cnf
+  openssl req -new -x509 -days 365 -extensions v3_ca -keyout \
+  ./private/cakey.pem -out cacert.pem -config ./openssl.cnf
 
 When you want to create a new certificate for a new client, first generate
 a certificate request and a private key for the client.
 
   mkdir client1
-  openssl req -new -nodes -keyout "./client1/key.pem" -out "client1_req.pem" -config ./openssl.cnf
+  openssl req -new -nodes -keyout "./client1/key.pem" -out \
+  "client1_req.pem" -config ./openssl.cnf
 
 Then we can create and sign the new certificate:
 
-  openssl ca -config openssl.cnf -in "client1_req.pem" -out "client1/certificat.pem"
+  openssl ca -config openssl.cnf -in "client1_req.pem" -out \
+  "client1/certificat.pem"
 
 
 Configuration

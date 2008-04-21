@@ -9,6 +9,8 @@ Known issues
 
 Plans
 -----
+- Autoconf and automake.
+- FreeBSD port.
 - Try to cope with the loss of important DTLS datagrams.
 - Rewrite the rendezvous server in C, which would allow to use DLTS
   between the peers and the server. Or wait for a good and flexible Java
