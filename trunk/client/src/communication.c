@@ -294,7 +294,7 @@ void * SSL_reading(void * args) {
     conditionSignal(&peer->cond_connected);
     log_message_verb("new DTLS connection opened with peer %s", inet_ntoa(peer->vpnIP));
     
-    while (!end_campagnol) {
+    while (1) { 
         /* Read and uncrypt a message, send it on the TUN device */
         r = SSL_read(peer->ssl, &u, MESSAGE_MAX_LENGTH);
         if (r < 0) { // error
@@ -308,10 +308,8 @@ void * SSL_reading(void * args) {
         MUTEXLOCK;
         if (r == 0) { // close connection
             log_message_verb("DTLS connection closed with peer %s", inet_ntoa(peer->vpnIP));
-            if (end_campagnol) {
-                decr_ref(peer);
-                MUTEXUNLOCK;
-                return NULL;
+            if (peer->send_shutdown) {
+                SSL_shutdown(peer->ssl);
             }
             peer->thread_running = 0;
             peer->state = CLOSED;
@@ -350,17 +348,31 @@ void * SSL_reading(void * args) {
             write(tunfd, (unsigned char *)&u, sizeof(u));
         }
     }
-    decr_ref(peer);
-    return NULL;
 }
 
 /*
  * Create the SSL_reading thread
  */
-void createSSL(struct client *peer) {
+void start_SSL_reading(struct client *peer) {
     peer->thread_running = 1;
     incr_ref(peer);
     peer->thread = createThread(SSL_reading, peer);
+}
+
+/*
+ * Stop the SSL_reading thread after sending a DTLS shutdown alert
+ * AND remove the last reference of the peer
+ * The peer is detroyed after calling end_SSL_reading.
+ * This insure that there is no inconsistency between the threads
+ */
+inline void end_SSL_reading(struct client *peer) {
+    peer->thread_running = 0;
+    peer->send_shutdown = 1;
+    /* SSL_read will return with 0, which is the same
+     * as when we receive a DTLS shutdown alert
+     * Just pass a non NULL pointer to BIO_write
+     */
+    BIO_write(peer->rbio, &peer, 0);
 }
 
 
@@ -498,7 +510,7 @@ void * comm_socket(void * argument) {
                                 peer->clientaddr = unknownaddr;
                                 if (peer->thread_running == 0) {
                                     BIO_ctrl(peer->wbio, BIO_CTRL_DGRAM_SET_PEER, 0, &peer->clientaddr);
-                                    createSSL(peer);
+                                    start_SSL_reading(peer);
                                 }
                                 decr_ref(peer);
                             }
@@ -527,9 +539,7 @@ void * comm_socket(void * argument) {
                     if (peer->thread_running) {
                         init_smsg(&smsg, CLOSE_CONNECTION, peer->vpnIP.s_addr, 0);
                         s = sendto(sockfd, &smsg, sizeof(smsg), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
-                        peer->thread_running = 0;
-                        SSL_shutdown(peer->ssl);
-                        BIO_write(peer->rbio, &u, 0);
+                        end_SSL_reading(peer);
                     }
                     else {
                         init_smsg(&smsg, CLOSE_CONNECTION, peer->vpnIP.s_addr, 0);
@@ -546,9 +556,7 @@ void * comm_socket(void * argument) {
                         if (peer->thread_running) {
                             init_smsg(&smsg, CLOSE_CONNECTION, peer->vpnIP.s_addr, 0);
                             s = sendto(sockfd, &smsg, sizeof(smsg), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
-                            peer->thread_running = 0;
-                            SSL_shutdown(peer->ssl);
-                            BIO_write(peer->rbio, &u, 0);
+                            end_SSL_reading(peer);
                         }
                         else {
                             init_smsg(&smsg, CLOSE_CONNECTION, peer->vpnIP.s_addr, 0);
@@ -767,11 +775,7 @@ void start_vpn(int sockfd, int tunfd) {
     while (peer != NULL) {
         next = peer->next;
         if (peer->thread_running) {
-            peer->thread_running = 0;
-            SSL_shutdown(peer->ssl);
-            BIO_write(peer->rbio, &smsg, 0);
-            peer->state = CLOSED;
-            decr_ref(peer);
+            end_SSL_reading(peer);
         }
         else {
             peer->state = CLOSED;

@@ -100,6 +100,7 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct
     peer->tunfd = tunfd;
     peer->sockfd = sockfd;
     peer->cond_connected = createCondition();
+    peer->send_shutdown = 0;
     
     peer->is_dtls_client = is_dtls_client;
     peer->thread_running = 0;
