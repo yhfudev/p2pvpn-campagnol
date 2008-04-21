@@ -181,16 +181,16 @@ public class CampagnolServer {
                         if (clientByID == null) {
                             /** OK for registering with this vpn IP on this vpn id*/
                             clients.add(client);
-                            sendOK(true, packet.getSocketAddress());
+                            sendOK(packet.getSocketAddress());
                         } else if (clientByID.isTimeout()) {
                             removeConnectionsWithClient(clientByID.vpnIPString);
                             clients.remove(clientByID);
                             clients.add(client);
-                            sendOK(true, packet.getSocketAddress());
+                            sendOK(packet.getSocketAddress());
                         } else {
                             /** NOT OK for registering */
                             client = null;
-                            sendOK(false, packet.getSocketAddress());
+                            sendNOK(packet.getSocketAddress());
                         }
                     } else {
                         /** client already registered but...
@@ -199,18 +199,18 @@ public class CampagnolServer {
                             /** a PC is already connected but seemed to be timeout */
                             if (java.util.Arrays.equals(message.ip1, client.vpnIP)) {
                                 client.updateTime();    // initialize timeout
-                                sendOK(true, packet.getSocketAddress());
+                                sendOK(packet.getSocketAddress());
                             } else {// another VPNIP
                                 removeConnectionsWithClient(client.vpnIPString);
                                 clients.remove(client);
                                 clients.add(new ClientStruct(packet.getSocketAddress(), message.ip1));
                                 client = null;
-                                sendOK(true, packet.getSocketAddress());
+                                sendOK(packet.getSocketAddress());
                             }
                         } else {
                             /** a PC is already connected on this socket (IPv4 address + port) */
                             if (CampagnolServer.verbose) System.out.println("A client is already connected with this IP/port");
-                            sendOK(false, packet.getSocketAddress());
+                            sendNOK(packet.getSocketAddress());
                         }
                     }
                     break;
@@ -294,18 +294,22 @@ public class CampagnolServer {
         }
     }
     
-    public void sendOK(boolean ok, SocketAddress address) {
+    public void sendOK(SocketAddress address) {
         try {
-            if (ok) this.socket.send(new DatagramPacket(MsgServStruct.MSG_OK,MsgServStruct.MSG_LENGTH,address));
-            else this.socket.send(new DatagramPacket(MsgServStruct.MSG_NOK,MsgServStruct.MSG_LENGTH,address));
-            if (ok) {
-                if (CampagnolServer.verbose) System.out.println(">> OK sent to client "+address.toString());
-            }
-            else {
-                if (CampagnolServer.verbose) System.out.println(">> NOK sent to client "+address.toString());
-            }
+            this.socket.send(new DatagramPacket(MsgServStruct.MSG_OK,MsgServStruct.MSG_LENGTH,address));
+            if (CampagnolServer.verbose) System.out.println(">> OK sent to client "+address.toString());
         } catch (Exception ex) {
             System.err.println("Error in sendOK:");
+            ex.printStackTrace();
+        }
+    }
+    
+    public void sendNOK(SocketAddress address) {
+        try {
+            this.socket.send(new DatagramPacket(MsgServStruct.MSG_NOK,MsgServStruct.MSG_LENGTH,address));
+            if (CampagnolServer.verbose) System.out.println(">> NOK sent to client "+address.toString());
+        } catch (Exception ex) {
+            System.err.println("Error in sendNOK:");
             ex.printStackTrace();
         }
     }
