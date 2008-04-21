@@ -770,6 +770,7 @@ void start_vpn(int sockfd, int tunfd) {
     
     free(args);
     
+    MUTEXLOCK;
     struct client *peer, *next;
     peer = clients;
     while (peer != NULL) {
@@ -783,7 +784,7 @@ void start_vpn(int sockfd, int tunfd) {
         }
         peer = next;
     }
-    
+    MUTEXUNLOCK;
     
     init_smsg(&smsg, BYE, config.vpnIP.s_addr, 0);
     if (config.debug) printf("Sending BYE\n");
