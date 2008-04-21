@@ -44,6 +44,7 @@ struct client {
     int is_dtls_client;             // DTLS client or server ?
     int thread_running;             // the thread from SSL_reading is running
     pthread_t thread;               // SSL_reading thread
+    int send_shutdown;              // Send a shutdown message after SSL_read returns 0
     
     pthread_mutex_t mutex_ref;      // mutex used to change the reference counter
     unsigned int ref_count;         // reference counter
