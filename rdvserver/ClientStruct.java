@@ -50,18 +50,6 @@ public class ClientStruct {
         this.createTime = this.timeoutMillis;
     }
     
-    
-    public boolean sameAs(ClientStruct client) {
-        boolean ok = client.port == this.port;
-        for (int i=0; ok && i<this.realIP.length; i++) {
-            ok = this.realIP[i] == client.realIP[i];
-        }
-        for (int i=0; ok && i<this.vpnIP.length; i++) {
-            ok = this.vpnIP[i] == client.vpnIP[i];
-        }
-        return ok;
-    }
-    
     public void updateTime() {
         this.timeoutMillis = System.currentTimeMillis();
     }

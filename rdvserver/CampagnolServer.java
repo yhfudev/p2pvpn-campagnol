@@ -197,14 +197,13 @@ public class CampagnolServer {
                          * check timeout connection */
                         if (client.isTimeout()) {
                             /** a PC is already connected but seemed to be timeout */
-                            ClientStruct newClient = new ClientStruct(packet.getSocketAddress(), message.ip1);
-                            if (newClient.sameAs(client)) {
+                            if (java.util.Arrays.equals(message.ip1, client.vpnIP)) {
                                 client.updateTime();    // initialize timeout
                                 sendOK(true, packet.getSocketAddress());
                             } else {// another VPNIP
                                 removeConnectionsWithClient(client.vpnIPString);
                                 clients.remove(client);
-                                clients.add(newClient);
+                                clients.add(new ClientStruct(packet.getSocketAddress(), message.ip1));
                                 client = null;
                                 sendOK(true, packet.getSocketAddress());
                             }
