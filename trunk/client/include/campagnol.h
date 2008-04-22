@@ -24,7 +24,7 @@
 #ifndef CAMPAGNOL_H_
 #define CAMPAGNOL_H_
 
-#define VERSION "0.1"
+#define VERSION "0.2"
 
 #include <stdio.h> 
 #include <stdlib.h> 

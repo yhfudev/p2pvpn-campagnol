@@ -1,0 +1,9 @@
+v 0.2:
+	client: use syslog to log important messages when the client is
+	started as a daemon. Add sample configuration files and certificates.
+	A few bugfixes, most of them being unlikely to happen. Enhanced
+	Makefile.
+	rdv server: adjust the behavior of the verbose and debug parameters.
+
+v 0.1:
+	First release.
