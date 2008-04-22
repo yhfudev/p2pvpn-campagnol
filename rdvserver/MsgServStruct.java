@@ -81,7 +81,7 @@ public class MsgServStruct {
         message.port = bb.getShort();
         bb.get(message.ip1);
         bb.get(message.ip2);
-        if (CampagnolServer.debug) System.out.println(message);
+        if (CampagnolServer.dump) System.out.println(message);
         return message;
     }
     
@@ -93,12 +93,12 @@ public class MsgServStruct {
         bb.putShort((short) message.port);
         bb.put(message.ip1);
         bb.put(message.ip2);
-        if (CampagnolServer.debug) System.out.println(message);
+        if (CampagnolServer.dump) System.out.println(message);
         return array;
     }
     
     public String toString() {
-        String s = "*****************************************************\n| TYPE  | PORT  | IP 1            | IP 2            |\n";
+        String s = "-----------------------------------------------------\n";
         String a="", c, d, e;
         switch (this.type) {
             case HELLO :
@@ -144,6 +144,7 @@ public class MsgServStruct {
                 a = "| CLOSE ";
                 break;
             default :
+                a = "|   ?   ";
                 break;
         }
         c = "| "+this.port;
@@ -152,7 +153,7 @@ public class MsgServStruct {
         while (d.length()<18) d+=" ";
         e = "| "+unMapAddress(this.ip2);
         while (e.length()<18) e+=" ";
-        return (s+a+c+d+e+"|\n*****************************************************");
+        return (s+a+c+d+e+"|\n-----------------------------------------------------");
     }
     
 }

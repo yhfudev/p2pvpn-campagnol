@@ -35,6 +35,7 @@ public class CampagnolServer {
     /** flags */
     public static boolean verbose = false;
     public static boolean debug = false;
+    public static boolean dump = false;
     
     /** constants */
     final int BUFFSIZE = MsgServStruct.MSG_LENGTH;
@@ -100,6 +101,7 @@ public class CampagnolServer {
             Connection ct = (Connection) cxs[i];
             if (ct.client1.vpnIPString.equals(vpnIP) || ct.client2.vpnIPString.equals(vpnIP)) {
                 connections.remove(ct);
+                if (CampagnolServer.verbose) System.out.println("Remove connection from "+ct.client1.vpnIPString+" to "+ct.client2.vpnIPString);
             }
         }
     }
@@ -112,6 +114,7 @@ public class CampagnolServer {
             if (ct.client1.vpnIPString.equals(vpnIP1) && ct.client2.vpnIPString.equals(vpnIP2)
                 || ct.client1.vpnIPString.equals(vpnIP2) && ct.client2.vpnIPString.equals(vpnIP1)) {
                 connections.remove(ct);
+                if (CampagnolServer.verbose) System.out.println("Remove connection from "+ct.client1.vpnIPString+" to "+ct.client2.vpnIPString);
             }
         }
     }
@@ -173,7 +176,7 @@ public class CampagnolServer {
             switch (message.type) {
                 case MsgServStruct.HELLO :
                     /**    connection request from peer */
-                    if (CampagnolServer.verbose) System.out.println("<< HELLO received from "+packet.getSocketAddress().toString());
+                    if (CampagnolServer.debug) System.out.println("<< HELLO received from "+packet.getSocketAddress().toString());
                     if (client == null) {
                         /**    client isn't yet registered */
                         client = new ClientStruct(packet.getSocketAddress(), message.ip1);
@@ -181,11 +184,14 @@ public class CampagnolServer {
                         if (clientByID == null) {
                             /** OK for registering with this vpn IP on this vpn id*/
                             clients.add(client);
+                            if (CampagnolServer.verbose) System.out.println("New client ["+client.sAddr.toString()+"] "+client.vpnIPString);
                             sendOK(packet.getSocketAddress());
                         } else if (clientByID.isTimeout()) {
                             removeConnectionsWithClient(clientByID.vpnIPString);
                             clients.remove(clientByID);
+                            if (CampagnolServer.verbose) System.out.println("Remove client ["+clientByID.sAddr.toString()+"] "+clientByID.vpnIPString+" (timeout)");
                             clients.add(client);
+                            if (CampagnolServer.verbose) System.out.println("New client ["+client.sAddr.toString()+"] "+client.vpnIPString);
                             sendOK(packet.getSocketAddress());
                         } else {
                             /** NOT OK for registering */
@@ -203,27 +209,31 @@ public class CampagnolServer {
                             } else {// another VPNIP
                                 removeConnectionsWithClient(client.vpnIPString);
                                 clients.remove(client);
-                                clients.add(new ClientStruct(packet.getSocketAddress(), message.ip1));
+                                if (CampagnolServer.verbose) System.out.println("Remove client ["+client.sAddr.toString()+"] "+client.vpnIPString+" (timeout)");
+                                ClientStruct newClient = new ClientStruct(packet.getSocketAddress(), message.ip1);
+                                clients.add(newClient);
+                                if (CampagnolServer.verbose) System.out.println("New client ["+newClient.sAddr.toString()+"] "+newClient.vpnIPString);
                                 client = null;
                                 sendOK(packet.getSocketAddress());
                             }
                         } else {
                             /** a PC is already connected on this socket (IPv4 address + port) */
-                            if (CampagnolServer.verbose) System.out.println("A client is already connected with this IP/port");
+                            if (CampagnolServer.debug) System.out.println("A client is already connected with this IP/port "+packet.getSocketAddress());
                             sendNOK(packet.getSocketAddress());
                         }
                     }
                     break;
                 case MsgServStruct.BYE:
-                    if (CampagnolServer.verbose) System.out.println("<< BYE received from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
+                    if (CampagnolServer.debug) System.out.println("<< BYE received from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
                     if (client != null) {
                         removeConnectionsWithClient(client.vpnIPString);
                         clients.remove(client);
+                        if (CampagnolServer.verbose) System.out.println("Remove client ["+client.sAddr.toString()+"] "+client.vpnIPString);
                     }
                     break;
                 case MsgServStruct.PING :
                     /**    ping from a peer */
-                    if (CampagnolServer.verbose) System.out.println("<< PING received from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
+                    if (CampagnolServer.debug) System.out.println("<< PING received from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
                     if (client != null) {
                         sendPONG(packet.getSocketAddress());
                         client.updateTime();
@@ -231,22 +241,23 @@ public class CampagnolServer {
                     break;
                 case MsgServStruct.ASK_CONNECTION :
                     /**    peer2peer connection request */
-                    if (CampagnolServer.verbose) System.out.println("<< ASK_CONNECTION received from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
+                    if (CampagnolServer.debug) System.out.println("<< ASK_CONNECTION received from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
                     requestedClient = getClientFromId(MsgServStruct.unMapAddress(message.ip1));
                     if (requestedClient == null) {
                         /** unknown peer */
                         sendREJECT(packet.getSocketAddress(), message.ip1);
-                        if (CampagnolServer.verbose) System.out.println("Peer doesn't exist");
+                        if (CampagnolServer.debug) System.out.println("Peer doesn't exist");
                     } else {
                         /** known peer */
                         Connection connection = getConnection(client.vpnIPString, requestedClient.vpnIPString);
                         if (requestedClient.isTimeout()) {
                             /** peer no more connected */
                             sendREJECT(packet.getSocketAddress(), message.ip1);
-                            if (CampagnolServer.verbose) System.out.println("Peer isn't connected anymore");
+                            if (CampagnolServer.debug) System.out.println("Peer isn't connected anymore");
                             /** remove references */
                             removeConnectionsWithClient(requestedClient.vpnIPString);
                             clients.remove(requestedClient);
+                            if (CampagnolServer.verbose) System.out.println("Remove client ["+requestedClient.sAddr.toString()+"] "+requestedClient.vpnIPString+" (timeout)");
                             requestedClient = null;
                             break;
                         }
@@ -257,13 +268,16 @@ public class CampagnolServer {
                                 /** connection demand doesn't already exist */
                                 connection = new Connection(client, requestedClient);    // instantiating the connection
                                 connections.add(connection);
+                                if (CampagnolServer.verbose) System.out.println("New connection from "+client.vpnIPString+" to "+requestedClient.vpnIPString);
                                 sendANS(client, requestedClient);
                                 sendFWD(requestedClient, client);
                             } else {
                                 connections.remove(reverseConnection);
+                                if (CampagnolServer.verbose) System.out.println("Remove connection from "+requestedClient.vpnIPString+" to "+client.vpnIPString);
                                 reverseConnection = null;
                                 connection = new Connection(client, requestedClient);    // instantiating the connection
                                 connections.add(connection);
+                                if (CampagnolServer.verbose) System.out.println("New connection from "+client.vpnIPString+" to "+requestedClient.vpnIPString);
                                 sendANS(client, requestedClient);
                                 sendFWD(requestedClient, client);
                             }
@@ -276,28 +290,28 @@ public class CampagnolServer {
                     }
                     break;
                 case MsgServStruct.CLOSE_CONNECTION :
-                    if (CampagnolServer.verbose) System.out.println("<< CLOSE_CONNECTION received from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
+                    if (CampagnolServer.debug) System.out.println("<< CLOSE_CONNECTION received from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
                     requestedClient = getClientFromId(MsgServStruct.unMapAddress(message.ip1));
                     if (client != null && requestedClient != null) {
                         removeConnection(client.vpnIPString, requestedClient.vpnIPString);
                     }
                     break;
                 default:
-                    if (CampagnolServer.verbose) {
+                    if (CampagnolServer.debug) {
                         System.out.println("Received unexpected message from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
                         if (CampagnolServer.debug) System.out.println(message);
                     }
                     break;
             }
         } else {
-            if (CampagnolServer.verbose) System.out.println("Message err : received message too short");
+            if (CampagnolServer.debug) System.out.println("Message err: received message too short");
         }
     }
     
     public void sendOK(SocketAddress address) {
         try {
             this.socket.send(new DatagramPacket(MsgServStruct.MSG_OK,MsgServStruct.MSG_LENGTH,address));
-            if (CampagnolServer.verbose) System.out.println(">> OK sent to client "+address.toString());
+            if (CampagnolServer.debug) System.out.println(">> OK sent to client "+address.toString());
         } catch (Exception ex) {
             System.err.println("Error in sendOK:");
             ex.printStackTrace();
@@ -307,7 +321,7 @@ public class CampagnolServer {
     public void sendNOK(SocketAddress address) {
         try {
             this.socket.send(new DatagramPacket(MsgServStruct.MSG_NOK,MsgServStruct.MSG_LENGTH,address));
-            if (CampagnolServer.verbose) System.out.println(">> NOK sent to client "+address.toString());
+            if (CampagnolServer.debug) System.out.println(">> NOK sent to client "+address.toString());
         } catch (Exception ex) {
             System.err.println("Error in sendNOK:");
             ex.printStackTrace();
@@ -320,7 +334,7 @@ public class CampagnolServer {
             MsgServStruct message = new MsgServStruct(MsgServStruct.REJ_CONNECTION);
             message.ip1 = IP;
             this.socket.send(new DatagramPacket(MsgServStruct.set(message), MsgServStruct.MSG_LENGTH, address));
-            if (CampagnolServer.verbose) System.out.println(">> REJECT send to client "+address.toString());
+            if (CampagnolServer.debug) System.out.println(">> REJECT send to client "+address.toString());
         } catch (Exception ex) {
             System.err.println("Error in sendREJECT:");
             ex.printStackTrace();
@@ -330,7 +344,7 @@ public class CampagnolServer {
     public void sendPING(SocketAddress address) {
         try {
             this.socket.send(new DatagramPacket(MsgServStruct.MSG_PING,MsgServStruct.MSG_LENGTH,address));
-            if (CampagnolServer.verbose) System.out.println(">> PING sent to client "+address.toString());
+            if (CampagnolServer.debug) System.out.println(">> PING sent to client "+address.toString());
         } catch (Exception ex) {
             System.err.println("Error in sendPING:");
             ex.printStackTrace();
@@ -340,7 +354,7 @@ public class CampagnolServer {
     public void sendPONG(SocketAddress address) {
         try {
             this.socket.send(new DatagramPacket(MsgServStruct.MSG_PONG,MsgServStruct.MSG_LENGTH,address));
-            if (CampagnolServer.verbose) System.out.println(">> PONG sent to client "+address.toString());
+            if (CampagnolServer.debug) System.out.println(">> PONG sent to client "+address.toString());
         } catch (Exception ex) {
             System.err.println("Error in sendPONG:");
             ex.printStackTrace();
@@ -354,7 +368,7 @@ public class CampagnolServer {
             message.ip1 = requestedClient.realIP;        // public address to punch
             message.ip2 = requestedClient.vpnIP;        // corresponding VPN IP (the address asked)
             this.socket.send(new DatagramPacket(MsgServStruct.set(message), MsgServStruct.MSG_LENGTH, client.sAddr));
-            if (CampagnolServer.verbose) System.out.println(">> ANS_CONNECTION sent to client "+client.sAddr.toString());
+            if (CampagnolServer.debug) System.out.println(">> ANS_CONNECTION sent to client "+client.sAddr.toString());
         } catch (Exception ex) {
             System.err.println("Error in sendANS:");
             ex.printStackTrace();
@@ -368,7 +382,7 @@ public class CampagnolServer {
             message.ip1 = requestedClient.realIP;        // public address to punch
             message.ip2 = requestedClient.vpnIP;        // corresponding VPN IP
             this.socket.send(new DatagramPacket(MsgServStruct.set(message), MsgServStruct.MSG_LENGTH, client.sAddr));
-            if (CampagnolServer.verbose) System.out.println(">> FWD_CONNECTION sent to client "+client.sAddr.toString());
+            if (CampagnolServer.debug) System.out.println(">> FWD_CONNECTION sent to client "+client.sAddr.toString());
         } catch (Exception ex) {
             System.err.println("Error in sendFWD:");
             ex.printStackTrace();
@@ -378,7 +392,7 @@ public class CampagnolServer {
     public void sendRECONNECT(SocketAddress address) {
         try {
             this.socket.send(new DatagramPacket(MsgServStruct.MSG_RECONNECT,MsgServStruct.MSG_LENGTH,address));
-            if (CampagnolServer.verbose) System.out.println(">> RECONNECT sent to client "+address.toString());
+            if (CampagnolServer.debug) System.out.println(">> RECONNECT sent to client "+address.toString());
         } catch (Exception ex) {
             System.err.println("Error in sendRECONNECT:");
             ex.printStackTrace();
@@ -390,7 +404,7 @@ public class CampagnolServer {
         System.err.println("Usage: java CampagnolServer [OPTION]...\n");
         System.err.println("Options");
         System.err.println(" -v, --verbose\t\t\tverbose mode");
-        System.err.println(" -d, --debug\t\t\tdebug mode");
+        System.err.println(" -d, --debug\t\t\tdebug mode. Can be use twice to dump the packets");
         System.err.println(" -p, --port=PORT\t\tlistening port");
         System.err.println(" -g, --gui\t\t\tstart the GUI with the server");
         System.err.println(" -h, --help\t\t\tthis help message");
@@ -429,8 +443,13 @@ public class CampagnolServer {
                 CampagnolServer.verbose = true;
             }
             else if (opt[0].equals("-d") || opt[0].equals("--debug")) {
-                CampagnolServer.verbose = true;
-                CampagnolServer.debug = true;
+                if (CampagnolServer.debug) {
+                    CampagnolServer.dump = true;
+                }
+                else {
+                    CampagnolServer.verbose = true;
+                    CampagnolServer.debug = true;
+                }
             }
             else if (opt[0].equals("-h") || opt[0].equals("--help")) {
                 CampagnolServer.usage();
