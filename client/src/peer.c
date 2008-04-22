@@ -254,19 +254,19 @@ void createClientSSL(struct client *peer, int recreate) {
         ERR_print_errors_fp(stderr);
         log_error("SSL_CTX_use_certificate_chain_file");
         log_message("%s", config.certificate_pem);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     if (!SSL_CTX_use_PrivateKey_file(peer->ctx, config.key_pem, SSL_FILETYPE_PEM)) {
         ERR_print_errors_fp(stderr);
         log_error("SSL_CTX_use_PrivateKey_file");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     SSL_CTX_set_verify(peer->ctx, SSL_VERIFY_PEER, verify_crl);
     SSL_CTX_set_verify_depth(peer->ctx, 1);
     if (!SSL_CTX_load_verify_locations(peer->ctx, config.verif_pem, NULL)) {
         ERR_print_errors_fp(stderr);
         log_error("SSL_CTX_load_verify_locations");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     
     /* Mandatory for DTLS */
@@ -284,7 +284,7 @@ void createClientSSL(struct client *peer, int recreate) {
         if (! SSL_CTX_set_cipher_list(peer->ssl->ctx, config.cipher_list)){
             log_error("SSL_CTX_set_cipher_list");
             ERR_print_errors_fp(stderr);
-            exit(1);
+            exit(EXIT_FAILURE);
         }
     }
     peer->is_dtls_client ? SSL_set_connect_state(peer->ssl) : SSL_set_accept_state(peer->ssl);
