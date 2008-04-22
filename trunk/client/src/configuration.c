@@ -149,7 +149,7 @@ void parseConfFile(char *confFile) {
     FILE *conf = fopen(confFile, "r");
     if (conf == NULL) {
         log_error(confFile);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     
     char line[1000];                    // last read line
@@ -210,7 +210,7 @@ void parseConfFile(char *confFile) {
                 struct hostent *host = gethostbyname(value);
                 if (host==NULL) {
                     log_message("[%s:local_host] Local IP address or hostname is not valid: \"%s\"", confFile, value);
-                    exit(1);
+                    exit(EXIT_FAILURE);
                 }
                 memcpy(&(config.localIP.s_addr), host->h_addr_list[0], sizeof(struct in_addr));
             }
@@ -225,7 +225,7 @@ void parseConfFile(char *confFile) {
                 struct hostent *host = gethostbyname(value);
                 if (host==NULL) {
                     log_message("[%s:server_host] RDV server IP address or hostname is not valid: \"%s\"", confFile, value);
-                    exit(1);
+                    exit(EXIT_FAILURE);
                 }
                 memcpy(&(config.serverAddr.sin_addr.s_addr), host->h_addr_list[0], sizeof(struct in_addr));
             }
@@ -236,7 +236,7 @@ void parseConfFile(char *confFile) {
             int port_tmp;
             if ( sscanf(value, "%ud", &port_tmp) != 1) {
                 log_message("[%s:server_port] Server UDP port is not valid: \"%s\"", confFile, value);
-                exit(1);
+                exit(EXIT_FAILURE);
             }
             config.serverAddr.sin_port = htons(port_tmp);
         }
@@ -244,14 +244,14 @@ void parseConfFile(char *confFile) {
             /* get the local port */
             if ( sscanf(value, "%d", &config.localport) != 1) {
                 log_message("[%s:local_port] Local UDP port is not valid: \"%s\"", confFile, value);
-                exit(1);
+                exit(EXIT_FAILURE);
             }
         }
         else if (strncmp(name, "vpn_ip", CONF_NAME_LENGTH) == 0) {
             /* Get the VPN IP address */
             if ( inet_aton(value, &config.vpnIP) == 0) {
                 log_message("[%s:vpn_ip] VPN IP address is not valid: \"%s\"", confFile, value);
-                exit(1);
+                exit(EXIT_FAILURE);
             }
             config.vpnIP_set = 1;
         }
@@ -279,31 +279,31 @@ void parseConfFile(char *confFile) {
         else if (strncmp(name, "fifo_size", CONF_NAME_LENGTH) == 0) {
             if ( sscanf(value, "%d", &config.FIFO_size) != 1) {
                 log_message("[%s:fifo_size] Internal FIFO size is not valid: \"%s\"", confFile, value);
-                exit(1);
+                exit(EXIT_FAILURE);
             }
             if (config.FIFO_size <= 0) {
                 log_message("[%s:fifo_size] Internal FIFO size %d must be > 0", confFile, config.FIFO_size);
-                exit(1);
+                exit(EXIT_FAILURE);
             }
         }
         else if (strncmp(name, "timeout", CONF_NAME_LENGTH) == 0) {
             if ( sscanf(value, "%d", &config.timeout) != 1) {
                 log_message("[%s:timeout] Timeout value is not valid: \"%s\"", confFile, value);
-                exit(1);
+                exit(EXIT_FAILURE);
             }
             if (config.timeout < 5) {
                 log_message("[%s:timeout] Timeout value %d must be >= 5", confFile, config.timeout);
-                exit(1);
+                exit(EXIT_FAILURE);
             }
         }
         else if (strncmp(name, "max_clients", CONF_NAME_LENGTH) == 0) {
             if ( sscanf(value, "%d", &config.max_clients) != 1) {
                 log_message("[%s:max_clients] Max number of clients is not valid: \"%s\"", confFile, value);
-                exit(1);
+                exit(EXIT_FAILURE);
             }
             if (config.max_clients < 1) {
                 log_message("[%s:max_clients] Max number of clients %d must be >= 1", confFile, config.timeout);
-                exit(1);
+                exit(EXIT_FAILURE);
             }
         }
         
@@ -320,34 +320,34 @@ void parseConfFile(char *confFile) {
      */
     if (!config.localIP_set) {
         log_message("Could not find a valid local IP address. Please check %s", confFile);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     
     
     /* Check the mandatory parameters */
     if (!config.serverIP_set) {
         log_message("[%s] Parameter \"server_host\" is mandatory", confFile);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     if (!config.vpnIP_set) {
         log_message("[%s] Parameter \"vpn_ip\" is mandatory", confFile);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     if (strlen(config.network) == 0) {
         log_message("[%s] Parameter \"network\" is mandatory", confFile);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     if (strlen(config.certificate_pem) == 0) {
         log_message("[%s] Parameter \"certificate\" is mandatory", confFile);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     if (strlen(config.key_pem) == 0) {
         log_message("[%s] Parameter \"key\" is mandatory", confFile);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     if (strlen(config.verif_pem) == 0) {
         log_message("[%s] Parameter \"ca_certificates\" is mandatory", confFile);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     
     /* compute the broadcast address */
@@ -356,27 +356,27 @@ void parseConfFile(char *confFile) {
     /* no netmask len? */
     if (!(search = strstr(config.network, "/"))) {
         log_message("[%s] Parameter \"network\" is not valid. Please give a netmask length (CIDR notation)", confFile);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     else {
         search++;
         /* weird value */
         if (*search == '\0' || strlen(search) > 2) {
             log_message("[%s] Parameter \"network\": ill-formed netmask (1 or 2 figures)", confFile);
-            exit(1);
+            exit(EXIT_FAILURE);
         }
         /* read the netmask */
         len = strtol(search, &end, 10);
         if ((end-search) != strlen(search)) {// A character is not a figure
             log_message("[%s] Parameter \"network\": ill-formed netmask (1 or 2 figures)", confFile);
             log_error("strtol:");
-            exit(1);
+            exit(EXIT_FAILURE);
         }
     }
     /* get the broadcast IP */
     if (get_ipv4_broadcast(config.vpnIP.s_addr, len, &config.vpnBroadcastIP.s_addr)) {
         log_message("[%s] Parameter \"network\": ill-formed netmask, should be between 0 and 32", confFile);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     fclose(conf);

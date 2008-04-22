@@ -57,14 +57,14 @@ void usage(void) {
     fprintf(stderr, " -d, --debug\t\t\tdebug mode\n");
     fprintf(stderr, " -h, --help\t\t\tthis help message\n");
     fprintf(stderr, " -V, --version\t\t\tshow version information and exit\n");
-    exit(1);
+    exit(EXIT_FAILURE);
 }
 
 void version(void) {
     fprintf(stderr, "Campagnol VPN | Client | Version %s\n", VERSION);
     fprintf(stderr, "Copyright (c) 2007 Antoine Vianey\n");
     fprintf(stderr, "              2008 Florent Bondoux\n");
-    exit(0);
+    exit(EXIT_SUCCESS);
 }
 
 int parse_args(int argc, char **argv, char **configFile) {
@@ -121,7 +121,7 @@ void daemonize(void) {
     r = daemon(1, 0);
     if (r != 0) {
         log_error("Unable to daemonize");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     config.verbose = 0;
@@ -177,19 +177,26 @@ int main (int argc, char **argv) {
     
     sockfd = create_socket();
     if (sockfd < 0) {
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     
     /* The UDP socket is configured
      * Now, register to the rendezvous server
      */
     if (register_rdv(sockfd)) {
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     tunfd = init_tun(1);
     if (tunfd < 0) {
-        exit(1);
+        struct message smsg;
+        smsg.ip1.s_addr = config.vpnIP.s_addr;
+        smsg.ip2.s_addr = 0;
+        smsg.port = 0;
+        smsg.type = BYE;
+        if (config.debug) printf("Sending BYE\n");
+        sendto(sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
+        exit(EXIT_FAILURE);
     }
     
     log_message("Starting VPN");
@@ -199,5 +206,5 @@ int main (int argc, char **argv) {
     log_close();
     close_tun(tunfd);
     close(sockfd);
-    return 0;
+    exit(EXIT_SUCCESS);
 }
