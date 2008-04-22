@@ -30,7 +30,7 @@ import java.net.*;
  * and of all operation on the client objects */
 public class CampagnolServer {
     
-    public static String VERSION = "0.1";
+    public static String VERSION = "0.2";
     
     /** flags */
     public static boolean verbose = false;
