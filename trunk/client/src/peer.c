@@ -39,8 +39,19 @@ int n_clients = 0;
  * mutex used to manipulate 'clients'
  * It needs to be recursive since decr_ref may lock it
  */
-pthread_mutex_t mutex_clients = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+pthread_mutex_t mutex_clients;
+pthread_mutexattr_t attrs_mutex_clients;
 
+void mutex_clients_init(void) {
+    pthread_mutexattr_init(&attrs_mutex_clients);
+    pthread_mutexattr_settype(&attrs_mutex_clients, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init(&mutex_clients, &attrs_mutex_clients);
+}
+
+void mutex_clients_destroy(void) {
+    pthread_mutex_destroy(&mutex_clients);
+    pthread_mutexattr_destroy(&attrs_mutex_clients);
+}
 
 /*
  * Safely increment the reference counter of peer

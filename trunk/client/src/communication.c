@@ -761,6 +761,8 @@ void start_vpn(int sockfd, int tunfd) {
     SSL_library_init();
     SSL_load_error_strings();
     
+    mutex_clients_init();
+    
     pthread_t th_socket, th_tun;
     th_socket = createThread(comm_socket, args);
     th_tun = createThread(comm_tun, args);
@@ -777,6 +779,8 @@ void start_vpn(int sockfd, int tunfd) {
         next = peer->next;
         if (peer->thread_running) {
             end_SSL_reading(peer);
+            // don't wait for the SSL_reading thread terminaison here !
+            // it requires to lock the mutex
         }
         else {
             peer->state = CLOSED;
@@ -791,5 +795,10 @@ void start_vpn(int sockfd, int tunfd) {
     if (sendto(sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr)) == -1) {
         log_error("sendto");
     }
+    
+    // wait for all the SSL_reading thread to finish
+    while (n_clients != 0) { usleep(100000); }
+    
+    mutex_clients_destroy();
 }
 

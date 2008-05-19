@@ -53,11 +53,15 @@ struct client {
 
 
 extern struct client *clients;
+extern int n_clients;
 extern pthread_mutex_t mutex_clients;
 
 /* mutex manipulation */
-#define MUTEXLOCK {mutexLock(&mutex_clients);}
-#define MUTEXUNLOCK {mutexUnlock(&mutex_clients);}
+#define MUTEXLOCK {/*fprintf(stderr, "lock %s %d\n",__FILE__,__LINE__);*/mutexLock(&mutex_clients);}
+#define MUTEXUNLOCK {/*fprintf(stderr, "unlock %s %d\n",__FILE__,__LINE__);*/mutexUnlock(&mutex_clients);}
+
+extern void mutex_clients_init(void);
+extern void mutex_clients_destroy(void);
 
 extern struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct in_addr clientIP, u_int16_t clientPort, struct in_addr vpnIP, int is_dtls_client);
 extern void createClientSSL(struct client *peer, int recreate);
