@@ -26,7 +26,6 @@
 #include <sys/ioctl.h>
 
 #include <arpa/inet.h>
-#include <linux/if.h>
 #include <netdb.h>
 #include <sys/stat.h> 
 #include <getopt.h>

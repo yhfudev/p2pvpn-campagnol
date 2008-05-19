@@ -24,7 +24,7 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <arpa/inet.h>
-#include <linux/if.h>
+#include <net/if.h>
 #include <linux/if_tun.h>
 
 #include "campagnol.h"
