@@ -37,6 +37,7 @@
 #include "configuration.h"
 
 #define SERVER_PORT_DEFAULT 57888
+#define DEFAULT_CONF_FILE "/etc/campagnol.conf"
 
 extern int end_campagnol;
 extern struct configuration config;

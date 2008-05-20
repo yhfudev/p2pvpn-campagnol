@@ -49,13 +49,14 @@ void handler_term(int s) {
 
 
 void usage(void) {
-    fprintf(stderr, "Usage: campagnol [OPTION]... configuration_file\n\n");
+    fprintf(stderr, "Usage: campagnol [OPTION]... [configuration_file]\n\n");
     fprintf(stderr, "Options\n");
     fprintf(stderr, " -v, --verbose\t\t\tverbose mode\n");
     fprintf(stderr, " -D, --daemon\t\t\tfork in background\n");
     fprintf(stderr, " -d, --debug\t\t\tdebug mode\n");
     fprintf(stderr, " -h, --help\t\t\tthis help message\n");
-    fprintf(stderr, " -V, --version\t\t\tshow version information and exit\n");
+    fprintf(stderr, " -V, --version\t\t\tshow version information and exit\n\n");
+    fprintf(stderr, "If no configuration file is given, the default is /etc/campagnol.conf\n");
     exit(EXIT_FAILURE);
 }
 
@@ -103,12 +104,16 @@ int parse_args(int argc, char **argv, char **configFile) {
     argv += optind;
     argc -= optind;
     
-    if (argc != 1) {
+    /* the configuration file */
+    if (argc == 1) {
+        *configFile = argv[0];
+    }
+    else if (argc == 0) {
+        *configFile = DEFAULT_CONF_FILE;
+    }
+    else {
         return 1;
     }
-    
-    /* the configuration file */
-    *configFile = argv[0];
     
     return 0;
 }
