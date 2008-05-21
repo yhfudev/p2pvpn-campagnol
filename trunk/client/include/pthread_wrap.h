@@ -26,16 +26,23 @@
 #include <pthread.h>
 #include <errno.h>
 
+extern void mutexInit(pthread_mutex_t *mutex, pthread_mutexattr_t *attrs);
+extern void mutexDestroy(pthread_mutex_t *mutex);
 extern void mutexLock(pthread_mutex_t *mutex);
 extern void mutexUnlock(pthread_mutex_t *mutex);
 
-extern pthread_cond_t createCondition(void);
-extern void destroyCondition(pthread_cond_t *cond);
+extern void mutexattrInit(pthread_mutexattr_t *attrs);
+extern void mutexattrDestroy(pthread_mutexattr_t *attrs);
+extern void mutexattrSettype(pthread_mutexattr_t *attrs, int type);
+
+extern void conditionInit(pthread_cond_t *cond, pthread_condattr_t *attrs);
+extern void conditionDestroy(pthread_cond_t *cond);
 extern int conditionWait(pthread_cond_t *cond, pthread_mutex_t *mutex);
 extern int conditionTimedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *abs_timeout);
 extern int conditionBroadcast(pthread_cond_t *cond);
 extern int conditionSignal(pthread_cond_t *cond);
 
 extern pthread_t createThread(void * (*start_routine)(void *), void * arg);
+extern void joinThread(pthread_t thread, void **value_ptr);
 
 #endif /*PTHREAD_WRAP_H_*/

@@ -29,10 +29,40 @@
 #include "log.h"
 
 
+void mutexInit(pthread_mutex_t *mutex, pthread_mutexattr_t *attrs) {
+    if (mutex) {
+        int r = pthread_mutex_init(mutex, attrs);
+        if (r != 0) {
+            log_message("Error pthread_mutex_init(): %s", strerror(r));
+            exit(EXIT_FAILURE);
+        }
+    }
+    else {
+        log_message("Call mutexInit with a NULL mutex");
+        exit(EXIT_FAILURE);
+    }
+}
+
+void mutexDestroy(pthread_mutex_t *mutex) {
+    if (mutex) {
+        int r = pthread_mutex_destroy(mutex);
+        if (r != 0) {
+            log_message("Error pthread_mutex_destroy(): %s", strerror(r));
+            exit(EXIT_FAILURE);
+        }
+    }
+    else {
+        log_message("Call mutexDestroy with a NULL mutex");
+        exit(EXIT_FAILURE);
+    }
+}
+
+
 void mutexLock(pthread_mutex_t *mutex) {
     if (mutex) {
-        if ( pthread_mutex_lock(mutex) != 0 ) {
-            log_error("Error pthread_mutex_lock()");
+        int r = pthread_mutex_lock(mutex);
+        if (r != 0) {
+            log_message("Error pthread_mutex_lock(): %s", strerror(r));
             exit(EXIT_FAILURE);
         }
     }
@@ -45,8 +75,9 @@ void mutexLock(pthread_mutex_t *mutex) {
 
 void mutexUnlock(pthread_mutex_t *mutex) {
     if (mutex) {
-        if ( pthread_mutex_unlock(mutex) != 0 ) {
-            log_error("Error pthread_mutex_unlock()");
+        int r = pthread_mutex_unlock(mutex);
+        if (r != 0) {
+            log_message("Error pthread_mutex_unlock(): %s", strerror(r));
             exit(EXIT_FAILURE);
         }
     }
@@ -57,18 +88,74 @@ void mutexUnlock(pthread_mutex_t *mutex) {
 };
 
 
-pthread_cond_t createCondition(void) {
-    pthread_cond_t cond;
-    if ( pthread_cond_init(&cond, NULL) != 0 ) {
-        log_error("Error pthread_cond_init()");
+void mutexattrInit(pthread_mutexattr_t *attrs) {
+    if (attrs) {
+        int r = pthread_mutexattr_init(attrs);
+        if (r != 0) {
+            log_message("Error pthread_mutexattr_init(): %s", strerror(r));
+            exit(EXIT_FAILURE);
+        }
+    }
+    else {
+        log_message("Call mutexattrInit with a NULL mutexattr");
         exit(EXIT_FAILURE);
     }
-    return cond;
 }
 
-void destroyCondition(pthread_cond_t *cond) {
+void mutexattrSettype(pthread_mutexattr_t *attrs, int type) {
+    if (attrs) {
+        int r = pthread_mutexattr_settype(attrs, type);
+        if (r != 0) {
+            log_message("Error pthread_mutexattr_settype(): %s", strerror(r));
+            exit(EXIT_FAILURE);
+        }
+    }
+    else {
+        log_message("Call mutexattrSettype with a NULL mutexattr");
+        exit(EXIT_FAILURE);
+    }
+}
+
+void mutexattrDestroy(pthread_mutexattr_t *attrs) {
+    if (attrs) {
+        int r = pthread_mutexattr_destroy(attrs);
+        if (r != 0) {
+            log_message("Error pthread_mutexattr_destroy(): %s", strerror(r));
+            exit(EXIT_FAILURE);
+        }
+    }
+    else {
+        log_message("Call mutexattrDestroy with a NULL mutexattr");
+        exit(EXIT_FAILURE);
+    }
+}
+
+
+void conditionInit(pthread_cond_t *cond, pthread_condattr_t *attrs) {
     if (cond) {
-        pthread_cond_destroy(cond);
+        int r = pthread_cond_init(cond, attrs);
+        if (r != 0) {
+            log_message("Error pthread_cond_init(): %s", strerror(r));
+            exit(EXIT_FAILURE);
+        }
+    }
+    else {
+        log_message("Call conditionInit with a NULL condition");
+        exit(EXIT_FAILURE);
+    }
+}
+
+void conditionDestroy(pthread_cond_t *cond) {
+    if (cond) {
+        int r = pthread_cond_destroy(cond);
+        if (r != 0) {
+            log_message("Error pthread_cond_destroy(): %s", strerror(r));
+            exit(EXIT_FAILURE);
+        }
+    }
+    else {
+        log_message("Call conditionDestroy with a NULL condition");
+        exit(EXIT_FAILURE);
     }
 }
 
@@ -76,8 +163,8 @@ int conditionWait(pthread_cond_t *cond, pthread_mutex_t *mutex) {
     if (cond) {
         int retval;
         retval =  pthread_cond_wait(cond, mutex);
-        if ( retval != 0) {
-            log_error("Error pthread_cond_wait()");
+        if (retval != 0) {
+            log_message("Error pthread_cond_wait(): %s", strerror(retval));
             exit(EXIT_FAILURE);
         }
         return retval;
@@ -92,8 +179,8 @@ int conditionTimedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, const struc
     if (cond) {
         int retval;
         retval =  pthread_cond_timedwait(cond, mutex, abs_timeout);
-        if ( retval != 0 && retval != ETIMEDOUT) {
-            log_error("Error pthread_cond_timedwait()");
+        if (retval != 0 && retval != ETIMEDOUT) {
+            log_message("Error pthread_cond_timedwait(): %s", strerror(retval));
             exit(EXIT_FAILURE);
         }
         return retval;
@@ -108,14 +195,14 @@ int conditionBroadcast(pthread_cond_t *cond) {
     if (cond) {
         int retval;
         retval =  pthread_cond_broadcast(cond);
-        if ( retval != 0) {
-            log_error("Error pthread_cond_broadcast()");
+        if (retval != 0) {
+            log_message("Error pthread_cond_broadcast(): %s", strerror(retval));
             exit(EXIT_FAILURE);
         }
         return retval;
     }
     else {
-        log_message("Call conditionBroadcat with a NULL semaphore");
+        log_message("Call conditionBroadcat with a NULL condition");
         exit(EXIT_FAILURE);
     }
 }
@@ -124,14 +211,14 @@ int conditionSignal(pthread_cond_t *cond) {
     if (cond) {
         int retval;
         retval =  pthread_cond_signal(cond);
-        if ( retval != 0) {
-            log_error("Error pthread_cond_signal()");
+        if (retval != 0) {
+            log_message("Error pthread_cond_signal(): %s", strerror(retval));
             exit(EXIT_FAILURE);
         }
         return retval;
     }
     else {
-        log_message("Call conditionSignal with a NULL semaphore");
+        log_message("Call conditionSignal with a NULL condition");
         exit(EXIT_FAILURE);
     }
 }
@@ -148,3 +235,11 @@ pthread_t createThread(void * (*start_routine)(void *), void * arg) {
     }
     return thread;
 };
+
+void joinThread(pthread_t thread, void **value_ptr) {
+    int r = pthread_join(thread, value_ptr);
+    if (r != 0) {
+        log_message("Error pthread_join(): %s", strerror(r));
+        exit(EXIT_FAILURE);
+    }
+}

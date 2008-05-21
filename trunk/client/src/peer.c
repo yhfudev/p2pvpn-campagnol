@@ -43,24 +43,24 @@ pthread_mutex_t mutex_clients;
 pthread_mutexattr_t attrs_mutex_clients;
 
 void mutex_clients_init(void) {
-    pthread_mutexattr_init(&attrs_mutex_clients);
-    pthread_mutexattr_settype(&attrs_mutex_clients, PTHREAD_MUTEX_RECURSIVE);
-    pthread_mutex_init(&mutex_clients, &attrs_mutex_clients);
+    mutexattrInit(&attrs_mutex_clients);
+    mutexattrSettype(&attrs_mutex_clients, PTHREAD_MUTEX_RECURSIVE);
+    mutexInit(&mutex_clients, &attrs_mutex_clients);
 }
 
 void mutex_clients_destroy(void) {
-    pthread_mutex_destroy(&mutex_clients);
-    pthread_mutexattr_destroy(&attrs_mutex_clients);
+    mutexDestroy(&mutex_clients);
+    mutexattrDestroy(&attrs_mutex_clients);
 }
 
 /*
  * Safely increment the reference counter of peer
  */
 void incr_ref(struct client *peer) {
-    pthread_mutex_lock(&peer->mutex_ref);
+    mutexLock(&peer->mutex_ref);
     peer->ref_count++;
 //    fprintf(stderr, "incr %s [%d]\n", inet_ntoa(peer->vpnIP), peer->ref_count);
-    pthread_mutex_unlock(&peer->mutex_ref);
+    mutexUnlock(&peer->mutex_ref);
 }
 
 /*
@@ -68,17 +68,17 @@ void incr_ref(struct client *peer) {
  * If the count reaches 0, the peer is freed
  */
 void decr_ref(struct client *peer) {
-    pthread_mutex_lock(&peer->mutex_ref);
+    mutexLock(&peer->mutex_ref);
     peer->ref_count--;
 //    fprintf(stderr, "decr %s [%d]\n", inet_ntoa(peer->vpnIP), peer->ref_count);
     if (peer->ref_count == 0) {
-        pthread_mutex_unlock(&peer->mutex_ref);
+        mutexUnlock(&peer->mutex_ref);
         MUTEXLOCK;
         remove_client(peer);
         MUTEXUNLOCK;
     }
     else {
-        pthread_mutex_unlock(&peer->mutex_ref);
+        mutexUnlock(&peer->mutex_ref);
     }
 }
 
@@ -110,12 +110,12 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct
     peer->state = state;
     peer->tunfd = tunfd;
     peer->sockfd = sockfd;
-    peer->cond_connected = createCondition();
+    conditionInit(&peer->cond_connected, NULL);
     peer->send_shutdown = 0;
     
     peer->is_dtls_client = is_dtls_client;
     peer->thread_running = 0;
-    pthread_mutex_init(&(peer->mutex_ref), NULL);
+    mutexInit(&(peer->mutex_ref), NULL);
     peer->ref_count = 2;
     
     createClientSSL(peer, 0);
@@ -142,8 +142,8 @@ struct client *cache_client_real = NULL;
 void remove_client(struct client *peer) {
     if (config.debug) printf("Deleting the client %s\n", inet_ntoa(peer->vpnIP));
     
-    destroyCondition(&peer->cond_connected);
-    pthread_mutex_destroy(&peer->mutex_ref);
+    conditionDestroy(&peer->cond_connected);
+    mutexDestroy(&peer->mutex_ref);
     SSL_free(peer->ssl);
     SSL_CTX_free(peer->ctx);
     

@@ -136,8 +136,8 @@ static int fifo_new(BIO *bi) {
     }
     prec->next = d->fifo; // close the loop
     
-    d->cond = createCondition();
-    d->mutex = (pthread_mutex_t) PTHREAD_MUTEX_INITIALIZER;
+    conditionInit(&d->cond, NULL);
+    mutexInit(&d->mutex, NULL);
     return(1);
 }
 
@@ -155,7 +155,8 @@ static int fifo_free (BIO *bi) {
                 free(item);
                 item = next;
             }
-            destroyCondition(&d->cond);
+            conditionDestroy(&d->cond);
+            mutexDestroy(&d->mutex);
             free(d);
             bi->ptr = NULL;
         }
