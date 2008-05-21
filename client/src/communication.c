@@ -200,7 +200,6 @@ int register_rdv(int sockfd) {
     timer_ping.it_value.tv_sec = TIMER_PING_SEC;
     timer_ping.it_value.tv_usec = TIMER_PING_USEC;
     sockfd_global = sockfd;
-    signal(SIGALRM, &handler_sigTimerPing);
     setitimer(ITIMER_REAL, &timer_ping, NULL);
     
     return 0;

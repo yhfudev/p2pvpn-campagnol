@@ -37,15 +37,9 @@
 #include "communication.h"
 #include "configuration.h"
 #include "log.h"
+#include "pthread_wrap.h"
 
 int end_campagnol = 0;
-
-void handler_term(int s) {
-    end_campagnol = 1;
-    log_message("received signal %d, exiting...", s);
-    signal(SIGTERM, SIG_DFL);
-    signal(SIGINT, SIG_DFL);
-}
 
 
 void usage(void) {
@@ -132,15 +126,36 @@ void daemonize(void) {
     config.debug = 0;
 }
 
+/* thread used to cath and handle signals */
+void * sig_handler(void * arg) {
+    sigset_t mask;
+    int sig;
+    
+    while (1) {
+        sigfillset(&mask);
+        sigwait(&mask, &sig); 
+        
+        switch (sig) {
+            case SIGTERM:
+            case SIGINT:
+                end_campagnol = 1;
+                log_message("received signal %d, exiting...", sig);
+                return NULL;
+            case SIGALRM:
+                handler_sigTimerPing(sig);
+                break;
+            default:
+                break;
+        }
+    }
+    
+}
 
 
 int main (int argc, char **argv) {
     char *configFile = NULL;
     int sockfd, tunfd;
     int pa;
-    
-    signal(SIGTERM, handler_term);
-    signal(SIGINT, handler_term);
     
     pa = parse_args(argc, argv, &configFile);
     if (pa == 1) {
@@ -183,6 +198,16 @@ int main (int argc, char **argv) {
     if (sockfd < 0) {
         exit(EXIT_FAILURE);
     }
+    
+    
+    /* mask all signals in this thread and child threads */
+    sigset_t mask;
+    sigfillset(&mask);
+    pthread_sigmask(SIG_BLOCK, &mask, NULL);
+    
+    /* start the signal handler */
+    createThread(sig_handler, NULL);
+    
     
     /* The UDP socket is configured
      * Now, register to the rendezvous server
