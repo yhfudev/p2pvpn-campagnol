@@ -767,8 +767,8 @@ void start_vpn(int sockfd, int tunfd) {
     th_socket = createThread(comm_socket, args);
     th_tun = createThread(comm_tun, args);
     
-    pthread_join(th_socket, NULL);
-    pthread_join(th_tun, NULL);
+    joinThread(th_socket, NULL);
+    joinThread(th_tun, NULL);
     
     free(args);
     
