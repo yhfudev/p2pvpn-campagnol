@@ -46,7 +46,7 @@ struct configuration config;
 #define IFRSIZE   ((int)(size * sizeof (struct ifreq)))
 void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
     struct ifconf ifc;
-    struct ifreq *ifr;
+    struct ifreq *ifr, ifreq_flags;
     int sockfd, size = 1;
 
     ifc.ifc_len = 0;
@@ -75,7 +75,12 @@ void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
 //            continue; // duplicate, skip it
 //        }
         
-        if (strlen(iface) == 0 && (strcmp (ifr->ifr_name, "lo") == 0 || strcmp (ifr->ifr_name, "lo0") == 0)) {
+        strncpy(ifreq_flags.ifr_name,  ifr->ifr_name, IFNAMSIZ);
+        if (ioctl(sockfd, SIOCGIFFLAGS, &ifreq_flags)) {
+            log_error("ioctl SIOCGIFFLAGS");
+            exit(EXIT_FAILURE);
+        }
+        if (ifreq_flags.ifr_flags & IFF_LOOPBACK) {
             continue; // local interface, skip it
         }
         
