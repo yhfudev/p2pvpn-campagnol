@@ -264,7 +264,7 @@ void * SSL_reading(void * args) {
     int r;
     // union used to receive the messages
     union {
-        struct iphdr ip;
+        struct ip ip;
         unsigned char raw[MESSAGE_MAX_LENGTH];
     } u; 
     struct client *peer = (struct client*) args;
@@ -323,14 +323,14 @@ void * SSL_reading(void * args) {
             MUTEXUNLOCK;
             if (config.debug) printf("<< Received a VPN message: size %d from SRC = %u.%u.%u.%u to DST = %u.%u.%u.%u\n",
                             r,
-                            (ntohl(u.ip.saddr) >> 24) & 0xFF,
-                            (ntohl(u.ip.saddr) >> 16) & 0xFF,
-                            (ntohl(u.ip.saddr) >> 8) & 0xFF,
-                            (ntohl(u.ip.saddr) >> 0) & 0xFF,
-                            (ntohl(u.ip.daddr) >> 24) & 0xFF,
-                            (ntohl(u.ip.daddr) >> 16) & 0xFF,
-                            (ntohl(u.ip.daddr) >> 8) & 0xFF,
-                            (ntohl(u.ip.daddr) >> 0) & 0xFF);
+                            (ntohl(u.ip.ip_src.s_addr) >> 24) & 0xFF,
+                            (ntohl(u.ip.ip_src.s_addr) >> 16) & 0xFF,
+                            (ntohl(u.ip.ip_src.s_addr) >> 8) & 0xFF,
+                            (ntohl(u.ip.ip_src.s_addr) >> 0) & 0xFF,
+                            (ntohl(u.ip.ip_dst.s_addr) >> 24) & 0xFF,
+                            (ntohl(u.ip.ip_dst.s_addr) >> 16) & 0xFF,
+                            (ntohl(u.ip.ip_dst.s_addr) >> 8) & 0xFF,
+                            (ntohl(u.ip.ip_dst.s_addr) >> 0) & 0xFF);
             /*
              * If dest IP = VPN broadcast VPN
              * The TUN device creates a point to point connection which
@@ -338,10 +338,10 @@ void * SSL_reading(void * args) {
              * So alter the dest. IP to the normal VPN IP
              * and compute the new checksum
              */
-            if (u.ip.daddr == config.vpnBroadcastIP.s_addr) {
-                u.ip.daddr = config.vpnIP.s_addr;
-                u.ip.check = 0; // the checksum field is set to 0 for the calculation
-                u.ip.check = ~compute_csum((uint16_t*) &u.ip, sizeof(u.ip));
+            if (u.ip.ip_dst.s_addr == config.vpnBroadcastIP.s_addr) {
+                u.ip.ip_dst.s_addr = config.vpnIP.s_addr;
+                u.ip.ip_sum = 0; // the checksum field is set to 0 for the calculation
+                u.ip.ip_sum = ~compute_csum((uint16_t*) &u.ip, sizeof(u.ip));
             }
             // send it to the TUN device
             write(tunfd, (unsigned char *)&u, sizeof(u));
@@ -592,7 +592,7 @@ void * comm_tun(void * argument) {
     struct timeval timeout;                     // timeout used with select
     struct timespec timeout_connect;            // timeout used when opening new connections
     union {
-        struct iphdr ip;
+        struct ip ip;
         unsigned char raw[MESSAGE_MAX_LENGTH];
     } u;
     struct in_addr dest;
@@ -613,15 +613,15 @@ void * comm_tun(void * argument) {
             r = read(tunfd, &u, sizeof(u));
             if (config.debug) printf(">> Sending a VPN message: size %d from SRC = %u.%u.%u.%u to DST = %u.%u.%u.%u\n",
                                 r,
-                                (ntohl(u.ip.saddr) >> 24) & 0xFF,
-                                (ntohl(u.ip.saddr) >> 16) & 0xFF,
-                                (ntohl(u.ip.saddr) >> 8) & 0xFF,
-                                (ntohl(u.ip.saddr) >> 0) & 0xFF,
-                                (ntohl(u.ip.daddr) >> 24) & 0xFF,
-                                (ntohl(u.ip.daddr) >> 16) & 0xFF,
-                                (ntohl(u.ip.daddr) >> 8) & 0xFF,
-                                (ntohl(u.ip.daddr) >> 0) & 0xFF);
-            dest.s_addr = u.ip.daddr;
+                                (ntohl(u.ip.ip_src.s_addr) >> 24) & 0xFF,
+                                (ntohl(u.ip.ip_src.s_addr) >> 16) & 0xFF,
+                                (ntohl(u.ip.ip_src.s_addr) >> 8) & 0xFF,
+                                (ntohl(u.ip.ip_src.s_addr) >> 0) & 0xFF,
+                                (ntohl(u.ip.ip_dst.s_addr) >> 24) & 0xFF,
+                                (ntohl(u.ip.ip_dst.s_addr) >> 16) & 0xFF,
+                                (ntohl(u.ip.ip_dst.s_addr) >> 8) & 0xFF,
+                                (ntohl(u.ip.ip_dst.s_addr) >> 0) & 0xFF);
+            dest.s_addr = u.ip.ip_dst.s_addr;
 
             /*
              * If dest IP = VPN broadcast VPN
