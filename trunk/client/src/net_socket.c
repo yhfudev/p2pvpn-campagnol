@@ -51,11 +51,13 @@ int create_socket(void) {
         struct ifreq ifr;
         memset(&ifr, 0, sizeof(ifr));
         strncpy(ifr.ifr_name, config.iface, IFNAMSIZ);
+#ifdef HAVE_LINUX
         if(setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, &ifr, sizeof(ifr))) {
             log_error("Error: binding socket to interface");
             log_message("interface: %s", config.iface);
             return -1;
         }
+#endif
     }
     
     bzero(&localaddr, sizeof(localaddr));
