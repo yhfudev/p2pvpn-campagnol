@@ -21,6 +21,8 @@
  *
  */
 
+#include "campagnol.h"
+
 #include <signal.h>
 
 #include <sys/ioctl.h>
@@ -31,7 +33,6 @@
 #include <getopt.h>
 
 
-#include "campagnol.h"
 #include "tun_device.h"
 #include "net_socket.h"
 #include "communication.h"

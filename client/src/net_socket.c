@@ -21,10 +21,11 @@
  *
  */
 
+#include "campagnol.h"
+
 #include <net/if.h>
 #include <arpa/inet.h>
 
-#include "campagnol.h"
 #include "communication.h"
 #include "net_socket.h"
 #include "log.h"
