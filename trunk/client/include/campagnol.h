@@ -24,12 +24,16 @@
 #ifndef CAMPAGNOL_H_
 #define CAMPAGNOL_H_
 
-#define VERSION "0.2"
+#include "config.h"
 
 #include <stdio.h> 
 #include <stdlib.h> 
 #include <string.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/in_systm.h>
 #include <netinet/ip.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>

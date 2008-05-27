@@ -66,6 +66,8 @@
  * [including the GNU Public Licence.]
  */
 
+#include "campagnol.h"
+
 #include <stdio.h>
 #include <errno.h>
 #include <openssl/bio.h>
@@ -75,7 +77,6 @@
 #include <unistd.h>
 #include <pthread.h>
 
-#include "campagnol.h"
 #include "bss_fifo.h"
 #include "pthread_wrap.h"
 

@@ -21,6 +21,7 @@
  *
  */
 
+#include "campagnol.h"
 
 #include <time.h> 
 #include <pthread.h>
@@ -31,7 +32,6 @@
 #include <sys/time.h>
 #include <signal.h>
 
-#include "campagnol.h"
 #include "communication.h"
 #include "pthread_wrap.h"
 #include "net_socket.h"
