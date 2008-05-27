@@ -1,4 +1,4 @@
-AC_INIT([campagnol],[0.3],[florent.bondoux@resel.fr])
+AC_INIT([campagnol],[0.2],[florent.bondoux@resel.fr])
 AM_INIT_AUTOMAKE([-Wall foreign])
 AC_CONFIG_SRCDIR([src/campagnol.c])
 AC_CONFIG_HEADERS([config.h])
@@ -34,8 +34,8 @@ openssl_set=0
 AC_ARG_WITH([openssl], [AS_HELP_STRING([--with-openssl=DIR],[OpenSSL base directory. This option is overwritten by --with-openssl-include and --with-openssl-lib. If neither of these options is given, the script will configure openssl with pkg-config.])],
             [
 	     openssl_set=1
-	     OPENSSL_CFLAGS="-I$withval/include $CPPFLAGS"
-	     OPENSSL_LIBS="-L$withval/lib $LDFLAGS -lssl -lcrypto $LIBS"
+	     OPENSSL_CFLAGS="-I$withval/include"
+	     OPENSSL_LIBS="-L$withval/lib -lssl -lcrypto"
 	    ]
 	   )
 AC_ARG_WITH([openssl-include], [AS_HELP_STRING([--with-openssl-include=DIR],[OpenSSL headers directory without the trailing '/openssl'])],
@@ -47,7 +47,7 @@ AC_ARG_WITH([openssl-include], [AS_HELP_STRING([--with-openssl-include=DIR],[Ope
 AC_ARG_WITH([openssl-libs], [AS_HELP_STRING([--with-openssl-libs=DIR],[OpenSSL libraries directory])],
             [
 	     openssl_set=1
-	     OPENSSL_LIBS="-L$withval $LDFLAGS -lssl -lcrypto $LIBS"
+	     OPENSSL_LIBS="-L$withval -lssl -lcrypto"
 	    ]
 	   )
 if test $openssl_set == 1; then
