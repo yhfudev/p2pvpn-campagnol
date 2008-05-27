@@ -33,8 +33,38 @@
 #include <netdb.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
+#ifdef HAVE_IFADDRS_H
+# include <ifaddrs.h>
+#endif
 
 struct configuration config;
+
+#ifdef HAVE_IFADDRS_H
+void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
+    struct ifaddrs *ifap = NULL, *ifap_first = NULL;
+    if (getifaddrs(&ifap) != 0) {
+        log_error("getifaddrs");
+        exit(EXIT_FAILURE);
+    }
+
+    ifap_first = ifap;
+    while (ifap != NULL) {
+        if (strlen(iface) == 0 && (ifap->ifa_flags & IFF_LOOPBACK) != 0) {
+            ifap = ifap->ifa_next;
+            continue; // local interface, skip it
+        }
+        if (strlen(iface) == 0 || strcmp (ifap->ifa_name, iface) == 0) {
+            if (ifap->ifa_addr->sa_family == AF_INET) {
+                *ip = (((struct sockaddr_in *) ifap->ifa_addr)->sin_addr);
+                *localIPset = 1;
+                break;
+            }
+        }
+        ifap = ifap->ifa_next;
+    }
+    freeifaddrs(ifap_first);
+}
+#else
 
 /*
  * Search the local IP address to use. Copy it into "ip" and set "localIPset".
@@ -93,6 +123,7 @@ void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
     close(sockfd);
     free(ifc.ifc_req);
 }
+#endif
 
 /*
  * Get the broadcast IP for the VPN subnetwork
