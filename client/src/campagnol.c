@@ -139,6 +139,7 @@ void * sig_handler(void * arg) {
         switch (sig) {
             case SIGTERM:
             case SIGINT:
+            case SIGQUIT:
                 end_campagnol = 1;
                 log_message("received signal %d, exiting...", sig);
                 return NULL;
@@ -157,6 +158,7 @@ int main (int argc, char **argv) {
     char *configFile = NULL;
     int sockfd, tunfd;
     int pa;
+    pthread_t sighandler_th;
     
     pa = parse_args(argc, argv, &configFile);
     if (pa == 1) {
@@ -207,7 +209,7 @@ int main (int argc, char **argv) {
     pthread_sigmask(SIG_BLOCK, &mask, NULL);
     
     /* start the signal handler */
-    createThread(sig_handler, NULL);
+    sighandler_th = createThread(sig_handler, NULL);
     
     
     /* The UDP socket is configured
@@ -233,6 +235,7 @@ int main (int argc, char **argv) {
     
     start_vpn(sockfd, tunfd);
     
+    joinThread(sighandler_th, NULL);
     log_close();
     close_tun(tunfd);
     close(sockfd);
