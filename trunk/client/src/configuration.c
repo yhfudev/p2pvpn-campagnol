@@ -188,13 +188,19 @@ void parseConfFile(char *confFile) {
         exit(EXIT_FAILURE);
     }
     
-    char line[1000];                    // last read line
+    char * line = NULL;                 // last read line
+    size_t line_len = 0;                // length of the line buffer
+    ssize_t r;                          // length of the line
     char *token;                        // word
     char name[CONF_NAME_LENGTH];        // option name
     char value[CONF_VALUE_LENGTH];      // option value
     
     int res;
     char *commentaire;
+    char *token_end;
+    char *line_eq;
+    char *eol;
+    int nline = 0;
     
     /* set default values in config */
     memset(&config.localIP, 0, sizeof(config.localIP));
@@ -218,34 +224,66 @@ void parseConfFile(char *confFile) {
     config.max_clients = 100;
     
     /* Read the configuration file */
-    while (fgets(line, sizeof(line), conf) != NULL) {
+    while ((r = getline(&line, &line_len, conf)) != -1) {
+        nline ++;
+        
         // comment
         commentaire = strchr(line, '#');
         if (commentaire != NULL) {
             *commentaire = '\0';
         }
-        
-        // Read the name of the option
-        token = strtok(line, " \t=\r\n");
-        if (token != NULL) {
-            strncpy(name, token, CONF_NAME_LENGTH);
+
+        // end of line
+        eol = strstr(line, "\r\n");
+        if (eol == NULL) eol = index(line, '\n');
+        if (eol != NULL) {
+            *eol = '\0';
         }
-        else continue;
-        
-        // Read the value
-        token = strtok(NULL, " \t=\r\n");
-        if (token != NULL) {
-            strncpy(value, token, CONF_VALUE_LENGTH);
+
+
+        token = line;
+        // remove leading spaces:
+        while (*token == ' ' || *token == '\t') token ++;
+        // empty line:
+        if (strlen(token) == 0) continue;
+        // find first equal sign:
+        line_eq = index(token, '=');
+        token_end = line_eq;
+        // no '=' or empty token:
+        if (token_end == NULL || token_end == token) {
+            log_message("[%s:%d] Syntax error", confFile, nline);
+            continue;
         }
-        else continue;
+        // remove trailing spaces:
+        while (*(token_end-1) == ' ' || *(token_end-1) == '\t') token_end --;
+        // copy name:
+        *token_end = '\0';
+        strncpy(name, token, CONF_NAME_LENGTH);
         
         
+        token = line_eq+1;
+        while (*token == ' ' || *token == '\t') token ++;
+        token_end = token + strlen(token);
+        if (token_end == token) {
+            log_message("[%s:%d] Syntax error", confFile, nline);
+            continue;
+        }
+        while (*(token_end-1) == ' ' || *(token_end-1) == '\t') token_end --;
+        *token_end = '\0';
+        strncpy(value, token, CONF_VALUE_LENGTH);
+        
+        
+        if (config.debug) {
+            printf("[%s:%d] '%s' = '%s'\n", confFile, nline, name, value);
+        }
+        
+
         if (strncmp(name, "local_host", CONF_NAME_LENGTH) == 0) {
             res = inet_aton(value, &config.localIP);
             if (res == 0) {
                 struct hostent *host = gethostbyname(value);
                 if (host==NULL) {
-                    log_message("[%s:local_host] Local IP address or hostname is not valid: \"%s\"", confFile, value);
+                    log_message("[%s:local_host:%d] Local IP address or hostname is not valid: \"%s\"", confFile, nline, value);
                     exit(EXIT_FAILURE);
                 }
                 memcpy(&(config.localIP.s_addr), host->h_addr_list[0], sizeof(struct in_addr));
@@ -260,7 +298,7 @@ void parseConfFile(char *confFile) {
             if (res == 0) {
                 struct hostent *host = gethostbyname(value);
                 if (host==NULL) {
-                    log_message("[%s:server_host] RDV server IP address or hostname is not valid: \"%s\"", confFile, value);
+                    log_message("[%s:server_host:%d] RDV server IP address or hostname is not valid: \"%s\"", confFile, nline, value);
                     exit(EXIT_FAILURE);
                 }
                 memcpy(&(config.serverAddr.sin_addr.s_addr), host->h_addr_list[0], sizeof(struct in_addr));
@@ -271,7 +309,7 @@ void parseConfFile(char *confFile) {
             /* get the server port */
             int port_tmp;
             if ( sscanf(value, "%ud", &port_tmp) != 1) {
-                log_message("[%s:server_port] Server UDP port is not valid: \"%s\"", confFile, value);
+                log_message("[%s:server_port:%d] Server UDP port is not valid: \"%s\"", confFile, nline, value);
                 exit(EXIT_FAILURE);
             }
             config.serverAddr.sin_port = htons(port_tmp);
@@ -279,14 +317,14 @@ void parseConfFile(char *confFile) {
         else if (strncmp(name, "local_port", CONF_NAME_LENGTH) == 0) {
             /* get the local port */
             if ( sscanf(value, "%d", &config.localport) != 1) {
-                log_message("[%s:local_port] Local UDP port is not valid: \"%s\"", confFile, value);
+                log_message("[%s:local_port:%d] Local UDP port is not valid: \"%s\"", confFile, nline, value);
                 exit(EXIT_FAILURE);
             }
         }
         else if (strncmp(name, "vpn_ip", CONF_NAME_LENGTH) == 0) {
             /* Get the VPN IP address */
             if ( inet_aton(value, &config.vpnIP) == 0) {
-                log_message("[%s:vpn_ip] VPN IP address is not valid: \"%s\"", confFile, value);
+                log_message("[%s:vpn_ip:%d] VPN IP address is not valid: \"%s\"", confFile, nline, value);
                 exit(EXIT_FAILURE);
             }
             config.vpnIP_set = 1;
@@ -308,41 +346,48 @@ void parseConfFile(char *confFile) {
         }
         else if (strncmp(name, "crl_file", CONF_NAME_LENGTH) == 0) {
             if (load_CRL(value)) {
-                log_message("[%s:crl_file] Error while loading the CRL file \"%s\"", confFile, value);
+                log_message("[%s:crl_file:%d] Error while loading the CRL file \"%s\"", confFile, nline, value);
                 //non fatal error
             }
         }
         else if (strncmp(name, "fifo_size", CONF_NAME_LENGTH) == 0) {
             if ( sscanf(value, "%d", &config.FIFO_size) != 1) {
-                log_message("[%s:fifo_size] Internal FIFO size is not valid: \"%s\"", confFile, value);
+                log_message("[%s:fifo_size:%d] Internal FIFO size is not valid: \"%s\"", confFile, nline, value);
                 exit(EXIT_FAILURE);
             }
             if (config.FIFO_size <= 0) {
-                log_message("[%s:fifo_size] Internal FIFO size %d must be > 0", confFile, config.FIFO_size);
+                log_message("[%s:fifo_size:%d] Internal FIFO size %d must be > 0", confFile, nline, config.FIFO_size);
                 exit(EXIT_FAILURE);
             }
         }
         else if (strncmp(name, "timeout", CONF_NAME_LENGTH) == 0) {
             if ( sscanf(value, "%d", &config.timeout) != 1) {
-                log_message("[%s:timeout] Timeout value is not valid: \"%s\"", confFile, value);
+                log_message("[%s:timeout:%d] Timeout value is not valid: \"%s\"", confFile, nline, value);
                 exit(EXIT_FAILURE);
             }
             if (config.timeout < 5) {
-                log_message("[%s:timeout] Timeout value %d must be >= 5", confFile, config.timeout);
+                log_message("[%s:timeout:%d] Timeout value %d must be >= 5", confFile, nline, config.timeout);
                 exit(EXIT_FAILURE);
             }
         }
         else if (strncmp(name, "max_clients", CONF_NAME_LENGTH) == 0) {
             if ( sscanf(value, "%d", &config.max_clients) != 1) {
-                log_message("[%s:max_clients] Max number of clients is not valid: \"%s\"", confFile, value);
+                log_message("[%s:max_clients:%d] Max number of clients is not valid: \"%s\"", confFile, nline, value);
                 exit(EXIT_FAILURE);
             }
             if (config.max_clients < 1) {
-                log_message("[%s:max_clients] Max number of clients %d must be >= 1", confFile, config.timeout);
+                log_message("[%s:max_clients:%d] Max number of clients %d must be >= 1", confFile, nline, config.timeout);
                 exit(EXIT_FAILURE);
             }
         }
+        else {
+            log_message("[%s:%d] Unknown keyword '%s' = '%s'", confFile, nline, name, value);
+        }
         
+    }
+    
+    if (line) {
+        free(line);
     }
     
     /* If no local IP address was given in the configuration file, 
