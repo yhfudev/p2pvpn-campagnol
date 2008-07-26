@@ -1,8 +1,8 @@
 /*
  * Small log functions
- * 
+ *
  * Copyright (C) 2008 Florent Bondoux
- * 
+ *
  * This file is part of Campagnol.
  *
  * Campagnol is free software: you can redistribute it and/or modify
@@ -74,13 +74,23 @@ void log_message(const char *format, ...) {
 }
 
 /*
- * Log a message with systlog or print it to stderr
+ * Log a message with syslog or print it to stderr
  * if config.verbose is true
  */
 void log_message_verb(const char *format, ...) {
     va_list ap;
     va_start(ap, format);
     log_message_inner(config.verbose, format, ap);
+    va_end(ap);
+}
+
+/*
+ * Log a message with syslog
+ */
+void log_message_syslog(const char *format, ...) {
+    va_list ap;
+    va_start(ap, format);
+    log_message_inner(0, format, ap);
     va_end(ap);
 }
 

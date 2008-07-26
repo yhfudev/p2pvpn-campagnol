@@ -1,8 +1,8 @@
 /*
  * Campagnol configuration
- * 
+ *
  * Copyright (C) 2008 Florent Bondoux
- * 
+ *
  * This file is part of Campagnol.
  *
  * Campagnol is free software: you can redistribute it and/or modify
@@ -19,7 +19,7 @@
  * along with Campagnol.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
- 
+
 /*
  * Parse the configuration file
  * Check the configuration
@@ -69,8 +69,8 @@ void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
 /*
  * Search the local IP address to use. Copy it into "ip" and set "localIPset".
  * If strlen(iface) != 0, get the IP associated with the given interface
- * Otherweise search the IP of the first interface different from lo or lo0
- * 
+ * Otherwise search the IP of the first interface different from lo or lo0
+ *
  * see http://groups.google.com/group/comp.os.linux.development.apps/msg/10f14dda86ee351a
  */
 #define IFRSIZE   ((int)(size * sizeof (struct ifreq)))
@@ -104,7 +104,7 @@ void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
 //        if (ifr->ifr_addr.sa_data == (ifr+1)->ifr_addr.sa_data) {
 //            continue; // duplicate, skip it
 //        }
-        
+
         strncpy(ifreq_flags.ifr_name,  ifr->ifr_name, IFNAMSIZ);
         if (ioctl(sockfd, SIOCGIFFLAGS, &ifreq_flags)) {
             log_error("ioctl SIOCGIFFLAGS");
@@ -113,7 +113,7 @@ void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
         if (ifreq_flags.ifr_flags & IFF_LOOPBACK) {
             continue; // local interface, skip it
         }
-        
+
         if (strlen(iface) == 0 || strcmp (ifr->ifr_name, iface) == 0) {
             *ip = (((struct sockaddr_in *) &(ifr->ifr_addr))->sin_addr);
             *localIPset = 1;
@@ -130,7 +130,7 @@ void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
  * vpnip: IPv4 address of the client
  * len: number of bits in the netmask
  * broadcast (out): broadcast address
- * 
+ *
  * vpnIP and broadcast are in network byte order
  */
 int get_ipv4_broadcast(uint32_t vpnip, int len, uint32_t *broadcast) {
@@ -160,20 +160,20 @@ int load_CRL(char *crl_file) {
     X509_CRL *crl = NULL;
     BIO *bfile = NULL;
     bfile = BIO_new(BIO_s_file());
-    
+
     // Lecture de la CRL à l'aide d'un BIO
     if (BIO_read_filename(bfile, crl_file) <= 0) {
         if (config.debug) fprintf(stderr, "load_CRL: BIO_read_filename\n");
         return -1;
     }
     crl = PEM_read_bio_X509_CRL(bfile, NULL, NULL, NULL);
-    
+
     if (crl == NULL) {
         if (config.debug) fprintf(stderr, "load_CRL: fichier CRL non compris\n");
         return -1;
     }
     config.crl = crl;
-    
+
     BIO_free(bfile);
     return 0;
 }
@@ -187,21 +187,21 @@ void parseConfFile(char *confFile) {
         log_error(confFile);
         exit(EXIT_FAILURE);
     }
-    
+
     char * line = NULL;                 // last read line
     size_t line_len = 0;                // length of the line buffer
     ssize_t r;                          // length of the line
     char *token;                        // word
     char name[CONF_NAME_LENGTH];        // option name
     char value[CONF_VALUE_LENGTH];      // option value
-    
+
     int res;
     char *commentaire;
     char *token_end;
     char *line_eq;
     char *eol;
     int nline = 0;
-    
+
     /* set default values in config */
     memset(&config.localIP, 0, sizeof(config.localIP));
     config.localIP_set = 0;
@@ -222,11 +222,11 @@ void parseConfFile(char *confFile) {
     config.FIFO_size = 50;
     config.timeout = 120;
     config.max_clients = 100;
-    
+
     /* Read the configuration file */
     while ((r = getline(&line, &line_len, conf)) != -1) {
         nline ++;
-        
+
         // comment
         commentaire = strchr(line, '#');
         if (commentaire != NULL) {
@@ -259,8 +259,8 @@ void parseConfFile(char *confFile) {
         // copy name:
         *token_end = '\0';
         strncpy(name, token, CONF_NAME_LENGTH);
-        
-        
+
+
         token = line_eq+1;
         while (*token == ' ' || *token == '\t') token ++;
         token_end = token + strlen(token);
@@ -271,12 +271,12 @@ void parseConfFile(char *confFile) {
         while (*(token_end-1) == ' ' || *(token_end-1) == '\t') token_end --;
         *token_end = '\0';
         strncpy(value, token, CONF_VALUE_LENGTH);
-        
-        
+
+
         if (config.debug) {
             printf("[%s:%d] '%s' = '%s'\n", confFile, nline, name, value);
         }
-        
+
 
         if (strncmp(name, "local_host", CONF_NAME_LENGTH) == 0) {
             res = inet_aton(value, &config.localIP);
@@ -383,19 +383,19 @@ void parseConfFile(char *confFile) {
         else {
             log_message("[%s:%d] Unknown keyword '%s' = '%s'", confFile, nline, name, value);
         }
-        
+
     }
-    
+
     if (line) {
         free(line);
     }
-    
-    /* If no local IP address was given in the configuration file, 
+
+    /* If no local IP address was given in the configuration file,
      * try to get one with get_local_IP
      */
     if (config.localIP_set == 0)
        get_local_IP(&config.localIP, &config.localIP_set, config.iface);
-    
+
     /* Still nothing :(
      * No connection, or wrong interface name
      */
@@ -403,8 +403,8 @@ void parseConfFile(char *confFile) {
         log_message("Could not find a valid local IP address. Please check %s", confFile);
         exit(EXIT_FAILURE);
     }
-    
-    
+
+
     /* Check the mandatory parameters */
     if (!config.serverIP_set) {
         log_message("[%s] Parameter \"server_host\" is mandatory", confFile);
@@ -430,7 +430,7 @@ void parseConfFile(char *confFile) {
         log_message("[%s] Parameter \"ca_certificates\" is mandatory", confFile);
         exit(EXIT_FAILURE);
     }
-    
+
     /* compute the broadcast address */
     char * search, * end;
     int len;
