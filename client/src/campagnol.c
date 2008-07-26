@@ -1,9 +1,9 @@
 /*
  * Startup code
- * 
+ *
  * Copyright (C) 2007 Antoine Vianey
  *               2008 Florent Bondoux
- * 
+ *
  * This file is part of Campagnol.
  *
  * Campagnol is free software: you can redistribute it and/or modify
@@ -29,7 +29,7 @@
 
 #include <arpa/inet.h>
 #include <netdb.h>
-#include <sys/stat.h> 
+#include <sys/stat.h>
 #include <getopt.h>
 
 
@@ -64,7 +64,7 @@ void version(void) {
 
 int parse_args(int argc, char **argv, char **configFile) {
     int opt;
-    
+
     config.verbose = 0;
     config.daemonize = 0;
     config.debug = 0;
@@ -95,10 +95,10 @@ int parse_args(int argc, char **argv, char **configFile) {
             default : return 1;
         }
     }
-    
+
     argv += optind;
     argc -= optind;
-    
+
     /* the configuration file */
     if (argc == 1) {
         *configFile = argv[0];
@@ -109,7 +109,7 @@ int parse_args(int argc, char **argv, char **configFile) {
     else {
         return 1;
     }
-    
+
     return 0;
 }
 
@@ -131,11 +131,11 @@ void daemonize(void) {
 void * sig_handler(void * arg) {
     sigset_t mask;
     int sig;
-    
+
     while (1) {
         sigfillset(&mask);
-        sigwait(&mask, &sig); 
-        
+        sigwait(&mask, &sig);
+
         switch (sig) {
             case SIGTERM:
             case SIGINT:
@@ -150,7 +150,7 @@ void * sig_handler(void * arg) {
                 break;
         }
     }
-    
+
 }
 
 
@@ -159,7 +159,7 @@ int main (int argc, char **argv) {
     int sockfd, tunfd;
     int pa;
     pthread_t sighandler_th;
-    
+
     pa = parse_args(argc, argv, &configFile);
     if (pa == 1) {
         usage();
@@ -167,16 +167,16 @@ int main (int argc, char **argv) {
     else if (pa == 2) {
         version();
     }
-    
+
     if (config.daemonize) daemonize();
     log_init(config.daemonize, "campagnol");
-    
+
     parseConfFile(configFile);
     /* Print the current OpenSSL error stack (missing CRL file)
      * Empty the error stack
      */
     ERR_print_errors_fp(stderr);
-    
+
     if (config.verbose) {
         puts("Configuration:");
         printf("  Local IP address: %s\n", inet_ntoa (config.localIP));
@@ -196,22 +196,22 @@ int main (int argc, char **argv) {
         printf("  Timeout: %d sec.\n", config.timeout);
         printf("  Maximum number of connections: %d\n\n", config.max_clients);
     }
-    
+
     sockfd = create_socket();
     if (sockfd < 0) {
         exit(EXIT_FAILURE);
     }
-    
-    
+
+
     /* mask all signals in this thread and child threads */
     sigset_t mask;
     sigfillset(&mask);
     pthread_sigmask(SIG_BLOCK, &mask, NULL);
-    
+
     /* start the signal handler */
     sighandler_th = createThread(sig_handler, NULL);
-    
-    
+
+
     /* The UDP socket is configured
      * Now, register to the rendezvous server
      */
@@ -230,11 +230,11 @@ int main (int argc, char **argv) {
         sendto(sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
         exit(EXIT_FAILURE);
     }
-    
+
     log_message("Starting VPN");
-    
+
     start_vpn(sockfd, tunfd);
-    
+
     joinThread(sighandler_th, NULL);
     log_close();
     close_tun(tunfd);

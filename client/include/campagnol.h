@@ -1,9 +1,9 @@
 /*
  * Startup code
- * 
+ *
  * Copyright (C) 2007 Antoine Vianey
  *               2008 Florent Bondoux
- * 
+ *
  * This file is part of Campagnol.
  *
  * Campagnol is free software: you can redistribute it and/or modify
@@ -26,10 +26,11 @@
 
 #include "config.h"
 
-#include <stdio.h> 
-#include <stdlib.h> 
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <assert.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -37,6 +38,13 @@
 #include <netinet/ip.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+
+
+/*
+ * provide a dummy definition for ASSERT
+ * log.h redefines ASSERT to use it with syslog
+ */
+#define ASSERT(expr)       assert(expr)
 
 #include "configuration.h"
 

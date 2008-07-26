@@ -66,6 +66,7 @@ AC_CACHE_SAVE
 AC_HEADER_STDC
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h netdb.h netinet/in.h stdlib.h string.h sys/ioctl.h sys/socket.h sys/time.h syslog.h unistd.h])
 AC_CHECK_HEADERS([ifaddrs.h])
+AC_HEADER_ASSERT
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST

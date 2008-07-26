@@ -1,8 +1,8 @@
 /*
  * Small log functions
- * 
+ *
  * Copyright (C) 2008 Florent Bondoux
- * 
+ *
  * This file is part of Campagnol.
  *
  * Campagnol is free software: you can redistribute it and/or modify
@@ -27,6 +27,25 @@ extern void log_init(int enabled, const char *name);
 extern void log_close(void);
 extern void log_message(const char *format, ...);
 extern void log_message_verb(const char *format, ...);
+extern void log_message_syslog(const char *format, ...);
 extern void log_error(const char *s);
+
+/*
+ * assertCampagnol: if campagnol run as a daemon, log the assertion error message with syslog
+ * otherwise, same as assert.
+ */
+#ifdef NDEBUG
+#define ASSERT(expr)       (__ASSERT_VOID_CAST (0))
+#else
+#define assert_log(expr)             \
+    ((expr)                         \
+        ? __ASSERT_VOID_CAST (0)    \
+        : log_message_syslog("%s:%d: %s: Assertion `%s' failed.", __FILE__, __LINE__, __ASSERT_FUNCTION, __STRING(expr)) \
+    )
+#ifdef ASSERT
+#undef ASSERT
+#endif
+#define ASSERT(expr)       {assert_log(expr);assert(expr);}
+#endif
 
 #endif /*LOG_H_*/

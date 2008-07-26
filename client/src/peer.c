@@ -1,8 +1,8 @@
 /*
  * Peers list management
- * 
+ *
  * Copyright (C) 2008 Florent Bondoux
- * 
+ *
  * This file is part of Campagnol.
  *
  * Campagnol is free software: you can redistribute it and/or modify
@@ -35,7 +35,7 @@
 /* List of known clients */
 struct client *clients = NULL;
 int n_clients = 0;
-/* 
+/*
  * mutex used to manipulate 'clients'
  * It needs to be recursive since decr_ref may lock it
  */
@@ -84,10 +84,10 @@ void decr_ref(struct client *peer) {
 
 /*
  * Add a client to the list
- * 
+ *
  * !! The reference counter of the new client is 2:
  * one reference in the linked list "clients" plus the returned reference
- * 
+ *
  * just call decr_ref to remove the last reference from "clients":
  * This will remove the client from the linked list and free it's memory
  */
@@ -98,7 +98,7 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct
         }
         return NULL;
     }
-    
+
     if (config.debug) printf("Adding new client %s\n", inet_ntoa(vpnIP));
     struct client *peer = malloc(sizeof(struct client));
     peer->time = time;
@@ -112,14 +112,14 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct
     peer->sockfd = sockfd;
     conditionInit(&peer->cond_connected, NULL);
     peer->send_shutdown = 0;
-    
+
     peer->is_dtls_client = is_dtls_client;
     peer->thread_running = 0;
     mutexInit(&(peer->mutex_ref), NULL);
     peer->ref_count = 2;
-    
+
     createClientSSL(peer, 0);
-    
+
     peer->next = clients;
     peer->prev = NULL;
     if (peer->next) peer->next->prev = peer;
@@ -131,7 +131,7 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct
 /*
  * Contains the last search results for
  * get_client_VPN and get_client_real
- */ 
+ */
 struct client *cache_client_VPN = NULL;
 struct client *cache_client_real = NULL;
 
@@ -141,12 +141,12 @@ struct client *cache_client_real = NULL;
  */
 void remove_client(struct client *peer) {
     if (config.debug) printf("Deleting the client %s\n", inet_ntoa(peer->vpnIP));
-    
+
     conditionDestroy(&peer->cond_connected);
     mutexDestroy(&peer->mutex_ref);
     SSL_free(peer->ssl);
     SSL_CTX_free(peer->ctx);
-    
+
     if (peer->next) peer->next->prev = peer->prev;
     if (peer->prev) {
         peer->prev->next = peer->next;
@@ -154,7 +154,7 @@ void remove_client(struct client *peer) {
     else {
         clients = peer->next;
     }
-    
+
     free(peer);
     cache_client_VPN = NULL;
     cache_client_real = NULL;
@@ -219,10 +219,10 @@ struct client * get_client_real(struct sockaddr_in *cl_address) {
 int verify_crl(int preverify_ok, X509_STORE_CTX *x509_ctx) {
     X509_REVOKED *revoked;
     int i, n;
-    
+
     if (!preverify_ok)
         return preverify_ok;
-    
+
     if (config.crl) {
         /* Check the name of the certificate issuer */
         if (X509_NAME_cmp(X509_CRL_get_issuer(config.crl), X509_get_issuer_name(x509_ctx->current_cert)) != 0) {
@@ -230,10 +230,10 @@ int verify_crl(int preverify_ok, X509_STORE_CTX *x509_ctx) {
             ERR_print_errors_fp(stderr);
             return 0;
         }
-        
+
         /* Number of certificates in the CRL */
         n = sk_num(X509_CRL_get_REVOKED(config.crl));
-        
+
         /* Compare the certificate serial number with the one of every certificates in the list */
         for (i = 0; i < n; i++) {
             revoked = (X509_REVOKED *)sk_value(X509_CRL_get_REVOKED(config.crl), i);
@@ -244,7 +244,7 @@ int verify_crl(int preverify_ok, X509_STORE_CTX *x509_ctx) {
             }
         }
     }
-    
+
     return preverify_ok;
 }
 
@@ -257,10 +257,10 @@ void createClientSSL(struct client *peer, int recreate) {
         SSL_CTX_free(peer->ctx);
         SSL_free(peer->ssl);
     }
-    
+
     SSL_METHOD *meth = peer->is_dtls_client ? DTLSv1_client_method() : DTLSv1_server_method();
     peer->ctx = SSL_CTX_new(meth);
-    
+
     if (!SSL_CTX_use_certificate_chain_file(peer->ctx, config.certificate_pem)) {
         ERR_print_errors_fp(stderr);
         log_error("SSL_CTX_use_certificate_chain_file");
@@ -279,15 +279,15 @@ void createClientSSL(struct client *peer, int recreate) {
         log_error("SSL_CTX_load_verify_locations");
         exit(EXIT_FAILURE);
     }
-    
+
     /* Mandatory for DTLS */
     SSL_CTX_set_read_ahead(peer->ctx, 1);
-    
+
     peer->ssl = SSL_new(peer->ctx);
     peer->wbio = BIO_new_dgram(peer->sockfd, BIO_NOCLOSE);
     peer->rbio = BIO_new(BIO_s_fifo());
     SSL_set_bio(peer->ssl, peer->rbio, peer->wbio);
-    
+
     /* No zlib compression */
     peer->ssl->ctx->comp_methods = NULL;
     /* Algorithms */
@@ -299,7 +299,7 @@ void createClientSSL(struct client *peer, int recreate) {
         }
     }
     peer->is_dtls_client ? SSL_set_connect_state(peer->ssl) : SSL_set_accept_state(peer->ssl);
-    
+
     /* Don't try to discover the MTU
      * Don't want that OpenSSL fragments our packets
      * The MTU of the TUN device is 1400 which ensure that the encrypted packets are < 1500 bytes
