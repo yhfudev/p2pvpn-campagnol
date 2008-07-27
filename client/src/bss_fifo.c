@@ -1,8 +1,8 @@
 /*
  * OpenSSL BIO FIFO
- * 
+ *
  * Copyright (C) 2008 Florent Bondoux
- * 
+ *
  * This file is part of Campagnol.
  *
  */
@@ -15,21 +15,21 @@
  * This package is an SSL implementation written
  * by Eric Young (eay@cryptsoft.com).
  * The implementation was written so as to conform with Netscapes SSL.
- * 
+ *
  * This library is free for commercial and non-commercial use as long as
  * the following conditions are aheared to.  The following conditions
  * apply to all code found in this distribution, be it the RC4, RSA,
  * lhash, DES, etc., code; not just the SSL code.  The SSL documentation
  * included with this distribution is covered by the same copyright terms
  * except that the holder is Tim Hudson (tjh@cryptsoft.com).
- * 
+ *
  * Copyright remains Eric Young's, and as such any Copyright notices in
  * the code are not to be removed.
  * If this package is used in a product, Eric Young should be given attribution
  * as the author of the parts of the library used.
  * This can be in the form of a textual message at program startup or
  * in documentation (online or textual) provided with the package.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -44,10 +44,10 @@
  *     Eric Young (eay@cryptsoft.com)"
  *    The word 'cryptographic' can be left out if the rouines from the library
  *    being used are not cryptographic related :-).
- * 4. If you include any Windows specific code (or a derivative thereof) from 
+ * 4. If you include any Windows specific code (or a derivative thereof) from
  *    the apps directory (application code) you must include an acknowledgement:
  *    "This product includes software written by Tim Hudson (tjh@cryptsoft.com)"
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY ERIC YOUNG ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -59,7 +59,7 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- * 
+ *
  * The licence and distribution terms for any publically available version or
  * derivative of this code cannot be changed.  i.e. this code cannot simply be
  * copied and put under another distribution licence
@@ -77,6 +77,7 @@
 #include <unistd.h>
 #include <pthread.h>
 
+#include "log.h"
 #include "bss_fifo.h"
 #include "pthread_wrap.h"
 
@@ -117,39 +118,65 @@ BIO_METHOD *BIO_s_fifo(void) {
  * fifo_data and the fifo_item list
  */
 static int fifo_new(BIO *bi) {
+    struct fifo_item *prec, *new, *item, *next;
+    int i,j;
+    struct fifo_data * d;
+
     bi->shutdown=1;         // the "close flag" (see BIO_set_close(3))
     bi->init=1;
     bi->num= -1;            // not used
     bi->ptr = malloc(sizeof(struct fifo_data));
-    struct fifo_data * d = (struct fifo_data *) bi->ptr;
+    if (bi->ptr == NULL) {
+        log_error("Cannot allocate a new client");
+        return 0;
+    }
+    d = (struct fifo_data *) bi->ptr;
     d->len = 0;
     d->queue = NULL;
     d->first = NULL;
-    
+
     /* Circularly-linked list of length config.FIO_size */
     d->fifo = malloc(sizeof(struct fifo_item));
-    struct fifo_item *prec = d->fifo;
-    int i;
+    if (d->fifo == NULL) {
+        free(bi->ptr);
+        log_error("Cannot allocate a new client");
+        return 0;
+    }
+    prec = d->fifo;
     for (i=0; i<config.FIFO_size-1; i++) {
-        struct fifo_item *new = malloc(sizeof(struct fifo_item));
+        new = malloc(sizeof(struct fifo_item));
+//        if (i==5) {free(new); new=NULL; errno=ENOMEM;} // test
+        if (new == NULL) break;
         prec->next = new;
         prec = new;
     }
+    if (i != config.FIFO_size-1) {
+        item = d->fifo;
+        for (j=0; j<=i; j++) {
+            next = item->next;
+            free(item);
+            item = next;
+        }
+        free(bi->ptr);
+        log_error("Cannot allocate a new client");
+        return 0;
+    }
     prec->next = d->fifo; // close the loop
-    
+
     conditionInit(&d->cond, NULL);
     mutexInit(&d->mutex, NULL);
     return(1);
 }
 
 static int fifo_free (BIO *bi) {
+    struct fifo_data *d;
+    struct fifo_item *item, *next;
+    int i;
     if (bi == NULL) return(0); // we have to check
     if (bi->shutdown) {
         if ((bi->init) && (bi->ptr != NULL)) {
-            struct fifo_data *d = (struct fifo_data *) bi->ptr;
-            struct fifo_item *item = d->fifo;
-            struct fifo_item *next;
-            int i;
+            d = (struct fifo_data *) bi->ptr;
+            item = d->fifo;
             // free the queue
             for (i=0; i<config.FIFO_size; i++) {
                 next = item->next;
@@ -171,7 +198,7 @@ static int fifo_read(BIO *b, char *out, int outl) {
     int ret = -1, len;
     struct fifo_data *d;
     struct fifo_item *item;
-    
+
     d = (struct fifo_data *) b->ptr;
     mutexLock(&d->mutex);
     BIO_clear_retry_flags(b);
@@ -179,7 +206,7 @@ static int fifo_read(BIO *b, char *out, int outl) {
         d->waiting = 1;
         conditionWait(&d->cond, &d->mutex);
     }
-    
+
     // now it's not empty anymore
     item = d->first;
     len = item->size;
@@ -205,22 +232,22 @@ static int fifo_write(BIO *b, const char *in, int inl) {
     struct fifo_data *d;
     struct fifo_item *item;
     int ret = -1;
-        
+
     if (in == NULL) {
         BIOerr(BIO_F_MEM_WRITE,BIO_R_NULL_PARAMETER);
         goto end;
     }
-    
+
     d = (struct fifo_data *) b->ptr;
-    
+
     mutexLock(&d->mutex);
     if (d->len == config.FIFO_size) {
         d->waiting = 1;
         conditionWait(&d->cond, &d->mutex);
     }
-    
+
     BIO_clear_retry_flags(b);
-    
+
     if (d->len == 0) { // empty FIFO
         item = d->fifo; // take d->fifo for the first element
         d->first = item;
@@ -250,7 +277,7 @@ end:
 static long fifo_ctrl(BIO *b, int cmd, long num, void *ptr)
     {
     long ret=1;
-    
+
     struct fifo_data * d = (struct fifo_data *) b->ptr;
 
     switch (cmd)
@@ -297,7 +324,7 @@ static long fifo_ctrl(BIO *b, int cmd, long num, void *ptr)
     return(ret);
     }
 
-    
+
 static int fifo_puts(BIO *bp, const char *str)
     {
     int n,ret;

@@ -92,6 +92,8 @@ void decr_ref(struct client *peer) {
  * This will remove the client from the linked list and free it's memory
  */
 struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct in_addr clientIP, u_int16_t clientPort, struct in_addr vpnIP, int is_dtls_client) {
+    int r;
+
     if (n_clients >= config.max_clients) {
         if (config.debug) {
             printf("Cannot open a new connection: maximum number of connections reached\n");
@@ -101,6 +103,10 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct
 
     if (config.debug) printf("Adding new client %s\n", inet_ntoa(vpnIP));
     struct client *peer = malloc(sizeof(struct client));
+    if (peer == NULL) {
+        log_error("Cannot allocate a new client (malloc)");
+        return NULL;
+    }
     peer->time = time;
     bzero(&(peer->clientaddr), sizeof(peer->clientaddr));
     peer->clientaddr.sin_family = AF_INET;
@@ -118,7 +124,12 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct
     mutexInit(&(peer->mutex_ref), NULL);
     peer->ref_count = 2;
 
-    createClientSSL(peer, 0);
+    r = createClientSSL(peer, 0);
+    if (r != 0) {
+        free(peer);
+        log_error("Could not create the new client");
+        return NULL;
+    }
 
     peer->next = clients;
     peer->prev = NULL;
@@ -252,7 +263,7 @@ int verify_crl(int preverify_ok, X509_STORE_CTX *x509_ctx) {
  * Build the SSL structure for a client
  * if recreate is true, delete existing structures
  */
-void createClientSSL(struct client *peer, int recreate) {
+int createClientSSL(struct client *peer, int recreate) {
     if (recreate) {
         SSL_CTX_free(peer->ctx);
         SSL_free(peer->ssl);
@@ -284,8 +295,26 @@ void createClientSSL(struct client *peer, int recreate) {
     SSL_CTX_set_read_ahead(peer->ctx, 1);
 
     peer->ssl = SSL_new(peer->ctx);
+    if (peer->ssl == NULL) {
+        ERR_print_errors_fp(stderr);
+        log_error("SSL_new");
+        return -1;
+    }
     peer->wbio = BIO_new_dgram(peer->sockfd, BIO_NOCLOSE);
+    if (peer->wbio == NULL) {
+        ERR_print_errors_fp(stderr);
+        log_error("BIO_new_dgram");
+        SSL_free(peer->ssl);
+        return -1;
+    }
     peer->rbio = BIO_new(BIO_s_fifo());
+    if (peer->rbio == NULL) {
+        ERR_print_errors_fp(stderr);
+        log_error("BIO_new(BIO_s_fifo())");
+        BIO_free(peer->wbio);
+        SSL_free(peer->ssl);
+        return -1;
+    }
     SSL_set_bio(peer->ssl, peer->rbio, peer->wbio);
 
     /* No zlib compression */
@@ -307,4 +336,6 @@ void createClientSSL(struct client *peer, int recreate) {
      */
     SSL_set_options(peer->ssl, SSL_OP_NO_QUERY_MTU);
     peer->ssl->d1->mtu = 1500;
+
+    return 0;
 }
