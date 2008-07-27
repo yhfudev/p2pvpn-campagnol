@@ -37,9 +37,53 @@
 # include <ifaddrs.h>
 #endif
 
+#ifndef HAVE_GETLINE
+#warning "Using replacement for GNU getline"
+#define getline campagnolgetline
+
+ssize_t campagnolgetline(char **lineptr, size_t *n, FILE *stream) {
+    ASSERT(lineptr);
+    ASSERT(n);
+    ASSERT(stream);
+    char *p;
+
+    if (*lineptr == NULL || *n == 0) {
+        *n = 120;
+        *lineptr = (char *) malloc(*n);
+        if (*lineptr == NULL) {
+            return -1;
+        }
+    }
+    p = *lineptr;
+    for (;;) {
+        *p = fgetc(stream);
+        if (*p == EOF) {
+            return -1;
+        }
+        if (*p == '\n') {
+            p = p+1;
+            break;
+        }
+        p = p+1;
+        if (p - *lineptr == *n) {
+            *lineptr = (char *)realloc(*lineptr, *n+*n);
+            p = *lineptr + *n;
+            *n = *n + 120;
+        }
+    }
+
+    return p - *lineptr;
+}
+#endif
+
 struct configuration config;
 
 #ifdef HAVE_IFADDRS_H
+/*
+ * Search the local IP address to use. Copy it into "ip" and set "localIPset".
+ * If strlen(iface) != 0, get the IP associated with the given interface
+ * Otherwise search the IP of the first non loopback interface
+ */
 void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
     struct ifaddrs *ifap = NULL, *ifap_first = NULL;
     if (getifaddrs(&ifap) != 0) {
@@ -54,7 +98,10 @@ void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
             continue; // local interface, skip it
         }
         if (strlen(iface) == 0 || strcmp (ifap->ifa_name, iface) == 0) {
-            if (ifap->ifa_addr->sa_family == AF_INET) {
+            /* If the iface is a TUN device and getifaddrs want to
+             * show us its AF_PACKET level address, ifap->ifa_addr is NULL (phew!)
+             */
+            if (ifap->ifa_addr != NULL && ifap->ifa_addr->sa_family == AF_INET) {
                 *ip = (((struct sockaddr_in *) ifap->ifa_addr)->sin_addr);
                 *localIPset = 1;
                 break;
@@ -69,7 +116,7 @@ void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
 /*
  * Search the local IP address to use. Copy it into "ip" and set "localIPset".
  * If strlen(iface) != 0, get the IP associated with the given interface
- * Otherwise search the IP of the first interface different from lo or lo0
+ * Otherwise search the IP of the first non loopback interface
  *
  * see http://groups.google.com/group/comp.os.linux.development.apps/msg/10f14dda86ee351a
  */
