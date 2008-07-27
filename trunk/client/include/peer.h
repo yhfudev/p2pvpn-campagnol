@@ -1,8 +1,8 @@
 /*
  * Peers list management
- * 
+ *
  * Copyright (C) 2008 Florent Bondoux
- * 
+ *
  * This file is part of Campagnol.
  *
  * Campagnol is free software: you can redistribute it and/or modify
@@ -45,7 +45,7 @@ struct client {
     int thread_running;             // the thread from SSL_reading is running
     pthread_t thread;               // SSL_reading thread
     int send_shutdown;              // Send a shutdown message after SSL_read returns 0
-    
+
     pthread_mutex_t mutex_ref;      // mutex used to change the reference counter
     unsigned int ref_count;         // reference counter
 };
@@ -64,7 +64,7 @@ extern void mutex_clients_init(void);
 extern void mutex_clients_destroy(void);
 
 extern struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct in_addr clientIP, u_int16_t clientPort, struct in_addr vpnIP, int is_dtls_client);
-extern void createClientSSL(struct client *peer, int recreate);
+extern int createClientSSL(struct client *peer, int recreate);
 extern void remove_client(struct client *peer);
 extern struct client * get_client_VPN(struct in_addr *address);
 extern struct client * get_client_real(struct sockaddr_in *cl_address);

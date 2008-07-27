@@ -1,9 +1,9 @@
 /*
  * Campagnol main code
- * 
+ *
  * Copyright (C) 2007 Antoine Vianey
  *               2008 Florent Bondoux
- * 
+ *
  * This file is part of Campagnol.
  *
  * Campagnol is free software: you can redistribute it and/or modify
@@ -23,7 +23,7 @@
 
 #include "campagnol.h"
 
-#include <time.h> 
+#include <time.h>
 #include <pthread.h>
 
 #include <sys/types.h>
@@ -78,7 +78,7 @@
 //    printf("| %s", tmp);
 //    for (i=0; i<16-strlen(tmp); i++) printf(" ");
 //    printf("|\n*****************************************************\n");
-//} 
+//}
 
 /* Initialise a message with the given fields */
 inline void init_smsg(struct message *smsg, int type, u_int32_t ip1, u_int32_t ip2) {
@@ -94,7 +94,7 @@ inline void init_timeout(struct timeval *timeout) {
     timeout->tv_usec = SELECT_DELAY_USEC;
 }
 
-/* 
+/*
  * Handler for SIGALRM
  * send a PING message
  */
@@ -139,16 +139,16 @@ uint16_t compute_csum(uint16_t *addr, size_t count){
 int register_rdv(int sockfd) {
     struct message smsg, rmsg;
     struct timeval timeout;
-    
+
     int s,r;
     int notRegistered = 1;
     int registeringTries = 0;
     fd_set fd_select;
-    
+
     /* Create a HELLO message */
     log_message_verb("Registering with the RDV server...");
     init_smsg(&smsg, HELLO, config.vpnIP.s_addr, 0);
-    
+
     while (notRegistered && registeringTries<MAX_REGISTERING_TRIES && !end_campagnol) {
         /* sending HELLO to the server */
         registeringTries++;
@@ -156,13 +156,13 @@ int register_rdv(int sockfd) {
         if ((s=sendto(sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr))) == -1) {
             log_error("sendto");
         }
-        
+
         /* fd_set used with the select call */
         FD_ZERO(&fd_select);
         FD_SET(sockfd, &fd_select);
         init_timeout(&timeout);
         select(sockfd+1, &fd_select, NULL, NULL, &timeout);
-        
+
         if (FD_ISSET(sockfd, &fd_select)!=0 && !end_campagnol) {
             /* Got a message from the server */
             socklen_t len = sizeof(struct sockaddr_in);
@@ -192,7 +192,7 @@ int register_rdv(int sockfd) {
         log_message_verb("The connection with the RDV server failed");
         return 1;
     }
-    
+
     /* set a timer for the ping messages */
     struct itimerval timer_ping;
     timer_ping.it_interval.tv_sec = TIMER_PING_SEC;
@@ -201,40 +201,39 @@ int register_rdv(int sockfd) {
     timer_ping.it_value.tv_usec = TIMER_PING_USEC;
     sockfd_global = sockfd;
     setitimer(ITIMER_REAL, &timer_ping, NULL);
-    
+
     return 0;
 }
 
 
-/* 
+/*
  * Function sending the punch messages for UDP hole punching
  * arg: struct punch_arg
  */
 void *punch(void *arg) {
     int i;
-    struct punch_arg *str = (struct punch_arg *)arg;
+    struct client *peer = (struct client *)arg;
     struct message smsg;
     init_smsg(&smsg, PUNCH, config.vpnIP.s_addr, 0);
-    str->peer->time = time(NULL);
+    peer->time = time(NULL);
     /* punching state */
     MUTEXLOCK;
-    if (str->peer->state!=ESTABLISHED) {
-        str->peer->state = PUNCHING;
+    if (peer->state!=ESTABLISHED) {
+        peer->state = PUNCHING;
     }
     MUTEXUNLOCK;
-    if (config.verbose) printf("punch %s %d\n", inet_ntoa(str->peer->clientaddr.sin_addr), ntohs(str->peer->clientaddr.sin_port));
-    for (i=0; i<PUNCH_NUMBER && str->peer->state != CLOSED; i++) {
-        sendto(str->sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&(str->peer->clientaddr), sizeof(str->peer->clientaddr));
+    if (config.verbose) printf("punch %s %d\n", inet_ntoa(peer->clientaddr.sin_addr), ntohs(peer->clientaddr.sin_port));
+    for (i=0; i<PUNCH_NUMBER && peer->state != CLOSED; i++) {
+        sendto(peer->sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&(peer->clientaddr), sizeof(peer->clientaddr));
         usleep(PUNCH_DELAY_USEC);
     }
     /* still waiting for an answer */
     MUTEXLOCK;
-    if (str->peer->state!=ESTABLISHED && str->peer->state!=CLOSED) {
-        str->peer->state = WAITING;
+    if (peer->state!=ESTABLISHED && peer->state!=CLOSED) {
+        peer->state = WAITING;
     }
-    decr_ref(str->peer);
+    decr_ref(peer);
     MUTEXUNLOCK;
-    free(arg);
     pthread_exit(NULL);
 }
 
@@ -242,22 +241,19 @@ void *punch(void *arg) {
  * Create a thread executing "punch"
  */
 void start_punch(struct client *peer, int sockfd) {
-    struct punch_arg *arg = malloc(sizeof(struct punch_arg));
-    arg->sockfd = sockfd;
-    arg->peer = peer;
     pthread_t t;
     incr_ref(peer);
-    t = createThread(punch, (void *)arg);
+    t = createThread(punch, (void *)peer);
 }
 
 /*
  * Thread associated with each SSL stream
- * 
+ *
  * Make the SSL handshake
  * Loop over SSL_read
- * 
+ *
  * The SSL stream is fed by calling BIO_write with peer->rbio
- * 
+ *
  * args: the connected peer (struct client *)
  */
 void * SSL_reading(void * args) {
@@ -266,10 +262,10 @@ void * SSL_reading(void * args) {
     union {
         struct ip ip;
         unsigned char raw[MESSAGE_MAX_LENGTH];
-    } u; 
+    } u;
     struct client *peer = (struct client*) args;
     int tunfd = peer->tunfd;
-    
+
     // DTLS handshake
     r = peer->ssl->handshake_func(peer->ssl);
     if (r != 1) {
@@ -292,8 +288,8 @@ void * SSL_reading(void * args) {
     MUTEXUNLOCK;
     conditionSignal(&peer->cond_connected);
     log_message_verb("new DTLS connection opened with peer %s", inet_ntoa(peer->vpnIP));
-    
-    while (1) { 
+
+    while (1) {
         /* Read and uncrypt a message, send it on the TUN device */
         r = SSL_read(peer->ssl, &u, MESSAGE_MAX_LENGTH);
         if (r < 0) { // error
@@ -383,7 +379,7 @@ void * comm_socket(void * argument) {
     struct comm_args * args = argument;
     int sockfd = args->sockfd;
     int tunfd = args->tunfd;
-    
+
     int r, s;
     int r_select;
     fd_set fd_select;                           // for the select call
@@ -401,16 +397,16 @@ void * comm_socket(void * argument) {
     struct message *rmsg = (struct message *) &u;   // incoming struct message
     struct message smsg; // outgoing message
     struct client *peer;
-    
+
     init_timeout(&timeout);
-    
+
     while (!end_campagnol) {
         /* select call initialisation */
         FD_ZERO(&fd_select);
         FD_SET(sockfd, &fd_select);
-        
+
         r_select = select(sockfd+1, &fd_select, NULL, NULL, &timeout);
-    
+
         /* MESSAGE READ FROM THE SOCKET */
         if (r_select > 0) {
             r = recvfrom(sockfd,(unsigned char *)&u,MESSAGE_MAX_LENGTH,0,(struct sockaddr *)&unknownaddr,&len);
@@ -520,11 +516,11 @@ void * comm_socket(void * argument) {
                     }
                 }
             }
-            
-        
+
+
         }
-        
-        
+
+
         /* TIMEOUT */
         else if (r_select == 0) {
             init_timeout(&timeout);
@@ -551,7 +547,7 @@ void * comm_socket(void * argument) {
                     if (config.debug && peer->state != TIMEOUT ) printf("timeout: %s\n", inet_ntoa(peer->vpnIP));
                     peer->state = TIMEOUT;
                     if (peer->is_dtls_client) {
-                        /* close the connection if we started it (client) */                   
+                        /* close the connection if we started it (client) */
                         if (peer->thread_running) {
                             init_smsg(&smsg, CLOSE_CONNECTION, peer->vpnIP.s_addr, 0);
                             s = sendto(sockfd, &smsg, sizeof(smsg), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
@@ -569,10 +565,10 @@ void * comm_socket(void * argument) {
             }
             MUTEXUNLOCK;
         }
-    
-    
+
+
     }
-    
+
     return NULL;
 }
 
@@ -585,7 +581,7 @@ void * comm_tun(void * argument) {
     struct comm_args * args = argument;
     int sockfd = args->sockfd;
     int tunfd = args->tunfd;
-    
+
     int r;
     int r_select;
     fd_set fd_select;                           // for the select call
@@ -606,8 +602,8 @@ void * comm_tun(void * argument) {
         FD_ZERO(&fd_select);
         FD_SET(tunfd, &fd_select);
         r_select = select(tunfd+1, &fd_select, NULL, NULL, &timeout);
-        
-        
+
+
         /* MESSAGE READ FROM TUN DEVICE */
         if (r_select > 0) {
             r = read(tunfd, &u, sizeof(u));
@@ -652,7 +648,7 @@ void * comm_tun(void * argument) {
                     /* ask the RDV server for a new connection with peer */
                     init_smsg(&smsg, ASK_CONNECTION, dest.s_addr, 0);
                     sendto(sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
-                    
+
                     clock_gettime(CLOCK_REALTIME, &timeout_connect);
                     timeout_connect.tv_sec += 3; // wait 3 secs
                     MUTEXLOCK;
@@ -670,7 +666,7 @@ void * comm_tun(void * argument) {
                         decr_ref(peer);
                     }
                     MUTEXUNLOCK;
-                    
+
                 }
                 else switch (peer->state) {
                     /* Already connected */
@@ -690,7 +686,7 @@ void * comm_tun(void * argument) {
                         /* ask the RDV server for a new connection with peer */
                         init_smsg(&smsg, ASK_CONNECTION, dest.s_addr, 0);
                         sendto(sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
-                        
+
                         clock_gettime(CLOCK_REALTIME, &timeout_connect);
                         timeout_connect.tv_sec += 3;
                         MUTEXLOCK;
@@ -738,9 +734,9 @@ void * comm_tun(void * argument) {
                 }
             }
         }
-    
+
     }
-    
+
     return NULL;
 }
 
@@ -748,29 +744,33 @@ void * comm_tun(void * argument) {
 /*
  * Start the VPN:
  * start a thread running comm_tun and another one running comm_socket
- * 
+ *
  * set end_campagnol to 1 un order to stop both threads (and others)
  */
 void start_vpn(int sockfd, int tunfd) {
     struct message smsg;
     struct comm_args *args = (struct comm_args*) malloc(sizeof(struct comm_args));
+    if (args == NULL) {
+        log_error("Could not allocate structure (start_vpn)");
+        exit(EXIT_FAILURE);
+    }
     args->sockfd = sockfd;
     args->tunfd = tunfd;
-    
+
     SSL_library_init();
     SSL_load_error_strings();
-    
+
     mutex_clients_init();
-    
+
     pthread_t th_socket, th_tun;
     th_socket = createThread(comm_socket, args);
     th_tun = createThread(comm_tun, args);
-    
+
     joinThread(th_socket, NULL);
     joinThread(th_tun, NULL);
-    
+
     free(args);
-    
+
     MUTEXLOCK;
     struct client *peer, *next;
     peer = clients;
@@ -788,16 +788,16 @@ void start_vpn(int sockfd, int tunfd) {
         peer = next;
     }
     MUTEXUNLOCK;
-    
+
     init_smsg(&smsg, BYE, config.vpnIP.s_addr, 0);
     if (config.debug) printf("Sending BYE\n");
     if (sendto(sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr)) == -1) {
         log_error("sendto");
     }
-    
+
     // wait for all the SSL_reading thread to finish
     while (n_clients != 0) { usleep(100000); }
-    
+
     mutex_clients_destroy();
 }
 
