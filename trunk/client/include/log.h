@@ -28,19 +28,20 @@ extern void log_close(void);
 extern void log_message(const char *format, ...);
 extern void log_message_verb(const char *format, ...);
 extern void log_message_syslog(const char *format, ...);
-extern void log_error(const char *s);
+extern void __log_error(const char *filename, unsigned int linenumber, const char *functionname, const char *s);
+#define log_error(msg)      __log_error(__FILE__, __LINE__, __func__, msg)
 
 /*
  * assertCampagnol: if campagnol run as a daemon, log the assertion error message with syslog
  * otherwise, same as assert.
  */
 #ifdef NDEBUG
-#define ASSERT(expr)       (__ASSERT_VOID_CAST (0))
+#define ASSERT(expr)       ((void)(0))
 #else
 #define assert_log(expr)             \
     ((expr)                         \
-        ? __ASSERT_VOID_CAST (0)    \
-        : log_message_syslog("%s:%d: %s: Assertion `%s' failed.", __FILE__, __LINE__, __ASSERT_FUNCTION, __STRING(expr)) \
+        ? (void)(0)    \
+        : log_message_syslog("%s:%d: %s: Assertion `%s' failed.", __FILE__, __LINE__, __func__, __STRING(expr)) \
     )
 #ifdef ASSERT
 #undef ASSERT
