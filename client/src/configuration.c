@@ -55,24 +55,24 @@ ssize_t campagnolgetline(char **lineptr, size_t *n, FILE *stream) {
         }
     }
     p = *lineptr;
-    for (;;) {
-        *p = fgetc(stream);
-        if (*p == EOF) {
-            return -1;
-        }
-        if (*p == '\n') {
-            p = p+1;
-            break;
-        }
-        p = p+1;
+    for (;;p++) {
         if (p - *lineptr == *n) {
-            *lineptr = (char *)realloc(*lineptr, *n+*n);
+            *lineptr = (char *)realloc(*lineptr, *n+120);
             p = *lineptr + *n;
             *n = *n + 120;
         }
+        *p = fgetc(stream);
+        if (*p == EOF) {
+            p--;
+            break;
+        }
+        if (*p == '\n') {
+            break;
+        }
     }
 
-    return p - *lineptr;
+    if ((p - *lineptr + 1) == 0) return -1;
+    return p - *lineptr+1;
 }
 #endif
 
