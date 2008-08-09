@@ -260,6 +260,19 @@ int verify_crl(int preverify_ok, X509_STORE_CTX *x509_ctx) {
 }
 
 /*
+ * callback function for SSL_*_set_info_callback
+ * The callback is called whenever the state of the TLS connection changes.
+ */
+void ctx_info_callback(const SSL *ssl, int where, int ret) {
+    if (where & SSL_CB_ALERT) {
+        log_message("DTLS alert: %s: %s | %s",
+                SSL_alert_type_string_long(ret),
+                SSL_alert_desc_string_long(ret),
+                SSL_state_string_long(ssl));
+    }
+}
+
+/*
  * Build the SSL structure for a client
  * if recreate is true, delete existing structures
  */
@@ -289,6 +302,10 @@ int createClientSSL(struct client *peer, int recreate) {
         ERR_print_errors_fp(stderr);
         log_error("SSL_CTX_load_verify_locations");
         exit(EXIT_FAILURE);
+    }
+
+    if (config.debug) {
+        SSL_CTX_set_info_callback(peer->ctx, ctx_info_callback);
     }
 
     /* Mandatory for DTLS */
