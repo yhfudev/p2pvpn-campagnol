@@ -1,9 +1,9 @@
 /*
  * Campagnol main code
- * 
+ *
  * Copyright (C) 2007 Antoine Vianey
  *               2008 Florent Bondoux
- * 
+ *
  * This file is part of Campagnol.
  *
  * Campagnol is free software: you can redistribute it and/or modify
@@ -24,7 +24,7 @@
 #ifndef COMMUNICATION_H_
 #define COMMUNICATION_H_
 
-/* 
+/*
  * Message types (1 byte)
  * Must be different from the DTLS content type values
  */
@@ -65,11 +65,50 @@
 #define MAX_REGISTERING_TRIES 4
 
 /*
- * Max UDP message length
- * the MTU on the TUN device is 1400
- * the overhead is (surely...) less than 100 bytes
+ * TUN_MTU: MTU on the TUN device
+ * TODO: add option for TUN_MTU
+ *
+ * MESSAGE_MAX_LENGTH: Max UDP message length
+ * it must be large enough for the maximum data size + the maximum DTLS overhead.
+ *
+ * the maximum data size is the MTU of the tun interface: TUN_MTU
+ * for campagnol, there is no data compression, so no potential compression overhead
+ *
+ * the DTLS overhead is:
+ * record layer + MAC + padding + padding length field + IV
+ * - record layer is 13 bytes
+ * - MAC is 20 bytes for SHA1, 16 bytes for MD5
+ * - the padding length field is 1 byte (so the padding is <= 255 bytes)
+ * - the total length of the (compressed) data, the IVs, the MAC, the padding
+ *   and the padding length must be a multiple of the cipher's block size.
+ *
+ * so, for camellia 256 + SHA1, and a packet size of 1400 bytes
+ * - the block size is 16 bytes. it's also the IV size.
+ * - the MAC size is 20 bytes
+ * - need to pad 1400+20+1+16 = 1437 to the next multiple of 16 = 1440
+ *   (add 3 bytes of padding)
+ * - the total message length is 1440 + 13 = 1453
+ *   1400 (data) + 20 (MAC) + 3 (padding) + 1 (padding length) + 16 (IVs) + 13 (record layer)
+ *
+ * we can also estimate the maximum overhead supposing that the IV size is the same as the block size
+ * block size | MAC size | overhead
+ *    8 (64)  |    20    |    49
+ *   16 (128) |    20    |    65
+ *    8 (64)  |    64    |    93    for future sha-512...
+ *   16 (128) |    64    |   109
+ *
+ * AFAIK, DTLS 1.0 only supports MD5 or SHA1 for the MAC, and openssl has no block cipher with block sizes
+ * larger than 128 bits.
+ * TLS 1.2 will allow other MAC like SHA-512
+ *
+ * If you want to estimate the best MTU for the VPN according to your
+ * network MTU and cipher algorithm, don't forget the IP and UDP headers.
+ * The overall overhead for campagnol is:
+ * 20 (IP) + 8 (UDP) + DTLS overhead
+ *
  */
-#define MESSAGE_MAX_LENGTH 1500
+#define TUN_MTU 1419
+#define MESSAGE_MAX_LENGTH (TUN_MTU+200)
 /*
  * Number of punch messages
  */

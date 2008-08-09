@@ -1,8 +1,8 @@
 /*
  * OpenSSL BIO FIFO
- * 
+ *
  * Copyright (C) 2008 Florent Bondoux
- * 
+ *
  * This file is part of Campagnol.
  *
  * Campagnol is free software: you can redistribute it and/or modify
@@ -24,6 +24,8 @@
 #ifndef BSS_FIFO_H_
 #define BSS_FIFO_H_
 
+#include "communication.h"
+
 /* BIO type: source/sink */
 #define BIO_TYPE_FIFO (23|BIO_TYPE_SOURCE_SINK)
 
@@ -44,7 +46,7 @@ struct fifo_data {
 /* An item in the queue */
 struct fifo_item {
     int size;                       // Size of the packet
-    char data[2000];                // Contains the data
+    char data[MESSAGE_MAX_LENGTH];  // Contains the data
     struct fifo_item *next;
 };
 

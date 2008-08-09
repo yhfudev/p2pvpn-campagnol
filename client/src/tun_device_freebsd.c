@@ -1,9 +1,9 @@
 /*
  * Create and configure a tun device
- * 
+ *
  * Copyright (C) 2007 Antoine Vianey
  *               2008 Florent Bondoux
- * 
+ *
  * This file is part of Campagnol.
  *
  * Campagnol is free software: you can redistribute it and/or modify
@@ -32,6 +32,7 @@
 #include <sys/stat.h>
 
 #include "campagnol.h"
+#include "communication.h"
 #include "tun_device.h"
 #include "log.h"
 
@@ -44,7 +45,7 @@ int init_tun(int istun) {
     int tunfd;
     struct stat buf;
     char systemcall[100] = "";          // used to configure the new interface with system shell commands
-    
+
     /* Open TUN interface */
     if (config.verbose) printf("TUN interface initialization\n");
     if( (tunfd = open("/dev/tun", O_RDWR)) < 0 ) {
@@ -60,7 +61,7 @@ int init_tun(int istun) {
     /* Inteface configuration */
     if (config.verbose) printf("TUN interface configuration\n");
     if (config.debug) printf("ifconfig...\n");
-    snprintf(systemcall, 100, "ifconfig %s inet %s %s mtu 1400 up", devname(buf.st_rdev, S_IFCHR), inet_ntoa (config.vpnIP), inet_ntoa(config.vpnIP));
+    snprintf(systemcall, 100, "ifconfig %s inet %s %s mtu %d up", devname(buf.st_rdev, S_IFCHR), inet_ntoa (config.vpnIP), inet_ntoa(config.vpnIP), TUN_MTU);
     if (config.debug) puts(systemcall);
     system(systemcall);
     if (config.debug) printf("ip route...\n");
@@ -77,14 +78,14 @@ int init_tun(int istun) {
         log_message_verb("Error while configuring the TUN interface");
         return -1;
     }
-        
+
     return tunfd;
 }
 
 int close_tun(int fd) {
     struct stat buf;
     char systemcall[100] = "";
-    
+
     fstat(fd, &buf);
     close(fd);
     snprintf(systemcall, 100, "ifconfig %s destroy", devname(buf.st_rdev, S_IFCHR));
