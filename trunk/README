@@ -29,14 +29,16 @@ In order to compile Campagnol you need:
 - Universal TUN/TAP driver          http://vtun.sourceforge.net/tun
 
 To build the server, build every .java file in the rdvserver directory:
-  javac *.java
+$ javac *.java
 or if you have Ant installed:
-  ant compile
+$ ant compile
 
 To build the client, go in the 'client' directory and run:
-  make
-You may edit the Makefile if you have installed OpenSSL in a non standard
-directory.
+$ ./configure
+$ make
+If you don't have pkg-config or if you have installed OpenSSL in a
+non standard directory, you should have a look at the --with-openssl*
+options for the 'configure' script.
 
 
 Creating the certificates

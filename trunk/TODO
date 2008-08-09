@@ -9,11 +9,9 @@ Known issues
 
 Plans
 -----
-- Autoconf and automake.
-- FreeBSD port.
 - Try to cope with the loss of important DTLS datagrams.
-- Rewrite the rendezvous server in C, which would allow to use DLTS
-  between the peers and the server. Or wait for a good and flexible Java
-  DTLS implementation.
-
-
+- Rewrite the rendezvous server in C.
+- Use DTLS between the rendezvous server and the peers, except for the ping messages.
+- Possibility to define the common options in the rendezvous server and to distribute them to the peers.
+- Maybe use OCSP instead of a CRL which has to be distributed and maintained for every clients.
+- OpenBSD port, maybe solaris too.
