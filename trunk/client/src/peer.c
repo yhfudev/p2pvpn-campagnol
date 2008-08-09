@@ -355,11 +355,9 @@ int createClientSSL(struct client *peer, int recreate) {
 
     /* Don't try to discover the MTU
      * Don't want that OpenSSL fragments our packets
-     * The MTU of the TUN device is 1400 which ensure that the encrypted packets are < 1500 bytes
-     * the typical overhead is 20 (IP) + 8 (UDP) + 5 (DTLS record) + 20 (160 bits SHA1 MAC)
      */
     SSL_set_options(peer->ssl, SSL_OP_NO_QUERY_MTU);
-    peer->ssl->d1->mtu = 1500;
+    peer->ssl->d1->mtu = MESSAGE_MAX_LENGTH;
 
     return 0;
 }

@@ -1,9 +1,9 @@
 /*
  * Create and configure a tun device
- * 
+ *
  * Copyright (C) 2007 Antoine Vianey
  *               2008 Florent Bondoux
- * 
+ *
  * This file is part of Campagnol.
  *
  * Campagnol is free software: you can redistribute it and/or modify
@@ -21,14 +21,14 @@
  *
  */
 
-#include "campagnol.h"
-
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <arpa/inet.h>
 #include <net/if.h>
 #include <linux/if_tun.h>
 
+#include "campagnol.h"
+#include "communication.h"
 #include "tun_device.h"
 #include "log.h"
 
@@ -41,7 +41,7 @@ int init_tun(int istun) {
     int tunfd;
     struct ifreq ifr;                   // interface request used to open the TUN device
     char systemcall[100] = "";          // used to configure the new interface with system shell commands
-    
+
     /* Open TUN interface */
     if (config.verbose) printf("TUN interface initialization\n");
     if( (tunfd = open("/dev/net/tun", O_RDWR)) < 0 ) {
@@ -50,13 +50,13 @@ int init_tun(int istun) {
     }
 
     bzero(&ifr, sizeof(ifr));
-    
-    /** Flags:  IFF_TUN   - TUN device (no Ethernet headers) 
-                IFF_TAP   - TAP device  
-                IFF_NO_PI - Do not provide packet information */ 
-    ifr.ifr_flags = (istun ? IFF_TUN : IFF_TAP) |IFF_NO_PI ; 
+
+    /** Flags:  IFF_TUN   - TUN device (no Ethernet headers)
+                IFF_TAP   - TAP device
+                IFF_NO_PI - Do not provide packet information */
+    ifr.ifr_flags = (istun ? IFF_TUN : IFF_TAP) |IFF_NO_PI ;
     strncpy(ifr.ifr_name, (istun ? "tun%d" : "tap%d"), IFNAMSIZ);
-    
+
     if ((ioctl(tunfd, TUNSETIFF, (void *) &ifr)) < 0) {
         close(tunfd);
         log_error("Error: ioctl TUNSETIFF");
@@ -67,13 +67,13 @@ int init_tun(int istun) {
         log_error("Error: ioctl TUNSETNOCSUM");
         return -1;
     }
-    
+
     if (config.debug) printf("Using TUN device: %s\n",ifr.ifr_name);
-    
+
     /* Inteface configuration */
     if (config.verbose) printf("TUN interface configuration\n");
     if (config.debug) printf("ifconfig...\n");
-    snprintf(systemcall, 100, "ifconfig %s %s mtu 1400 up", ifr.ifr_name, inet_ntoa (config.vpnIP));
+    snprintf(systemcall, 100, "ifconfig %s %s mtu %d up", ifr.ifr_name, inet_ntoa (config.vpnIP), TUN_MTU);
     if (config.debug) puts(systemcall);
     system(systemcall);
     if (config.debug) printf("ip route...\n");
@@ -90,7 +90,7 @@ int init_tun(int istun) {
         log_message_verb("Error while configuring the TUN interface");
         return -1;
     }
-        
+
     return tunfd;
 }
 
