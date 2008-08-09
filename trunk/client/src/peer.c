@@ -283,7 +283,7 @@ int createClientSSL(struct client *peer, int recreate) {
         log_error("SSL_CTX_use_PrivateKey_file");
         exit(EXIT_FAILURE);
     }
-    SSL_CTX_set_verify(peer->ctx, SSL_VERIFY_PEER, verify_crl);
+    SSL_CTX_set_verify(peer->ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT , verify_crl);
     SSL_CTX_set_verify_depth(peer->ctx, 1);
     if (!SSL_CTX_load_verify_locations(peer->ctx, config.verif_pem, NULL)) {
         ERR_print_errors_fp(stderr);
@@ -327,7 +327,14 @@ int createClientSSL(struct client *peer, int recreate) {
             exit(EXIT_FAILURE);
         }
     }
-    peer->is_dtls_client ? SSL_set_connect_state(peer->ssl) : SSL_set_accept_state(peer->ssl);
+
+    if (peer->is_dtls_client) {
+        SSL_set_connect_state(peer->ssl);
+    }
+    else {
+        SSL_set_accept_state(peer->ssl);
+        SSL_CTX_set_client_CA_list(peer->ctx, SSL_load_client_CA_file(config.verif_pem));
+    }
 
     /* Don't try to discover the MTU
      * Don't want that OpenSSL fragments our packets
