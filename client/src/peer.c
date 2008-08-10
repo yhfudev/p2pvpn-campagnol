@@ -315,6 +315,7 @@ int createClientSSL(struct client *peer, int recreate) {
     if (peer->ssl == NULL) {
         ERR_print_errors_fp(stderr);
         log_error("SSL_new");
+        SSL_CTX_free(peer->ctx);
         return -1;
     }
     peer->wbio = BIO_new_dgram(peer->sockfd, BIO_NOCLOSE);
@@ -322,6 +323,7 @@ int createClientSSL(struct client *peer, int recreate) {
         ERR_print_errors_fp(stderr);
         log_error("BIO_new_dgram");
         SSL_free(peer->ssl);
+        SSL_CTX_free(peer->ctx);
         return -1;
     }
     peer->rbio = BIO_new(BIO_s_fifo());
@@ -330,6 +332,7 @@ int createClientSSL(struct client *peer, int recreate) {
         log_error("BIO_new(BIO_s_fifo())");
         BIO_free(peer->wbio);
         SSL_free(peer->ssl);
+        SSL_CTX_free(peer->ctx);
         return -1;
     }
     SSL_set_bio(peer->ssl, peer->rbio, peer->wbio);
