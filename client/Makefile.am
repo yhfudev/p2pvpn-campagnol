@@ -1,2 +1,2 @@
 SUBDIRS = src 
-EXTRA_DIST = include samples campagnol.conf
+EXTRA_DIST = $(shell find include samples -type f ! -path '*.svn*') campagnol.conf

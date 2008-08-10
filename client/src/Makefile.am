@@ -10,5 +10,3 @@ campagnol_CPPFLAGS = -I"$(srcdir)/../include" @OPENSSL_CFLAGS@
 campagnol_CFLAGS = -Wall -Wstrict-prototypes
 campagnol_LDFLAGS = @OPENSSL_LIBS@
 
-
-EXTRA_DIST = tun_device_linux.c tun_device_freebsd.c
