@@ -32,6 +32,7 @@
 #include <sys/stat.h>
 
 #include "campagnol.h"
+#include "configuration.h"
 #include "communication.h"
 #include "tun_device.h"
 #include "log.h"
@@ -59,9 +60,9 @@ int init_tun(int istun) {
     fstat(tunfd, &buf);
 
     /* Inteface configuration */
-    if (config.verbose) printf("TUN interface configuration\n");
+    if (config.verbose) printf("TUN interface configuration (%s MTU %d)\n", devname(buf.st_rdev, S_IFCHR), config.tun_mtu);
     if (config.debug) printf("ifconfig...\n");
-    snprintf(systemcall, 100, "ifconfig %s inet %s %s mtu %d up", devname(buf.st_rdev, S_IFCHR), inet_ntoa (config.vpnIP), inet_ntoa(config.vpnIP), TUN_MTU);
+    snprintf(systemcall, 100, "ifconfig %s inet %s %s mtu %d up", devname(buf.st_rdev, S_IFCHR), inet_ntoa (config.vpnIP), inet_ntoa(config.vpnIP), config.tun_mtu);
     if (config.debug) puts(systemcall);
     system(systemcall);
     if (config.debug) printf("ip route...\n");

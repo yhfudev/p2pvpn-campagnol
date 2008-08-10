@@ -28,6 +28,7 @@
 #include <linux/if_tun.h>
 
 #include "campagnol.h"
+#include "configuration.h"
 #include "communication.h"
 #include "tun_device.h"
 #include "log.h"
@@ -71,9 +72,9 @@ int init_tun(int istun) {
     if (config.debug) printf("Using TUN device: %s\n",ifr.ifr_name);
 
     /* Inteface configuration */
-    if (config.verbose) printf("TUN interface configuration\n");
+    if (config.verbose) printf("TUN interface configuration (%s MTU %d)\n", ifr.ifr_name, config.tun_mtu);
     if (config.debug) printf("ifconfig...\n");
-    snprintf(systemcall, 100, "ifconfig %s %s mtu %d up", ifr.ifr_name, inet_ntoa (config.vpnIP), TUN_MTU);
+    snprintf(systemcall, 100, "ifconfig %s %s mtu %d up", ifr.ifr_name, inet_ntoa (config.vpnIP), config.tun_mtu);
     if (config.debug) puts(systemcall);
     system(systemcall);
     if (config.debug) printf("ip route...\n");

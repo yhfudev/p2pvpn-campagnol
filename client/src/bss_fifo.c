@@ -119,7 +119,7 @@ BIO_METHOD *BIO_s_fifo(void) {
  */
 static int fifo_new(BIO *bi) {
     struct fifo_item *prec, *new, *item, *next;
-    int i,j;
+    int i;
     struct fifo_data * d;
 
     bi->shutdown=1;         // the "close flag" (see BIO_set_close(3))
@@ -136,24 +136,36 @@ static int fifo_new(BIO *bi) {
     d->first = NULL;
 
     /* Circularly-linked list of length config.FIO_size */
-    d->fifo = malloc(sizeof(struct fifo_item));
+    d->fifo = calloc(1, sizeof(struct fifo_item));
     if (d->fifo == NULL) {
         free(bi->ptr);
         log_error("Cannot allocate a new client");
         return 0;
     }
+    d->fifo->data = malloc(MESSAGE_MAX_LENGTH);
+    if (d->fifo->data == NULL) {
+        free(bi->ptr);
+        free(d->fifo);
+        log_error("Cannot allocate a new client");
+        return 0;
+    }
     prec = d->fifo;
     for (i=0; i<config.FIFO_size-1; i++) {
-        new = malloc(sizeof(struct fifo_item));
+        new = calloc(1, sizeof(struct fifo_item));
 //        if (i==5) {free(new); new=NULL; errno=ENOMEM;} // test
         if (new == NULL) break;
         prec->next = new;
         prec = new;
+        new->data = malloc(MESSAGE_MAX_LENGTH);
+//        if (i==5) {free(new->data); new->data=NULL; errno=ENOMEM;} // test
+        if (new->data == NULL) break;
     }
     if (i != config.FIFO_size-1) {
         item = d->fifo;
-        for (j=0; j<=i; j++) {
+        for (i=0; i<config.FIFO_size; i++) {
+            if (item == NULL) break;
             next = item->next;
+            free(item->data);
             free(item);
             item = next;
         }
@@ -180,6 +192,7 @@ static int fifo_free (BIO *bi) {
             // free the queue
             for (i=0; i<config.FIFO_size; i++) {
                 next = item->next;
+                free(item->data);
                 free(item);
                 item = next;
             }
