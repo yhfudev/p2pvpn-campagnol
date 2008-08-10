@@ -9,18 +9,19 @@ AC_GNU_SOURCE
 AC_CANONICAL_HOST
 case $host_os in
 	*linux*)
-		TUNFILE="src/tun_device_linux.c"
-		AC_DEFINE([HAVE_LINUX], [1], [Linux])
+		AC_DEFINE([LINUX], [1], [Linux])
+		host_os_name=linux
 		;;
 	*freebsd*)
-		TUNFILE="src/tun_device_freebsd.c"
-		AC_DEFINE([HAVE_FREEBSD], [1], [FreeBSD])
+		AC_DEFINE([FREEBSD], [1], [FreeBSD])
+		host_os_name=freebsd
 		;;
 	*)
 		AC_MSG_ERROR("OS $host_os not supported.")
 		;;
 esac
-AC_CONFIG_LINKS([src/tun_device.c:$TUNFILE])
+AM_CONDITIONAL([HAVE_LINUX], [test "$host_os_name" = "linux"])
+AM_CONDITIONAL([HAVE_FREEBSD], [test "$host_os_name" = "freebsd"])
 AC_CACHE_SAVE
 
 # Checks for programs.
