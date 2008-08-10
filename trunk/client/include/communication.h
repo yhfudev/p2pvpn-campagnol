@@ -65,8 +65,8 @@
 #define MAX_REGISTERING_TRIES 4
 
 /*
- * TUN_MTU: MTU on the TUN device
- * TODO: add option for TUN_MTU
+ * TUN_MTU_DEFAULT: default MTU on the TUN device if not overridden in the
+ * configuration file
  *
  * MESSAGE_MAX_LENGTH: Max UDP message length
  * it must be large enough for the maximum data size + the maximum DTLS overhead.
@@ -107,8 +107,8 @@
  * 20 (IP) + 8 (UDP) + DTLS overhead
  *
  */
-#define TUN_MTU 1419
-#define MESSAGE_MAX_LENGTH (TUN_MTU+200)
+#define TUN_MTU_DEFAULT 1419
+#define MESSAGE_MAX_LENGTH (config.tun_mtu+200)
 /*
  * Number of punch messages
  */

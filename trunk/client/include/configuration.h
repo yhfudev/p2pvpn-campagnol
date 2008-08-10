@@ -1,8 +1,8 @@
 /*
  * Campagnol configuration
- * 
+ *
  * Copyright (C) 2008 Florent Bondoux
- * 
+ *
  * This file is part of Campagnol.
  *
  * Campagnol is free software: you can redistribute it and/or modify
@@ -42,6 +42,7 @@ struct configuration {
     struct in_addr vpnIP;                       // VPN IP address
     int vpnIP_set;                              // vpnIP is defined
     char network[CONF_VALUE_LENGTH];            // VPN subnetwork
+    int tun_mtu;                                // MTU of the tun device
     struct in_addr vpnBroadcastIP;              // "broadcast" IP, computed from vpnIP and network
     char iface[CONF_VALUE_LENGTH];              // bind to a specific network interface
     char certificate_pem[CONF_VALUE_LENGTH];    // PEM formated file containing the client certificate

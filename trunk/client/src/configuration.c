@@ -27,6 +27,7 @@
  */
 #include "campagnol.h"
 #include "configuration.h"
+#include "communication.h"
 #include "log.h"
 
 #include <arpa/inet.h>
@@ -260,6 +261,7 @@ void parseConfFile(char *confFile) {
     memset(&config.vpnIP, 0, sizeof(config.localIP));
     config.vpnIP_set = 0;
     config.network[0] = '\0';
+    config.tun_mtu = TUN_MTU_DEFAULT;
     config.iface[0] = '\0';
     config.certificate_pem[0] = '\0';
     config.key_pem[0] = '\0';
@@ -423,7 +425,17 @@ void parseConfFile(char *confFile) {
                 exit(EXIT_FAILURE);
             }
             if (config.max_clients < 1) {
-                log_message("[%s:max_clients:%d] Max number of clients %d must be >= 1", confFile, nline, config.timeout);
+                log_message("[%s:max_clients:%d] Max number of clients %d must be >= 1", confFile, nline, config.max_clients);
+                exit(EXIT_FAILURE);
+            }
+        }
+        else if (strncmp(name, "tun_mtu", CONF_NAME_LENGTH) == 0) {
+            if ( sscanf(value, "%d", &config.tun_mtu) != 1) {
+                log_message("[%s:tun_mtu:%d] MTU of the tun device is not valid: \"%s\"", confFile, nline, value);
+                exit(EXIT_FAILURE);
+            }
+            if (config.tun_mtu < 150) {
+                log_message("[%s:max_clients:%d] MTU of the tun device %d must be >= 150", confFile, nline, config.tun_mtu);
                 exit(EXIT_FAILURE);
             }
         }

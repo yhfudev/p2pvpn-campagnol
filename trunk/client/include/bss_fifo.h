@@ -46,7 +46,7 @@ struct fifo_data {
 /* An item in the queue */
 struct fifo_item {
     int size;                       // Size of the packet
-    char data[MESSAGE_MAX_LENGTH];  // Contains the data
+    char *data;                     // Contains the data
     struct fifo_item *next;
 };
 

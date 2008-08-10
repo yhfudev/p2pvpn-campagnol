@@ -133,6 +133,7 @@ Be sure to set the same values for the following options on every clients:
   server_port
   network
   cipher_list
+  tun_mtu
   timeout
 
 
