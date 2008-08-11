@@ -9,11 +9,11 @@ AC_GNU_SOURCE
 AC_CANONICAL_HOST
 case $host_os in
 	*linux*)
-		AC_DEFINE([LINUX], [1], [Linux])
+		AC_DEFINE([HAVE_LINUX], [1], [Linux])
 		host_os_name=linux
 		;;
 	*freebsd*)
-		AC_DEFINE([FREEBSD], [1], [FreeBSD])
+		AC_DEFINE([HAVE_FREEBSD], [1], [FreeBSD])
 		host_os_name=freebsd
 		;;
 	*)
