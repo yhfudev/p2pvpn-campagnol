@@ -20,10 +20,14 @@
  *
  */
 
-#include "campagnol.h"
+#include "config.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
 #include <syslog.h>
 #include <stdarg.h>
+#include <string.h>
 
 #include "log.h"
 

@@ -38,6 +38,7 @@ extern void __log_error(const char *filename, unsigned int linenumber, const cha
 #ifdef NDEBUG
 #define ASSERT(expr)       ((void)(0))
 #else
+#include <assert.h>
 #define assert_log(expr)             \
     ((expr)                         \
         ? (void)(0)    \
