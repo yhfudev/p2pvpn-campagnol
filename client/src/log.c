@@ -26,16 +26,17 @@
 #include <stdarg.h>
 
 #include "log.h"
-#include "configuration.h"
 
 static int log_enabled;
+static int log_verbose;
 
 /*
  * Initialise syslog if enabled is true
  * Use name for the logs
  */
-void log_init(int enabled, const char *name) {
+void log_init(int enabled, int verbose, const char *name) {
     log_enabled = enabled;
+    log_verbose = verbose;
     if (log_enabled) {
         openlog(name, LOG_PID, LOG_DAEMON);
     }
@@ -75,12 +76,12 @@ void log_message(const char *format, ...) {
 
 /*
  * Log a message with syslog or print it to stderr
- * if config.verbose is true
+ * if log_verbose is true
  */
 void log_message_verb(const char *format, ...) {
     va_list ap;
     va_start(ap, format);
-    log_message_inner(config.verbose, format, ap);
+    log_message_inner(log_verbose, format, ap);
     va_end(ap);
 }
 
