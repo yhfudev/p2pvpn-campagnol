@@ -1,9 +1,9 @@
 /*
  * UDP socket management
- * 
+ *
  * Copyright (C) 2007 Antoine Vianey
  *               2008 Florent Bondoux
- * 
+ *
  * This file is part of Campagnol.
  *
  * Campagnol is free software: you can redistribute it and/or modify
@@ -26,7 +26,7 @@
 #include <net/if.h>
 #include <arpa/inet.h>
 
-#include "communication.h"
+#include "configuration.h"
 #include "net_socket.h"
 #include "log.h"
 
@@ -38,7 +38,7 @@
 int create_socket(void) {
     int sockfd;
     struct sockaddr_in localaddr;
-    
+
     /* Socket creation */
     if (config.debug) printf("Create the UDP socket...\n");
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -46,20 +46,20 @@ int create_socket(void) {
         log_message("Error: creating socket");
         return -1;
     }
-    
+
+#ifdef HAVE_LINUX
     if (strlen(config.iface) != 0) {
         struct ifreq ifr;
         memset(&ifr, 0, sizeof(ifr));
         strncpy(ifr.ifr_name, config.iface, IFNAMSIZ);
-#ifdef HAVE_LINUX
         if(setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, &ifr, sizeof(ifr))) {
             log_error("Error: binding socket to interface");
             log_message("interface: %s", config.iface);
             return -1;
         }
-#endif
     }
-    
+#endif
+
     bzero(&localaddr, sizeof(localaddr));
     localaddr.sin_family = AF_INET;
     localaddr.sin_addr.s_addr=config.localIP.s_addr;
@@ -70,7 +70,7 @@ int create_socket(void) {
         return -1;
     }
     if (config.verbose) printf("Socket opened\n");
-    
+
     return sockfd;
 }
 
