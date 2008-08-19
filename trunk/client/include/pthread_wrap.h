@@ -1,8 +1,8 @@
 /*
  * Pthread wrapper functions
- * 
+ *
  * Copyright (C) 2008 Florent Bondoux
- * 
+ *
  * This file is part of Campagnol.
  *
  * Campagnol is free software: you can redistribute it and/or modify
@@ -24,7 +24,6 @@
 #define PTHREAD_WRAP_H_
 
 #include <pthread.h>
-#include <errno.h>
 
 extern void mutexInit(pthread_mutex_t *mutex, pthread_mutexattr_t *attrs);
 extern void mutexDestroy(pthread_mutex_t *mutex);
