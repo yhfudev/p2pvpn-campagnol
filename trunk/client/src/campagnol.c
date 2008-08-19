@@ -169,7 +169,7 @@ int main (int argc, char **argv) {
     }
 
     if (config.daemonize) daemonize();
-    log_init(config.daemonize, "campagnol");
+    log_init(config.daemonize, config.verbose, "campagnol");
 
     parseConfFile(configFile);
     /* Print the current OpenSSL error stack (missing CRL file)
