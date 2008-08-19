@@ -24,7 +24,11 @@
  * Wrapper functions around a few pthread functions
  * These functions exit in case of error
  */
-#include "campagnol.h"
+
+#include "config.h"
+#include <stdlib.h>
+#include <errno.h>
+#include <string.h>
 #include "pthread_wrap.h"
 #include "log.h"
 
