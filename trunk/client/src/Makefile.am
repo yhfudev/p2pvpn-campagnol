@@ -8,5 +8,5 @@ campagnol_SOURCES += tun_device_freebsd.c
 endif
 campagnol_CPPFLAGS = -I"$(srcdir)/../include" @OPENSSL_CFLAGS@
 campagnol_CFLAGS = -Wall -Wstrict-prototypes
-campagnol_LDFLAGS = @OPENSSL_LIBS@
+campagnol_LDADD = @OPENSSL_LIBS@
 
