@@ -32,22 +32,22 @@ extern void __log_error(const char *filename, unsigned int linenumber, const cha
 #define log_error(msg)      __log_error(__FILE__, __LINE__, __func__, msg)
 
 /*
- * assertCampagnol: if campagnol run as a daemon, log the assertion error message with syslog
+ * ASSERT: if campagnol run as a daemon, log the assertion error message with syslog
  * otherwise, same as assert.
  */
+#ifdef ASSERT
+#   undef ASSERT
+#endif
 #ifdef NDEBUG
-#define ASSERT(expr)       ((void)(0))
+#   define ASSERT(expr)       ((void)(0))
 #else
-#include <assert.h>
-#define assert_log(expr)             \
+#   include <assert.h>
+#   define assert_log(expr)             \
     ((expr)                         \
         ? (void)(0)    \
         : log_message_syslog("%s:%d: %s: Assertion `%s' failed.", __FILE__, __LINE__, __func__, __STRING(expr)) \
     )
-#ifdef ASSERT
-#undef ASSERT
-#endif
-#define ASSERT(expr)       {assert_log(expr);assert(expr);}
+#   define ASSERT(expr)       {assert_log(expr);assert(expr);}
 #endif
 
 #endif /*LOG_H_*/
