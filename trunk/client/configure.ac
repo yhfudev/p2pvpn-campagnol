@@ -1,4 +1,4 @@
-AC_PREREQ(2.61)
+AC_PREREQ([2.61])
 AC_INIT([campagnol],[0.2],[florent.bondoux@resel.fr])
 AM_INIT_AUTOMAKE([-Wall foreign])
 AC_CONFIG_SRCDIR([src/campagnol.c])
@@ -18,7 +18,7 @@ case $host_os in
 		host_os_name=freebsd
 		;;
 	*)
-		AC_MSG_ERROR("OS $host_os not supported.")
+		AC_MSG_ERROR([OS $host_os not supported.])
 		;;
 esac
 AM_CONDITIONAL([HAVE_LINUX], [test "$host_os_name" = "linux"])
@@ -27,17 +27,16 @@ AC_CACHE_SAVE
 
 # Checks for programs.
 AC_PROG_CC
-AC_PROG_INSTALL
 AC_CACHE_SAVE
 
 # Checks for libraries.
-AC_CHECK_LIB([pthread], [pthread_create])
+AC_SEARCH_LIBS([pthread_create], [pthread], [], [AC_MSG_ERROR([Requires pthreads])])
 OPENSSL_CHECK
-AC_SEARCH_LIBS([clock_gettime], [rt])
+# later: search into libposix4 for Solaris support
+AC_SEARCH_LIBS([clock_gettime], [rt], [], [AC_MSG_ERROR([Requires clock_gettime])])
 AC_CACHE_SAVE
 
 # Checks for header files.
-AC_HEADER_STDC
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h ifaddrs.h netdb.h netinet/in.h string.h sys/ioctl.h sys/socket.h sys/time.h syslog.h unistd.h])
 AC_HEADER_ASSERT
 

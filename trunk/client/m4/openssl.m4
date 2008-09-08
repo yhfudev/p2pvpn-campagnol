@@ -1,3 +1,5 @@
+# serial 1
+
 AC_DEFUN([OPENSSL_CHECK],
 [
 openssl_set=0
