@@ -58,7 +58,6 @@ void mutexLock(pthread_mutex_t *mutex) {
         exit(EXIT_FAILURE);
     }
 }
-;
 
 void mutexUnlock(pthread_mutex_t *mutex) {
     ASSERT(mutex);
@@ -68,7 +67,6 @@ void mutexUnlock(pthread_mutex_t *mutex) {
         exit(EXIT_FAILURE);
     }
 }
-;
 
 void mutexattrInit(pthread_mutexattr_t *attrs) {
     ASSERT(attrs);
@@ -174,7 +172,6 @@ pthread_t createThread(void * (*start_routine)(void *), void * arg) {
     }
     return thread;
 }
-;
 
 void joinThread(pthread_t thread, void **value_ptr) {
     int r = pthread_join(thread, value_ptr);
