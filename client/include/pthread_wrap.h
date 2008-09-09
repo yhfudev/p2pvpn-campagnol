@@ -42,6 +42,7 @@ extern int conditionBroadcast(pthread_cond_t *cond);
 extern int conditionSignal(pthread_cond_t *cond);
 
 extern pthread_t createThread(void * (*start_routine)(void *), void * arg);
+extern pthread_t createDetachedThread(void * (*start_routine)(void *), void * arg);
 extern void joinThread(pthread_t thread, void **value_ptr);
 
 #endif /*PTHREAD_WRAP_H_*/

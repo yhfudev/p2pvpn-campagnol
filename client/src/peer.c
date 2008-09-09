@@ -120,7 +120,7 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct
     peer->send_shutdown = 0;
 
     peer->is_dtls_client = is_dtls_client;
-    peer->thread_running = 0;
+    peer->thread_ssl_running = 0;
     mutexInit(&(peer->mutex_ref), NULL);
     peer->ref_count = 2;
 
