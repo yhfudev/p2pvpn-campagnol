@@ -42,8 +42,7 @@ struct client {
     BIO *rbio;                      // BIO for incoming packets
     SSL_CTX *ctx;                   // SSL context associated to the connection
     int is_dtls_client;             // DTLS client or server ?
-    int thread_running;             // the thread from SSL_reading is running
-    pthread_t thread;               // SSL_reading thread
+    int thread_ssl_running;         // the thread from SSL_reading is running
     int send_shutdown;              // Send a shutdown message after SSL_read returns 0
 
     pthread_mutex_t mutex_ref;      // mutex used to change the reference counter

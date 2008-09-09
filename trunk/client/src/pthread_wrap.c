@@ -173,6 +173,19 @@ pthread_t createThread(void * (*start_routine)(void *), void * arg) {
     return thread;
 }
 
+/*
+ * Create a thread executing start_routine with the arguments arg
+ * without attributes. Then call pthread_detach.
+ */
+pthread_t createDetachedThread(void * (*start_routine)(void *), void * arg) {
+    pthread_t thread = createThread(start_routine, arg);
+    if (pthread_detach(thread) != 0) {
+        log_error("Error pthread_detach()");
+        exit(EXIT_FAILURE);
+    }
+    return thread;
+}
+
 void joinThread(pthread_t thread, void **value_ptr) {
     int r = pthread_join(thread, value_ptr);
     if (r != 0) {
