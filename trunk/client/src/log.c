@@ -105,10 +105,10 @@ void log_message_syslog(const char *format, ...) {
  */
 void __log_error(const char *filename, unsigned int linenumber, const char *functionname, const char *s) {
     if (log_enabled) {
-        syslog(LOG_NOTICE, "%s:%d:%s: %s: %s", filename, linenumber, functionname, s, strerror(errno));
+        syslog(LOG_NOTICE, "%s:%u:%s: %s: %s", filename, linenumber, functionname, s, strerror(errno));
     }
     else {
-        fprintf(stderr, "%s:%d:%s: ", filename, linenumber, functionname);
+        fprintf(stderr, "%s:%u:%s: ", filename, linenumber, functionname);
         perror(s);
     }
 }

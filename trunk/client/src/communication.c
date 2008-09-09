@@ -81,7 +81,7 @@
 //}
 
 /* Initialise a message with the given fields */
-inline void init_smsg(struct message *smsg, int type, u_int32_t ip1, u_int32_t ip2) {
+inline void init_smsg(struct message *smsg, unsigned char type, u_int32_t ip1, u_int32_t ip2) {
     bzero(smsg, sizeof(struct message));
     smsg->type = type;
     smsg->ip1.s_addr = ip1;
@@ -129,7 +129,7 @@ uint16_t compute_csum(uint16_t *addr, size_t count){
     /*  Fold 32-bit sum to 16 bits */
     sum = (sum >> 16) + (sum & 0xffff);
 
-    return sum;
+    return (uint16_t) ~sum;
 }
 
 /*
@@ -337,7 +337,7 @@ void * SSL_reading(void * args) {
             if (u.ip.ip_dst.s_addr == config.vpnBroadcastIP.s_addr) {
                 u.ip.ip_dst.s_addr = config.vpnIP.s_addr;
                 u.ip.ip_sum = 0; // the checksum field is set to 0 for the calculation
-                u.ip.ip_sum = ~compute_csum((uint16_t*) &u.ip, sizeof(u.ip));
+                u.ip.ip_sum = compute_csum((uint16_t*) &u.ip, sizeof(u.ip));
             }
             // send it to the TUN device
             write(tunfd, (unsigned char *)&u, sizeof(u));

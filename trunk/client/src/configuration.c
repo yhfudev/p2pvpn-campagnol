@@ -356,7 +356,7 @@ void parseConfFile(char *confFile) {
         }
         else if (strncmp(name, "server_port", CONF_NAME_LENGTH) == 0) {
             /* get the server port */
-            int port_tmp;
+            unsigned int port_tmp;
             if ( sscanf(value, "%ud", &port_tmp) != 1) {
                 log_message("[%s:server_port:%d] Server UDP port is not valid: \"%s\"", confFile, nline, value);
                 exit(EXIT_FAILURE);
