@@ -340,7 +340,7 @@ void * SSL_reading(void * args) {
                 u.ip.ip_sum = compute_csum((uint16_t*) &u.ip, sizeof(u.ip));
             }
             // send it to the TUN device
-            write(tunfd, (unsigned char *)&u, sizeof(u));
+            write(tunfd, (unsigned char *)&u, r);
         }
     }
 }
@@ -633,6 +633,12 @@ void * comm_tun(void * argument) {
                     peer = next;
                 }
                 MUTEXUNLOCK;
+            }
+            /*
+             * Local packet...
+             */
+            else if (dest.s_addr == config.vpnIP.s_addr) {
+                write(tunfd, (unsigned char *)&u, r);
             }
             else {
                 MUTEXLOCK;
