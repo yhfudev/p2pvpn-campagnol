@@ -1,6 +1,7 @@
 AC_PREREQ([2.61])
 AC_INIT([campagnol],[0.2],[florent.bondoux@resel.fr])
 AM_INIT_AUTOMAKE([-Wall foreign])
+AM_MAINTAINER_MODE
 AC_CONFIG_SRCDIR([src/campagnol.c])
 AC_CONFIG_HEADERS([config.h])
 
