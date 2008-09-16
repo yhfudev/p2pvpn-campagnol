@@ -280,6 +280,7 @@ void * SSL_reading(void * args) {
         decr_ref(peer);
         decr_ref(peer);
         MUTEXUNLOCK;
+        ERR_remove_state(0);
         return NULL;
     }
     /* Unlock the thread waiting for the connection */
@@ -311,6 +312,7 @@ void * SSL_reading(void * args) {
             decr_ref(peer);
             decr_ref(peer);
             MUTEXUNLOCK;
+            ERR_remove_state(0);
             return NULL;
         }
         else {// everything's fine
@@ -569,6 +571,7 @@ void * comm_socket(void * argument) {
 
     }
 
+    ERR_remove_state(0);
     return NULL;
 }
 
@@ -743,6 +746,7 @@ void * comm_tun(void * argument) {
 
     }
 
+    ERR_remove_state(0);
     return NULL;
 }
 
@@ -762,9 +766,6 @@ void start_vpn(int sockfd, int tunfd) {
     }
     args->sockfd = sockfd;
     args->tunfd = tunfd;
-
-    SSL_library_init();
-    SSL_load_error_strings();
 
     mutex_clients_init();
 

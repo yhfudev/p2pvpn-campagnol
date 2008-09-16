@@ -31,6 +31,8 @@
 #include <netdb.h>
 #include <sys/stat.h>
 #include <getopt.h>
+#include <openssl/conf.h>
+#include <openssl/engine.h>
 
 
 #include "tun_device.h"
@@ -170,6 +172,11 @@ int main (int argc, char **argv) {
     if (config.daemonize) daemonize();
     log_init(config.daemonize, config.verbose, "campagnol");
 
+    /* init openssl before reading the configuration file */
+    SSL_library_init();
+    SSL_load_error_strings();
+
+
     parseConfFile(configFile);
     /* Print the current OpenSSL error stack (missing CRL file)
      * Empty the error stack
@@ -234,8 +241,28 @@ int main (int argc, char **argv) {
 
     start_vpn(sockfd, tunfd);
 
+
     log_close();
     close_tun(tunfd);
     close(sockfd);
+
+
+    /* try to clean up everything in openssl
+     * OpenSSL has no cleanup function
+     * IFAIK there is nothing to cleanup the compression methods
+     */
+    if (config.crl != NULL) {
+        X509_CRL_free(config.crl);
+    }
+    // thread error state. must be called by each thread
+    ERR_remove_state(0);
+    // engine
+    ENGINE_cleanup();
+    CONF_modules_unload(1);
+
+    ERR_free_strings();
+    EVP_cleanup();
+    CRYPTO_cleanup_all_ex_data();
+
     exit(EXIT_SUCCESS);
 }
