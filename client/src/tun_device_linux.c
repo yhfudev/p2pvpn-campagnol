@@ -21,13 +21,14 @@
  *
  */
 
+#include "campagnol.h"
+
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <arpa/inet.h>
 #include <net/if.h>
 #include <linux/if_tun.h>
 
-#include "campagnol.h"
 #include "configuration.h"
 #include "communication.h"
 #include "tun_device.h"

@@ -21,6 +21,8 @@
  *
  */
 
+#include "campagnol.h"
+
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <arpa/inet.h>
@@ -31,7 +33,6 @@
 #include <net/if_tun.h>
 #include <sys/stat.h>
 
-#include "campagnol.h"
 #include "configuration.h"
 #include "communication.h"
 #include "tun_device.h"
