@@ -24,23 +24,22 @@
 #ifndef BSS_FIFO_H_
 #define BSS_FIFO_H_
 
-#include "communication.h"
+#include <semaphore.h>
 
 /* BIO type: source/sink */
 #define BIO_TYPE_FIFO (23|BIO_TYPE_SOURCE_SINK)
 
 /* Create a new BIO */
-extern BIO_METHOD *BIO_s_fifo(void);
+extern BIO *BIO_new_fifo(int len, int data_size);
 
 /* Data structure used by the BIO */
 struct fifo_data {
-    struct fifo_item *fifo;         // One item in the list
-    struct fifo_item *first;        // First item in the queue if it is not empty
-    struct fifo_item *queue;        // Last item in the queue if it is not empty
-    int len;                        // Size of the FIFO queue
-    pthread_cond_t cond;            // Pthread condition used to create a blocking BIO
-    pthread_mutex_t mutex;          // Mutex used to protect the queue
-    int waiting;                    // The FIFO is locked during an I/O operation
+    int size;                       // Size of the FIFO queue
+    struct fifo_item *fifo;         // The FIFO's items
+    unsigned int index_read;        // Read position
+    unsigned int index_write;       // Write position
+    sem_t sem_read;                 // Number of items ready to be read
+    sem_t sem_write;                // Number of free items in the FIFO
 };
 
 /* An item in the queue */

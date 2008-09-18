@@ -29,6 +29,7 @@
 #include "pthread_wrap.h"
 #include "bss_fifo.h"
 #include "log.h"
+#include "communication.h"
 
 #include <arpa/inet.h>
 
@@ -326,7 +327,7 @@ int createClientSSL(struct client *peer, int recreate) {
         SSL_CTX_free(peer->ctx);
         return -1;
     }
-    peer->rbio = BIO_new(BIO_s_fifo());
+    peer->rbio = BIO_new_fifo(config.FIFO_size, MESSAGE_MAX_LENGTH);
     if (peer->rbio == NULL) {
         ERR_print_errors_fp(stderr);
         log_error("BIO_new(BIO_s_fifo())");
