@@ -1,22 +1,30 @@
-<project name="Campagnol" default="compile" basedir=".">
+<project name="Campagnol" default="jar" basedir=".">
 	<property name="targetVM" value="1.4" />
 
 	<target name="compile" description="Compiles files">
 		<javac srcdir="${basedir}" source="${targetVM}" target="${targetVM}"/>
 	</target>
-	
-	<target name="clean">
-		<delete>
-	    	<fileset dir="." includes="*.class"/>
-	        <fileset dir="." includes="*~"/>
-	    </delete>
+
+	<target name="jar" description="Build jar archive" depends="compile">
+		<jar destfile="CampagnolServer.jar" basedir="." includes="*.class">
+			<manifest>
+				<attribute name="Main-Class" value="CampagnolServer" />
+			</manifest>
+		</jar>
 	</target>
 	
-	<target name="run" depends="compile">
+	<target name="clean" description="Clean classes and jar file">
+		<delete>
+			<fileset dir="." includes="*.class"/>
+			<fileset dir="." file="CampagnolServer.jar"/>
+		</delete>
+	</target>
+	
+	<target name="run" depends="compile" description="Start Campagnol server">
 		<java classname="CampagnolServer" fork="yes" failonerror="yes"/>
 	</target>
 
-	<target name="runGUI" depends="compile">
+	<target name="runGUI" depends="compile" description="Start Campagnol server with GUI">
 		<java classname="CampagnolServer" fork="yes" failonerror="yes">
 			<arg value="-g"/>
 		</java>
