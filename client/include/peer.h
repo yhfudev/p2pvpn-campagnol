@@ -65,10 +65,27 @@ extern void mutex_clients_destroy(void);
 extern struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct in_addr clientIP, u_int16_t clientPort, struct in_addr vpnIP, int is_dtls_client);
 extern int createClientSSL(struct client *peer, int recreate);
 extern void remove_client(struct client *peer);
-extern struct client * get_client_VPN(struct in_addr *address);
-extern struct client * get_client_real(struct sockaddr_in *cl_address);
+
+extern struct client * _get_client_VPN(struct in_addr *address);
+extern struct client * _get_client_real(struct sockaddr_in *cl_address);
+extern struct client *cache_client_VPN;
+extern struct client *cache_client_real;
 
 extern void incr_ref(struct client *peer);
 extern void decr_ref(struct client *peer);
+
+/* get_client_VPN and get_client_real check the cache before calling _get_client_* */
+#define get_client_VPN(__address) ({    \
+    (cache_client_VPN != NULL    \
+        && cache_client_VPN->vpnIP.s_addr == (__address)->s_addr) ? \
+                incr_ref(cache_client_VPN), cache_client_VPN : _get_client_VPN((__address));    \
+    })
+
+#define get_client_real(__address) ({   \
+    (cache_client_real != NULL   \
+        && cache_client_real->clientaddr.sin_addr.s_addr == (__address)->sin_addr.s_addr    \
+        && cache_client_real->clientaddr.sin_port == (__address)->sin_port) ?   \
+                incr_ref(cache_client_real), cache_client_real : _get_client_real((__address)); \
+    })
 
 #endif /*PEER_H_*/
