@@ -24,7 +24,6 @@
 #define CONFIGURATION_H_
 
 #include <openssl/ssl.h>
-#include <openssl/err.h>
 
 /* Option name and value lengths in the configuration value */
 #define CONF_NAME_LENGTH 20
@@ -35,12 +34,9 @@ struct configuration {
     int debug;                                  // more verbose
     int daemonize;                              // daemonize the client
     struct in_addr localIP;                     // local IP address
-    int localIP_set;                            // localIP is defined
-    int localport;                              // local UDP port
+    unsigned int localport;                     // local UDP port
     struct sockaddr_in serverAddr;              // rendezvous server inet address
-    int serverIP_set;                           // serverAddr is defined
     struct in_addr vpnIP;                       // VPN IP address
-    int vpnIP_set;                              // vpnIP is defined
     char network[CONF_VALUE_LENGTH];            // VPN subnetwork
     int tun_mtu;                                // MTU of the tun device
     struct in_addr vpnBroadcastIP;              // "broadcast" IP, computed from vpnIP and network
@@ -57,5 +53,31 @@ struct configuration {
 };
 
 extern void parseConfFile(char *file);
+
+/* names of sections and options */
+#define SECTION_NETWORK     "NETWORK"
+#define SECTION_VPN         "VPN"
+#define SECTION_CLIENT      "CLIENT"
+#define SECTION_SECURITY    "SECURITY"
+
+#define OPT_LOCAL_HOST      "local_host"
+#define OPT_LOCAL_PORT      "local_port"
+#define OPT_SERVER_HOST     "server_host"
+#define OPT_SERVER_PORT     "server_port"
+#define OPT_TUN_MTU         "tun_mtu"
+#define OPT_INTERFACE       "interface"
+
+#define OPT_VPN_IP          "vpn_ip"
+#define OPT_VPN_NETWORK     "network"
+
+#define OPT_CERTIFICATE     "certificate"
+#define OPT_KEY             "key"
+#define OPT_CA              "ca_certificates"
+#define OPT_CRL             "crl_file"
+#define OPT_CIPHERS         "cipher_list"
+
+#define OPT_FIFO            "fifo_size"
+#define OPT_TIMEOUT         "timeout"
+#define OPT_MAX_CLIENTS     "max_clients"
 
 #endif /*CONFIGURATION_H_*/
