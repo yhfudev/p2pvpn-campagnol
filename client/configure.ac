@@ -57,7 +57,7 @@ AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 AC_FUNC_SELECT_ARGTYPES
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([bzero gethostbyname getline inet_ntoa memset select socket strchr strerror strstr strtol])
+AC_CHECK_FUNCS([bzero gethostbyname getline inet_ntoa memset select socket strchr strerror strstr strtol tdestroy])
 
 AC_CONFIG_FILES([Makefile src/Makefile])
 AC_OUTPUT
