@@ -142,7 +142,7 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct
 
 /*
  * Contains the last search results for
- * get_client_VPN and get_client_real
+ * _get_client_VPN and _get_client_real
  */
 struct client *cache_client_VPN = NULL;
 struct client *cache_client_real = NULL;
@@ -177,12 +177,7 @@ void remove_client(struct client *peer) {
  * Get a client by its VPN IP address and increments its ref. counter
  * return NULL if the client is unknown
  */
-struct client * get_client_VPN(struct in_addr *address) {
-    if (cache_client_VPN != NULL
-        && cache_client_VPN->vpnIP.s_addr == address->s_addr) {
-        incr_ref(cache_client_VPN);
-        return cache_client_VPN;
-    }
+struct client * _get_client_VPN(struct in_addr *address) {
     if (config.debug) printf("get %s\n", inet_ntoa(*address));
     struct client *peer = clients;
     while (peer != NULL) {
@@ -201,13 +196,7 @@ struct client * get_client_VPN(struct in_addr *address) {
  * Get a client by its real IP address and UDP port and increments its ref. counter
  * return NULL if the client is unknown
  */
-struct client * get_client_real(struct sockaddr_in *cl_address) {
-    if (cache_client_real != NULL
-        && cache_client_real->clientaddr.sin_addr.s_addr == cl_address->sin_addr.s_addr
-        && cache_client_real->clientaddr.sin_port == cl_address->sin_port) {
-        incr_ref(cache_client_real);
-        return cache_client_real;
-    }
+struct client * _get_client_real(struct sockaddr_in *cl_address) {
     if (config.debug) printf("get by client IP %s\n", inet_ntoa(cl_address->sin_addr));
     struct client *peer = clients;
     while (peer != NULL) {
