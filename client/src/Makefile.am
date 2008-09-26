@@ -1,5 +1,5 @@
 bin_PROGRAMS = campagnol
-campagnol_SOURCES = bss_fifo.c  campagnol.c  communication.c  configuration.c  log.c  net_socket.c  peer.c  pthread_wrap.c
+campagnol_SOURCES = bss_fifo.c  campagnol.c  communication.c  configuration.c  log.c  net_socket.c  peer.c  pthread_wrap.c  config_parser.c
 if HAVE_LINUX
 campagnol_SOURCES += tun_device_linux.c
 endif
