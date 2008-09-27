@@ -566,7 +566,7 @@ static void parser_write_option(const void *nodep, const VISIT which, const int 
         case postorder:
         case leaf:
             item = *(item_value_t **) nodep;
-            fprintf(item->section->parser->dump_file, "%s = %s\n", item->name, item->value);
+            fprintf(item->section->parser->dump_file, "%s = \"%s\"\n", item->name, item->value);
             break;
         default:
             break;
