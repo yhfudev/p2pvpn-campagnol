@@ -279,8 +279,8 @@ void * SSL_reading(void * args) {
         conditionSignal(&peer->cond_connected);
         decr_ref(peer);
         decr_ref(peer);
-        MUTEXUNLOCK;
         ERR_remove_state(0);
+        MUTEXUNLOCK;
         return NULL;
     }
     /* Unlock the thread waiting for the connection */
@@ -311,8 +311,8 @@ void * SSL_reading(void * args) {
             peer->state = CLOSED;
             decr_ref(peer);
             decr_ref(peer);
-            MUTEXUNLOCK;
             ERR_remove_state(0);
+            MUTEXUNLOCK;
             return NULL;
         }
         else {// everything's fine
@@ -571,7 +571,9 @@ void * comm_socket(void * argument) {
 
     }
 
+    MUTEXLOCK; // avoid a potential double free bug in OpenSSL's internals
     ERR_remove_state(0);
+    MUTEXUNLOCK;
     return NULL;
 }
 
@@ -746,7 +748,9 @@ void * comm_tun(void * argument) {
 
     }
 
+    MUTEXLOCK; // avoid a potential double free bug in OpenSSL's internals
     ERR_remove_state(0);
+    MUTEXUNLOCK;
     return NULL;
 }
 
