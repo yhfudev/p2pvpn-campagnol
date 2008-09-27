@@ -37,7 +37,7 @@ public class ClientStruct {
     public long timeoutMillis;
     public long createTime;
     public InetSocketAddress sAddr;             // socket address
-    public String vpnIPString;
+    public String vpnIPString;                  // stringified VPN IP for debuging and GUI
     public byte[] vpnIP;                        // client VPN IP
     
     public ClientStruct(SocketAddress sAddr, byte[] IP) {
