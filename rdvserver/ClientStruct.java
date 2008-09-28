@@ -38,6 +38,7 @@ public class ClientStruct {
     public long createTime;
     public InetSocketAddress sAddr;             // socket address
     public String vpnIPString;                  // stringified VPN IP for debuging and GUI
+    public InetAddress vpnInet;                 // InetAddress containing the VPN IP
     public byte[] vpnIP;                        // client VPN IP
     
     public ClientStruct(SocketAddress sAddr, byte[] IP) {
@@ -46,6 +47,11 @@ public class ClientStruct {
         this.realIP = this.sAddr.getAddress().getAddress();
         this.vpnIP = IP;
         this.vpnIPString = MsgServStruct.unMapAddress(IP);
+        try {
+            this.vpnInet = InetAddress.getByAddress(IP);
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
         this.timeoutMillis = System.currentTimeMillis();
         this.createTime = this.timeoutMillis;
     }
