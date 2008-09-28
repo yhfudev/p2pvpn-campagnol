@@ -20,6 +20,8 @@
  *
  */
 
+package net.sourceforge.campagnol;
+
 import java.util.Iterator;
 import java.util.HashMap;
 import javax.swing.table.AbstractTableModel;
