@@ -63,19 +63,10 @@ public class CampagnolServer {
     
     /** constants */
     final int BUFFSIZE = MsgServStruct.MSG_LENGTH;
-    /**    time to wait before forwarding the connection request to the peer
-     * use to connect in a second try if one peer is behind a symmetric NAT */
-    final long WAIT_MILLIS_FWD = 50;
-    /** if we alternate the hole punching sequences (the peer who request start first and
-     * if connection cannot be established then the peer requested start first)
-     * consider the connection is impossible after this number of tries */
-    final int MAX_CONNECTION_TRIES = 4;
     
     /** local variables */
     private int portNumber = 57888;
     private DatagramSocket socket;
-    private DatagramPacket packet;
-    private byte[] buff;
     private CampagnolGUI gui = null;
     
     /** HashMaps for the client's structures (mapped by real address and VPN IP)
@@ -170,8 +161,6 @@ public class CampagnolServer {
             System.exit(0);
         }
         this.portNumber = portNumber;
-        this.buff = new byte[BUFFSIZE];
-        this.packet = new DatagramPacket(buff, BUFFSIZE);
         this.clientsHashAddr = new HashMap();
         this.clientsHashVPN = new HashMap();
         this.connectionsHash = new HashMap();
@@ -182,6 +171,9 @@ public class CampagnolServer {
     }
     
     public void run() {
+        DatagramPacket packet;
+        packet = new DatagramPacket(new byte[BUFFSIZE], BUFFSIZE);
+        
         System.out.println("Server listening on port "+portNumber);
 
         /** listening for incomming messages */
