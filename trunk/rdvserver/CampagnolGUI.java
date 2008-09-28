@@ -21,7 +21,7 @@
  */
 
 import java.util.Iterator;
-import java.util.Vector;
+import java.util.HashMap;
 import javax.swing.table.AbstractTableModel;
 
 /**
@@ -33,9 +33,9 @@ public class CampagnolGUI extends javax.swing.JFrame {
     public ConnectionsTableModel connections;
     
     /** Creates new form CampagnolGUI */
-    public CampagnolGUI(Vector clientsVector, Vector connexionsVector) {
-        this.clients = new ClientsTableModel(clientsVector);
-        this.connections = new ConnectionsTableModel(connexionsVector);
+    public CampagnolGUI(HashMap clientsMap, HashMap connexionsMap) {
+        this.clients = new ClientsTableModel(clientsMap);
+        this.connections = new ConnectionsTableModel(connexionsMap);
         initComponents();
     }
     
@@ -116,9 +116,9 @@ public class CampagnolGUI extends javax.swing.JFrame {
 class ClientsTableModel extends AbstractTableModel {
     private String[] columnNames = {"VPN IP", "Real IP", "Port", "Registration date", "timeout"};
     private Object[][]data = null;
-    private Vector clients;
+    private HashMap clients;
     
-    public ClientsTableModel(Vector clients) {
+    public ClientsTableModel(HashMap clients) {
         super();
         this.clients = clients;
     }
@@ -173,7 +173,7 @@ class ClientsTableModel extends AbstractTableModel {
     public void updateData() {
         this.data = new Object[clients.size()][this.getColumnCount()];
         int n=0;
-        Iterator it = clients.iterator();
+        Iterator it = clients.values().iterator();
         while (it.hasNext()) {
             ClientStruct cl = (ClientStruct) it.next();
             data[n][0] = cl.vpnIPString;
@@ -194,9 +194,9 @@ class ClientsTableModel extends AbstractTableModel {
 class ConnectionsTableModel extends AbstractTableModel {
     private String[] columnNames = {"DTLS client", "DTLS server", "Creation date"};
     private Object[][] data = null;
-    private Vector connections;
+    private HashMap connections;
     
-    public ConnectionsTableModel(Vector connections) {
+    public ConnectionsTableModel(HashMap connections) {
         super();
         this.connections = connections;
     }
@@ -238,7 +238,7 @@ class ConnectionsTableModel extends AbstractTableModel {
     public void updateData() {
         this.data = new Object[connections.size()][this.getColumnCount()];
         int n=0;
-        Iterator it = connections.iterator();
+        Iterator it = connections.values().iterator();
         while (it.hasNext()) {
             Connection ct = (Connection) it.next();
             data[n][0] = ct.client1.vpnIPString;

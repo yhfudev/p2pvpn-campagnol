@@ -26,6 +26,30 @@
 import java.util.*;
 import java.net.*;
 
+/**
+ * This class defines the key used to store the connections
+ * into a hashmap.
+ * It combines the two vpnIP.
+ */
+class ConnectionKey {
+    public byte[] vpnIP1, vpnIP2;
+    public ConnectionKey(byte[] vpnIP1, byte[] vpnIP2) {
+        this.vpnIP1 = vpnIP1;
+        this.vpnIP2 = vpnIP2;
+    }
+    public ConnectionKey(Connection connection) {
+        this.vpnIP1 = connection.client1.vpnIP;
+        this.vpnIP2 = connection.client2.vpnIP;
+    }
+    public boolean equals(Object obj) {
+        ConnectionKey key = (ConnectionKey) obj;
+        return Arrays.equals(this.vpnIP1, key.vpnIP1) && Arrays.equals(this.vpnIP2, key.vpnIP2);
+    }
+    public int hashCode() {
+        return this.vpnIP1.hashCode() + this.vpnIP2.hashCode();
+    }
+}
+
 /**    class in charge of starting up the server
  * and of all operation on the client objects */
 public class CampagnolServer {
@@ -52,72 +76,82 @@ public class CampagnolServer {
     private DatagramSocket socket;
     private DatagramPacket packet;
     private byte[] buff;
-    /** Vector containing the client's ClientStruct */
-    private Vector clients;
-    /** Vector containing the Connection instances*/
-    private Vector connections;
     private CampagnolGUI gui = null;
+    
+    /** HashMaps for the client's structures (mapped by real address and VPN IP)
+     * and connections' structures
+     */
+    private HashMap clientsHashAddr, clientsHashVPN, connectionsHash;
+    
+    /** insert a client structure into the maps */
+    private void addClient(ClientStruct cl) {
+        clientsHashAddr.put(cl.sAddr, cl);
+        clientsHashVPN.put(cl.vpnInet, cl);
+        if (CampagnolServer.verbose) System.out.println("New client ["+cl.sAddr.toString()+"] "+cl.vpnIPString);
+    }
+    
+    /** remove client from the maps */
+    private void removeClient(ClientStruct cl) {
+        clientsHashAddr.remove(cl.sAddr);
+        clientsHashVPN.remove(cl.vpnInet);
+        if (CampagnolServer.verbose) System.out.println("Remove client ["+cl.sAddr.toString()+"] "+cl.vpnIPString);
+    }
     
     /** Get a client from it's VPN IP */
     private ClientStruct getClientFromId(byte[] vpnip) {
-        Iterator it = clients.iterator();
-        while (it.hasNext()) {
-            ClientStruct cl = (ClientStruct) it.next();
-            if (Arrays.equals(cl.vpnIP,vpnip)) {
-                return cl;
-            }
+        try {
+            return getClientFromId(InetAddress.getByAddress(vpnip));
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+            return null;
         }
-        return null;
+    }
+    private ClientStruct getClientFromId(InetAddress vpnip) {
+        return (ClientStruct) clientsHashVPN.get(vpnip);
     }
     
     /** Get a client from it's real address */
     private ClientStruct getClientFromIp(SocketAddress ad) {
-        Iterator it = clients.iterator();
-        while (it.hasNext()) {
-            ClientStruct cl = (ClientStruct) it.next();
-            if (cl.sAddr.equals(ad)) {
-                return cl;
-            }
-        }
-        return null;
+        return (ClientStruct) clientsHashAddr.get(ad);
+    }
+    
+    
+    /** Insert a connection structure into the hashmap */
+    private void addConnection(Connection ct) {
+        connectionsHash.put(new ConnectionKey(ct), ct);
+        if (CampagnolServer.verbose) System.out.println("New connection from "+ct.client1.vpnIPString+" to "+ct.client2.vpnIPString);
+    }
+    
+    /** Remove ct from the hashmap */
+    private void removeConnection(Connection ct) {
+        ct = (Connection) connectionsHash.remove(new ConnectionKey(ct));
+        if (ct != null && CampagnolServer.verbose) System.out.println("Remove connection from "+ct.client1.vpnIPString+" to "+ct.client2.vpnIPString);
+    }
+    /** Remove the connection vpnIP1 -> vpnIP2 or the reverse one */
+    private void removeConnection(byte[] vpnIP1, byte[] vpnIP2) {
+        Connection ct;
+        ct = (Connection) connectionsHash.remove(new ConnectionKey(vpnIP1, vpnIP2));
+        if (ct != null && CampagnolServer.verbose) System.out.println("Remove connection from "+ct.client1.vpnIPString+" to "+ct.client2.vpnIPString);
+        ct = (Connection) connectionsHash.remove(new ConnectionKey(vpnIP2, vpnIP1));
+        if (ct != null && CampagnolServer.verbose) System.out.println("Remove connection from "+ct.client2.vpnIPString+" to "+ct.client1.vpnIPString);
     }
     
     /** Get the connection started by the first IP */
     private Connection getConnection(byte[] vpnIP1, byte[] vpnIP2) {
-        Iterator it = connections.iterator();
-        while (it.hasNext()) {
-            Connection ct = (Connection) it.next();
-            if (Arrays.equals(ct.client1.vpnIP, vpnIP1) && Arrays.equals(ct.client2.vpnIP,vpnIP2)) {
-                return ct;
-            }
-        }
-        return null;
+        return (Connection) connectionsHash.get(new ConnectionKey(vpnIP1, vpnIP2));
     }
     
     /** Remove all connections involving vpnIP */
-    private void removeConnectionsWithClient(byte[] vpnIP) {
-        Object[] cxs = connections.toArray();
+    private void removeConnectionsWithClient(ClientStruct client) {
+        Object[] cxs = connectionsHash.values().toArray();
         for (int i=0; i<cxs.length; i++) {
             Connection ct = (Connection) cxs[i];
-            if (Arrays.equals(ct.client1.vpnIP,vpnIP) || Arrays.equals(ct.client2.vpnIP,vpnIP)) {
-                connections.remove(ct);
-                if (CampagnolServer.verbose) System.out.println("Remove connection from "+ct.client1.vpnIPString+" to "+ct.client2.vpnIPString);
+            if (Arrays.equals(ct.client1.vpnIP, client.vpnIP) || Arrays.equals(ct.client2.vpnIP,client. vpnIP)) {
+                removeConnection(ct);
             }
         }
     }
     
-    /** Remove the given connection (or reverse connection) */
-    private void removeConnection(byte[] vpnIP1, byte[] vpnIP2) {
-        Object[] cxs = connections.toArray();
-        for (int i=0; i<cxs.length; i++) {
-            Connection ct = (Connection) cxs[i];
-            if (Arrays.equals(ct.client1.vpnIP,vpnIP1) && Arrays.equals(ct.client2.vpnIP,vpnIP2)
-                || Arrays.equals(ct.client1.vpnIP,vpnIP2) && Arrays.equals(ct.client2.vpnIP,vpnIP1)) {
-                connections.remove(ct);
-                if (CampagnolServer.verbose) System.out.println("Remove connection from "+ct.client1.vpnIPString+" to "+ct.client2.vpnIPString);
-            }
-        }
-    }
     
     private void updateViews() {
         if (this.gui != null) {
@@ -138,10 +172,11 @@ public class CampagnolServer {
         this.portNumber = portNumber;
         this.buff = new byte[BUFFSIZE];
         this.packet = new DatagramPacket(buff, BUFFSIZE);
-        this.clients = new Vector();
-        this.connections = new Vector();
+        this.clientsHashAddr = new HashMap();
+        this.clientsHashVPN = new HashMap();
+        this.connectionsHash = new HashMap();
         if (withGui) {
-            this.gui = new CampagnolGUI(this.clients, this.connections);
+            this.gui = new CampagnolGUI(this.clientsHashAddr, this.connectionsHash);
             this.gui.setVisible(true);
         }
     }
@@ -180,18 +215,15 @@ public class CampagnolServer {
                     if (client == null) {
                         /**    client isn't yet registered */
                         client = new ClientStruct(packet.getSocketAddress(), message.ip1);
-                        ClientStruct clientByID = getClientFromId(client.vpnIP);
+                        ClientStruct clientByID = getClientFromId(client.vpnInet);
                         if (clientByID == null) {
                             /** OK for registering with this vpn IP on this vpn id*/
-                            clients.add(client);
-                            if (CampagnolServer.verbose) System.out.println("New client ["+client.sAddr.toString()+"] "+client.vpnIPString);
+                            addClient(client);
                             sendOK(packet.getSocketAddress());
                         } else if (clientByID.isTimeout()) {
-                            removeConnectionsWithClient(clientByID.vpnIP);
-                            clients.remove(clientByID);
-                            if (CampagnolServer.verbose) System.out.println("Remove client ["+clientByID.sAddr.toString()+"] "+clientByID.vpnIPString+" (timeout)");
-                            clients.add(client);
-                            if (CampagnolServer.verbose) System.out.println("New client ["+client.sAddr.toString()+"] "+client.vpnIPString);
+                            removeConnectionsWithClient(clientByID);
+                            removeClient(clientByID);
+                            addClient(client);
                             sendOK(packet.getSocketAddress());
                         } else {
                             /** NOT OK for registering */
@@ -207,12 +239,10 @@ public class CampagnolServer {
                                 client.updateTime();    // initialize timeout
                                 sendOK(packet.getSocketAddress());
                             } else {// another VPNIP
-                                removeConnectionsWithClient(client.vpnIP);
-                                clients.remove(client);
-                                if (CampagnolServer.verbose) System.out.println("Remove client ["+client.sAddr.toString()+"] "+client.vpnIPString+" (timeout)");
+                                removeConnectionsWithClient(client);
+                                removeClient(client);
                                 ClientStruct newClient = new ClientStruct(packet.getSocketAddress(), message.ip1);
-                                clients.add(newClient);
-                                if (CampagnolServer.verbose) System.out.println("New client ["+newClient.sAddr.toString()+"] "+newClient.vpnIPString);
+                                addClient(newClient);
                                 client = null;
                                 sendOK(packet.getSocketAddress());
                             }
@@ -226,9 +256,8 @@ public class CampagnolServer {
                 case MsgServStruct.BYE:
                     if (CampagnolServer.debug) System.out.println("<< BYE received from "+packet.getSocketAddress().toString()+" ("+client.vpnIPString+")");
                     if (client != null) {
-                        removeConnectionsWithClient(client.vpnIP);
-                        clients.remove(client);
-                        if (CampagnolServer.verbose) System.out.println("Remove client ["+client.sAddr.toString()+"] "+client.vpnIPString);
+                        removeConnectionsWithClient(client);
+                        removeClient(client);
                     }
                     break;
                 case MsgServStruct.PING :
@@ -255,9 +284,8 @@ public class CampagnolServer {
                             sendREJECT(packet.getSocketAddress(), message.ip1);
                             if (CampagnolServer.debug) System.out.println("Peer isn't connected anymore");
                             /** remove references */
-                            removeConnectionsWithClient(requestedClient.vpnIP);
-                            clients.remove(requestedClient);
-                            if (CampagnolServer.verbose) System.out.println("Remove client ["+requestedClient.sAddr.toString()+"] "+requestedClient.vpnIPString+" (timeout)");
+                            removeConnectionsWithClient(requestedClient);
+                            removeClient(requestedClient);
                             requestedClient = null;
                             break;
                         }
@@ -267,17 +295,14 @@ public class CampagnolServer {
                             if (reverseConnection == null) {
                                 /** connection demand doesn't already exist */
                                 connection = new Connection(client, requestedClient);    // instantiating the connection
-                                connections.add(connection);
-                                if (CampagnolServer.verbose) System.out.println("New connection from "+client.vpnIPString+" to "+requestedClient.vpnIPString);
+                                addConnection(connection);
                                 sendANS(client, requestedClient);
                                 sendFWD(requestedClient, client);
                             } else {
-                                connections.remove(reverseConnection);
-                                if (CampagnolServer.verbose) System.out.println("Remove connection from "+requestedClient.vpnIPString+" to "+client.vpnIPString);
+                                removeConnection(reverseConnection);
                                 reverseConnection = null;
                                 connection = new Connection(client, requestedClient);    // instantiating the connection
-                                connections.add(connection);
-                                if (CampagnolServer.verbose) System.out.println("New connection from "+client.vpnIPString+" to "+requestedClient.vpnIPString);
+                                addConnection(connection);
                                 sendANS(client, requestedClient);
                                 sendFWD(requestedClient, client);
                             }
