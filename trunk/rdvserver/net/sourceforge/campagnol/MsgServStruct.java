@@ -21,7 +21,7 @@
  *
  */
 
-//package Campagnol;
+package net.sourceforge.campagnol;
 
 import java.net.UnknownHostException;
 

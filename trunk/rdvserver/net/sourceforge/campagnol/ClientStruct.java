@@ -21,7 +21,7 @@
  *
  */
 
-//package Campagnol;
+package net.sourceforge.campagnol;
 
 import java.text.DateFormat;
 import java.util.*;

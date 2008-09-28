@@ -21,11 +21,11 @@
  *
  */
 
+package net.sourceforge.campagnol;
+
 import java.text.DateFormat;
 import java.util.Date;
     
-//package Campagnol;
-
 /** represent a peer to peer connection */
 public class Connection {
 
