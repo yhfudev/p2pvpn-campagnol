@@ -1,31 +1,34 @@
 <project name="Campagnol" default="jar" basedir=".">
 	<property name="targetVM" value="1.4" />
+	<property name="build" value="classes" />
+	<property name="src" value="${basedir}" />
+	<property name="mainClass" value="net.sourceforge.campagnol.CampagnolServer" />
 
 	<target name="compile" description="Compiles files">
-		<javac srcdir="${basedir}" source="${targetVM}" target="${targetVM}"/>
+		<javac srcdir="${src}" destdir="${build}" source="${targetVM}" target="${targetVM}"/>
 	</target>
 
 	<target name="jar" description="Build jar archive" depends="compile">
-		<jar destfile="CampagnolServer.jar" basedir="." includes="*.class">
+		<jar destfile="CampagnolServer.jar" basedir="${build}" includes="**/*.class">
 			<manifest>
-				<attribute name="Main-Class" value="CampagnolServer" />
+				<attribute name="Main-Class" value="${mainClass}" />
 			</manifest>
 		</jar>
 	</target>
 	
 	<target name="clean" description="Clean classes and jar file">
 		<delete>
-			<fileset dir="." includes="*.class"/>
+			<fileset dir="${build}" includes="**/*.class"/>
 			<fileset dir="." file="CampagnolServer.jar"/>
 		</delete>
 	</target>
 	
 	<target name="run" depends="compile" description="Start Campagnol server">
-		<java classname="CampagnolServer" fork="yes" failonerror="yes"/>
+		<java classname="${mainClass}" classpath="${build}" fork="yes" failonerror="yes"/>
 	</target>
 
 	<target name="runGUI" depends="compile" description="Start Campagnol server with GUI">
-		<java classname="CampagnolServer" fork="yes" failonerror="yes">
+		<java classname="${mainClass}" classpath="${build}" fork="yes" failonerror="yes">
 			<arg value="-g"/>
 		</java>
 	</target>
