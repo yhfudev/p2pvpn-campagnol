@@ -56,20 +56,20 @@ void log_close(void) {
 
 /*
  * Log format/ap if log_enabled is true
- * Otherwise print the message to stderr if tostderr is true
+ * Otherwise print the message to stdout if tostdout is true
  */
-inline void log_message_inner(int tostderr, const char *format, va_list ap) {
+inline void log_message_inner(int tostdout, const char *format, va_list ap) {
     if (log_enabled) {
         vsyslog(LOG_NOTICE, format, ap);
     }
-    else if (tostderr) {
-        vfprintf(stderr, format, ap);
-        fprintf(stderr, "\n");
+    else if (tostdout) {
+        vfprintf(stdout, format, ap);
+        fprintf(stdout, "\n");
     }
 }
 
 /*
- * Log a message with systlog or print it to stderr
+ * Log a message with systlog or print it to stdout
  */
 void log_message(const char *format, ...) {
     va_list ap;
@@ -79,7 +79,7 @@ void log_message(const char *format, ...) {
 }
 
 /*
- * Log a message with syslog or print it to stderr
+ * Log a message with syslog or print it to stdout
  * if log_verbose is true
  */
 void log_message_verb(const char *format, ...) {
@@ -95,7 +95,9 @@ void log_message_verb(const char *format, ...) {
 void log_message_syslog(const char *format, ...) {
     va_list ap;
     va_start(ap, format);
-    log_message_inner(0, format, ap);
+    if (log_enabled) {
+        vsyslog(LOG_NOTICE, format, ap);
+    }
     va_end(ap);
 }
 
