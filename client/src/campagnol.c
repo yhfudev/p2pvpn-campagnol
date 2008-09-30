@@ -186,7 +186,7 @@ int main (int argc, char **argv) {
     if (config.verbose) {
         puts("Configuration:");
         printf("  Local IP address: %s\n", inet_ntoa (config.localIP));
-        if (strlen(config.iface) != 0) printf("  Using interface: %s\n", config.iface);
+        if (config.iface) printf("  Using interface: %s\n", config.iface);
         if (config.localport != 0) printf("  Using local port: %d\n", config.localport);
         printf("  RDV server IP address: %s\n", inet_ntoa (config.serverAddr.sin_addr));
         printf("  RDV server port: %d\n", ntohs(config.serverAddr.sin_port));
@@ -196,7 +196,7 @@ int main (int argc, char **argv) {
         printf("  DTLS certificate file: %s\n", config.certificate_pem);
         printf("  DTLS private key file: %s\n", config.key_pem);
         printf("  DTLS root certificates chain file: %s\n", config.verif_pem);
-        if (strlen(config.cipher_list) != 0) printf("  DTLS cipher list: %s\n", config.cipher_list);
+        if (config.cipher_list) printf("  DTLS cipher list: %s\n", config.cipher_list);
         if (config.crl) printf("  Using a certificate revocation list (%d entries)\n", sk_num(X509_CRL_get_REVOKED(config.crl)));
         printf("  FIFO size: %d\n", config.FIFO_size);
         printf("  Timeout: %d sec.\n", config.timeout);
@@ -251,9 +251,8 @@ int main (int argc, char **argv) {
      * OpenSSL has no cleanup function
      * IFAIK there is nothing to cleanup the compression methods
      */
-    if (config.crl != NULL) {
-        X509_CRL_free(config.crl);
-    }
+    // free config.crl and the strings stored in config
+    freeConfig();
     // thread error state. must be called by each thread
     ERR_remove_state(0);
     // engine

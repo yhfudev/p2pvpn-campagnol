@@ -44,7 +44,7 @@ struct configuration config;
 #ifdef HAVE_IFADDRS_H
 /*
  * Search the local IP address to use. Copy it into "ip" and set "localIPset".
- * If strlen(iface) != 0, get the IP associated with the given interface
+ * If iface != NULL, get the IP associated with the given interface
  * Otherwise search the IP of the first non loopback interface
  */
 void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
@@ -56,11 +56,11 @@ void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
 
     ifap_first = ifap;
     while (ifap != NULL) {
-        if (strlen(iface) == 0 && (ifap->ifa_flags & IFF_LOOPBACK) != 0) {
+        if (iface == NULL && (ifap->ifa_flags & IFF_LOOPBACK) != 0) {
             ifap = ifap->ifa_next;
             continue; // local interface, skip it
         }
-        if (strlen(iface) == 0 || strcmp (ifap->ifa_name, iface) == 0) {
+        if (iface == NULL || strcmp (ifap->ifa_name, iface) == 0) {
             /* If the iface is a TUN device and getifaddrs want to
              * show us its AF_PACKET level address, ifap->ifa_addr is NULL (phew!)
              */
@@ -78,7 +78,7 @@ void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
 
 /*
  * Search the local IP address to use. Copy it into "ip" and set "localIPset".
- * If strlen(iface) != 0, get the IP associated with the given interface
+ * If iface != NULL, get the IP associated with the given interface
  * Otherwise search the IP of the first non loopback interface
  *
  * see http://groups.google.com/group/comp.os.linux.development.apps/msg/10f14dda86ee351a
@@ -124,7 +124,7 @@ void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
             continue; // local interface, skip it
         }
 
-        if (strlen(iface) == 0 || strcmp (ifr->ifr_name, iface) == 0) {
+        if (iface != NULL || strcmp (ifr->ifr_name, iface) == 0) {
             *ip = (((struct sockaddr_in *) &(ifr->ifr_addr))->sin_addr);
             *localIPset = 1;
             break;
@@ -192,29 +192,29 @@ int load_CRL(char *crl_file) {
  * print a warning otherwise
  */
 void check_options(const char *section, const char *option, const char *value, int nline) {
-    if (strncmp(section, SECTION_NETWORK, CONF_NAME_LENGTH) == 0) {
-        if (strncmp(option, OPT_LOCAL_HOST, CONF_NAME_LENGTH) == 0) return;
-        if (strncmp(option, OPT_LOCAL_PORT, CONF_NAME_LENGTH) == 0) return;
-        if (strncmp(option, OPT_SERVER_HOST, CONF_NAME_LENGTH) == 0) return;
-        if (strncmp(option, OPT_SERVER_PORT, CONF_NAME_LENGTH) == 0) return;
-        if (strncmp(option, OPT_TUN_MTU, CONF_NAME_LENGTH) == 0) return;
-        if (strncmp(option, OPT_INTERFACE, CONF_NAME_LENGTH) == 0) return;
+    if (strcmp(section, SECTION_NETWORK) == 0) {
+        if (strcmp(option, OPT_LOCAL_HOST) == 0) return;
+        if (strcmp(option, OPT_LOCAL_PORT) == 0) return;
+        if (strcmp(option, OPT_SERVER_HOST) == 0) return;
+        if (strcmp(option, OPT_SERVER_PORT) == 0) return;
+        if (strcmp(option, OPT_TUN_MTU) == 0) return;
+        if (strcmp(option, OPT_INTERFACE) == 0) return;
     }
-    else if (strncmp(section, SECTION_VPN, CONF_NAME_LENGTH) == 0) {
-        if (strncmp(option, OPT_VPN_IP, CONF_NAME_LENGTH) == 0) return;
-        if (strncmp(option, OPT_VPN_NETWORK, CONF_NAME_LENGTH) == 0) return;
+    else if (strcmp(section, SECTION_VPN) == 0) {
+        if (strcmp(option, OPT_VPN_IP) == 0) return;
+        if (strcmp(option, OPT_VPN_NETWORK) == 0) return;
     }
-    else if (strncmp(section, SECTION_SECURITY, CONF_NAME_LENGTH) == 0) {
-        if (strncmp(option, OPT_CERTIFICATE, CONF_NAME_LENGTH) == 0) return;
-        if (strncmp(option, OPT_KEY, CONF_NAME_LENGTH) == 0) return;
-        if (strncmp(option, OPT_CA, CONF_NAME_LENGTH) == 0) return;
-        if (strncmp(option, OPT_CRL, CONF_NAME_LENGTH) == 0) return;
-        if (strncmp(option, OPT_CIPHERS, CONF_NAME_LENGTH) == 0) return;
+    else if (strcmp(section, SECTION_SECURITY) == 0) {
+        if (strcmp(option, OPT_CERTIFICATE) == 0) return;
+        if (strcmp(option, OPT_KEY) == 0) return;
+        if (strcmp(option, OPT_CA) == 0) return;
+        if (strcmp(option, OPT_CRL) == 0) return;
+        if (strcmp(option, OPT_CIPHERS) == 0) return;
     }
-    else if (strncmp(section, SECTION_CLIENT, CONF_NAME_LENGTH) == 0) {
-        if (strncmp(option, OPT_FIFO, CONF_NAME_LENGTH) == 0) return;
-        if (strncmp(option, OPT_TIMEOUT, CONF_NAME_LENGTH) == 0) return;
-        if (strncmp(option, OPT_MAX_CLIENTS, CONF_NAME_LENGTH) == 0) return;
+    else if (strcmp(section, SECTION_CLIENT) == 0) {
+        if (strcmp(option, OPT_FIFO) == 0) return;
+        if (strcmp(option, OPT_TIMEOUT) == 0) return;
+        if (strcmp(option, OPT_MAX_CLIENTS) == 0) return;
     }
 
     log_message("Unknown option [%s] '%s' = '%s' line %d", section, option, value, nline);
@@ -240,12 +240,16 @@ void parseConfFile(char *confFile) {
     config.serverAddr.sin_port=htons(SERVER_PORT_DEFAULT);
     memset(&config.vpnIP, 0, sizeof(config.localIP));
     config.tun_mtu = TUN_MTU_DEFAULT;
-    config.iface[0] = '\0';
-    config.cipher_list[0] = '\0';
     config.crl = NULL;
     config.FIFO_size = 50;
     config.timeout = 120;
     config.max_clients = 100;
+    config.network = NULL;
+    config.iface = NULL;
+    config.certificate_pem = NULL;
+    config.key_pem = NULL;
+    config.verif_pem = NULL;
+    config.cipher_list = NULL;
 
     // init config parser. no DEFAULT section, no empty value
     parser_init(&parser, 0, 0);
@@ -274,7 +278,11 @@ void parseConfFile(char *confFile) {
 
     value = parser_get(SECTION_NETWORK, OPT_INTERFACE, &nline, &parser);
     if (value != NULL) {
-        strncpy(config.iface, value, CONF_NAME_LENGTH);
+        config.iface = strdup(value);
+        if (config.iface == NULL) {
+            log_error("Could not allocate string (configuration)");
+            exit(EXIT_FAILURE);
+        }
     }
 
     value = parser_get(SECTION_NETWORK, OPT_SERVER_HOST, &nline, &parser);
@@ -338,7 +346,11 @@ void parseConfFile(char *confFile) {
 
     value = parser_get(SECTION_VPN, OPT_VPN_NETWORK, &nline, &parser);
     if (value != NULL) {
-        strncpy(config.network, value, CONF_VALUE_LENGTH);
+        config.network = strdup(value);
+        if (config.network == NULL) {
+            log_error("Could not allocate string (configuration)");
+            exit(EXIT_FAILURE);
+        }
 
         /* compute the broadcast address */
         char * search, * end;
@@ -378,7 +390,11 @@ void parseConfFile(char *confFile) {
 
     value = parser_get(SECTION_SECURITY, OPT_CERTIFICATE, &nline, &parser);
     if (value != NULL) {
-        strncpy(config.certificate_pem, value, CONF_VALUE_LENGTH);
+        config.certificate_pem = strdup(value);
+        if (config.certificate_pem == NULL) {
+            log_error("Could not allocate string (configuration)");
+            exit(EXIT_FAILURE);
+        }
     }
     else {
         log_message("[%s] Parameter \""OPT_CERTIFICATE"\" is mandatory", confFile);
@@ -387,7 +403,11 @@ void parseConfFile(char *confFile) {
 
     value = parser_get(SECTION_SECURITY, OPT_KEY, &nline, &parser);
     if (value != NULL) {
-        strncpy(config.key_pem, value, CONF_VALUE_LENGTH);
+        config.key_pem = strdup(value);
+        if (config.key_pem == NULL) {
+            log_error("Could not allocate string (configuration)");
+            exit(EXIT_FAILURE);
+        }
     }
     else {
         log_message("[%s] Parameter \""OPT_KEY"\" is mandatory", confFile);
@@ -396,7 +416,11 @@ void parseConfFile(char *confFile) {
 
     value = parser_get(SECTION_SECURITY, OPT_CA, &nline, &parser);
     if (value != NULL) {
-        strncpy(config.verif_pem, value, CONF_VALUE_LENGTH);
+        config.verif_pem = strdup(value);
+        if (config.verif_pem == NULL) {
+            log_error("Could not allocate string (configuration)");
+            exit(EXIT_FAILURE);
+        }
     }
     else {
         log_message("[%s] Parameter \""OPT_CA"\" is mandatory", confFile);
@@ -405,7 +429,11 @@ void parseConfFile(char *confFile) {
 
     value = parser_get(SECTION_SECURITY, OPT_CIPHERS, &nline, &parser);
     if (value != NULL) {
-        strncpy(config.cipher_list, value, CONF_VALUE_LENGTH);
+        config.cipher_list = strdup(value);
+        if (config.cipher_list == NULL) {
+            log_error("Could not allocate string (configuration)");
+            exit(EXIT_FAILURE);
+        }
     }
 
     value = parser_get(SECTION_SECURITY, OPT_CRL, &nline, &parser);
@@ -475,4 +503,13 @@ void parseConfFile(char *confFile) {
 
 }
 
+void freeConfig() {
+    if (config.crl != NULL) X509_CRL_free(config.crl);
+    if (config.iface) free(config.iface);
+    if (config.network) free(config.network);
+    if (config.certificate_pem) free(config.certificate_pem);
+    if (config.key_pem) free(config.key_pem);
+    if (config.verif_pem) free(config.verif_pem);
+    if (config.cipher_list) free(config.cipher_list);
+}
 

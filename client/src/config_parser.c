@@ -47,6 +47,9 @@ ssize_t campagnol_getline(char **lineptr, size_t *n, FILE *stream) {
     for (;;p++) {
         if (p - *lineptr == *n) {
             *lineptr = (char *)realloc(*lineptr, *n+120);
+            if (*lineptr == NULL) {
+                return -1;
+            }
             p = *lineptr + *n;
             *n = *n + 120;
         }
@@ -65,6 +68,9 @@ ssize_t campagnol_getline(char **lineptr, size_t *n, FILE *stream) {
     p++;
     if (p - *lineptr == *n) {
         *lineptr = (char *)realloc(*lineptr, *n+120);
+        if (*lineptr == NULL) {
+            return -1;
+        }
         p = *lineptr + *n;
         *n = *n + 120;
     }
@@ -94,11 +100,10 @@ void campagnol_tdestroy(void *root, void (*free_node)(void *nodep), int (*compar
 #   define tdestroy(root,free_node) campagnol_tdestroy(root,free_node,parser_compare)
 #endif
 
-
-
 /* internal comparison function (strncmp) */
 static int parser_compare(const void *itema, const void *itemb) {
-    return strncmp((const char *) itema, (const char *) itemb, CONF_NAME_LENGTH);
+    return strcmp(((const item_common_t *) itema)->name,
+            ((const item_common_t *) itemb)->name);
 }
 
 /* set [section] option=value @line number = nline
@@ -110,13 +115,23 @@ void parser_set(const char *section, const char *option, const char *value,
     void *tmp;
     item_section_t *item_section;
     item_value_t *item_value;
+    item_common_t tmp_item;
 
     // get or create section
-    tmp = tsearch(section, &parser->data, parser_compare);
-    if (*(void **) tmp == section) {
+    tmp_item.name = (char *) section;
+    tmp = tsearch(&tmp_item, &parser->data, parser_compare);
+    if (*(void **) tmp == &tmp_item) {
         item_section = (item_section_t *) malloc(sizeof(item_section_t));
+        if (item_section == NULL) {
+            log_error("Could not allocate structure (parser_config)");
+            exit(EXIT_FAILURE);
+        }
         *(void **) tmp = item_section;
-        strncpy(item_section->name, section, CONF_NAME_LENGTH);
+        item_section->name = strdup(section);
+        if (item_section->name == NULL) {
+            log_error("Could not allocate string (parser_config)");
+            exit(EXIT_FAILURE);
+        }
         item_section->values_tree = NULL;
         item_section->parser = parser;
     }
@@ -125,18 +140,32 @@ void parser_set(const char *section, const char *option, const char *value,
     }
 
     // get or create option
-    tmp = tsearch(option, &item_section->values_tree, parser_compare);
-    if (*(void **) tmp == option) {
+    tmp_item.name = (char *) option;
+    tmp = tsearch(&tmp_item, &item_section->values_tree, parser_compare);
+    if (*(void **) tmp == &tmp_item) {
         item_value = (item_value_t *) malloc(sizeof(item_value_t));
+        if (item_value == NULL) {
+            log_error("Could not allocate structure (parser_config)");
+            exit(EXIT_FAILURE);
+        }
         *(void **) tmp = item_value;
-        strncpy(item_value->name, option, CONF_NAME_LENGTH);
+        item_value->name = strdup(option);
+        if (item_value->name == NULL) {
+            log_error("Could not allocate structure (parser_config)");
+            exit(EXIT_FAILURE);
+        }
     }
     else {
         item_value = *(void **) tmp;
+        free(item_value->value);
     }
 
     // set value
-    strncpy(item_value->value, value, CONF_VALUE_LENGTH);
+    item_value->value = strdup(value);
+    if (item_value->value == NULL) {
+        log_error("Could not allocate string (parser_config)");
+        exit(EXIT_FAILURE);
+    }
     item_value->nline = nline;
     item_value->section = item_section;
 }
@@ -145,13 +174,22 @@ void parser_set(const char *section, const char *option, const char *value,
  * or do nothing if it already exists*/
 void parser_add_section(const char *section, parser_context_t *parser) {
     void *tmp;
-    item_section_t *item_section;
+    item_section_t *item_section, tmp_section;
 
-    tmp = tsearch(section, &parser->data, parser_compare);
-    if (*(void **) tmp == section) {
+    tmp_section.name = (char *) section;
+    tmp = tsearch(&tmp_section, &parser->data, parser_compare);
+    if (*(void **) tmp == &tmp_section) {
         item_section = (item_section_t *) malloc(sizeof(item_section_t));
+        if (item_section == NULL) {
+            log_error("Could not allocate structure (parser_config)");
+            exit(EXIT_FAILURE);
+        }
         *(void **) tmp = item_section;
-        strncpy(item_section->name, section, CONF_NAME_LENGTH);
+        item_section->name = strdup(section);
+        if (item_section->name == NULL) {
+            log_error("Could not allocate string (parser_config)");
+            exit(EXIT_FAILURE);
+        }
         item_section->values_tree = NULL;
         item_section->parser = parser;
     }
@@ -160,8 +198,10 @@ void parser_add_section(const char *section, parser_context_t *parser) {
 /* Tell whether section exists */
 int parser_has_section(const char *section, parser_context_t *parser) {
     void *tmp;
+    item_section_t tmp_section;
 
-    tmp = tfind(section, &parser->data, parser_compare);
+    tmp_section.name = (char *) section;
+    tmp = tfind(&tmp_section, &parser->data, parser_compare);
     return tmp != NULL;
 }
 
@@ -170,14 +210,17 @@ int parser_has_option(const char *section, const char *option,
         parser_context_t *parser) {
     void *tmp;
     item_section_t *item_section;
+    item_common_t tmp_item;
 
-    tmp = tfind(section, &parser->data, parser_compare);
+    tmp_item.name = (char *) section;
+    tmp = tfind(&tmp_item, &parser->data, parser_compare);
     if (tmp == NULL)
         return 0;
 
     item_section = *(void **) tmp;
 
-    tmp = tfind(option, &item_section->values_tree, parser_compare);
+    tmp_item.name = (char *) option;
+    tmp = tfind(&tmp_item, &item_section->values_tree, parser_compare);
 
     return tmp != NULL;
 }
@@ -190,15 +233,18 @@ char *parser_get(const char *section, const char *option, int *nline,
         parser_context_t *parser) {
     item_section_t *item_section;
     item_value_t *item_value;
+    item_common_t tmp_item;
     void *tmp;
 
-    tmp = tfind(section, &parser->data, parser_compare);
+    tmp_item.name = (char *) section;
+    tmp = tfind(&tmp_item, &parser->data, parser_compare);
     if (tmp == NULL) {
         return NULL;
     }
     item_section = *(void **) tmp;
 
-    tmp = tfind(option, &item_section->values_tree, parser_compare);
+    tmp_item.name = (char *) option;
+    tmp = tfind(&tmp_item, &item_section->values_tree, parser_compare);
     if (tmp == NULL) {
         return NULL;
     }
@@ -267,17 +313,13 @@ int parser_getboolean(const char *section, const char *option, int *value,
         *raw = v;
     }
 
-    if (strncasecmp(v, "yes", CONF_VALUE_LENGTH) == 0 || strncasecmp(v, "1",
-            CONF_VALUE_LENGTH) == 0
-            || strncasecmp(v, "true", CONF_VALUE_LENGTH) == 0 || strncasecmp(v,
-            "on", CONF_VALUE_LENGTH) == 0) {
+    if (strcasecmp(v, "yes") == 0 || strcasecmp(v, "1") == 0 || strcasecmp(v,
+            "true") == 0 || strcasecmp(v, "on") == 0) {
         *value = 1;
         return 1;
     }
-    if (strncasecmp(v, "no", CONF_VALUE_LENGTH) == 0 || strncasecmp(v, "0",
-            CONF_VALUE_LENGTH) == 0 || strncasecmp(v, "false",
-            CONF_VALUE_LENGTH) == 0 || strncasecmp(v, "off", CONF_VALUE_LENGTH)
-            == 0) {
+    if (strcasecmp(v, "no") == 0 || strcasecmp(v, "0") == 0 || strcasecmp(v,
+            "false") == 0 || strcasecmp(v, "off") == 0) {
         *value = 0;
         return 1;
     }
@@ -287,7 +329,10 @@ int parser_getboolean(const char *section, const char *option, int *value,
 
 /* internal function used to free an item_value_t */
 static void free_value(void *p) {
-    free(p);
+    item_value_t *v = (item_value_t *) p;
+    free(v->value);
+    free(v->name);
+    free(v);
 }
 
 /* internal function used to free an item_section_t
@@ -298,6 +343,7 @@ static void free_section(void *p) {
     if (section->values_tree != NULL) {
         tdestroy(section->values_tree, free_value);
     }
+    free(section->name);
     free(p);
 }
 
@@ -306,7 +352,6 @@ void parser_free(parser_context_t *parser) {
     tdestroy(parser->data, free_section);
     parser->data = NULL;
 }
-
 
 /* Initialize a new parser */
 void parser_init(parser_context_t *parser, int allow_default_section,
@@ -324,14 +369,17 @@ void parser_remove_option(const char *section, const char *option,
     void *tmp;
     item_section_t *item_section;
     item_value_t *item_value;
+    item_common_t tmp_item;
 
-    tmp = tfind(section, &parser->data, parser_compare);
+    tmp_item.name = (char *) section;
+    tmp = tfind(&tmp_item, &parser->data, parser_compare);
     if (tmp == NULL)
         return;
 
     item_section = *(void **) tmp;
 
-    tmp = tfind(option, &item_section->values_tree, parser_compare);
+    tmp_item.name = (char *) option;
+    tmp = tfind(&tmp_item, &item_section->values_tree, parser_compare);
 
     if (tmp != NULL) {
         item_value = *(void **) tmp;
@@ -346,16 +394,16 @@ void parser_remove_option(const char *section, const char *option,
 void parser_remove_section(const char *section, parser_context_t *parser) {
     void *tmp;
     item_section_t *item_section;
+    item_common_t tmp_item;
 
-    tmp = tfind(section, &parser->data, parser_compare);
+    tmp_item.name = (char *) section;
+    tmp = tfind(&tmp_item, &parser->data, parser_compare);
     if (tmp == NULL)
         return;
     item_section = *(void **) tmp;
     tdelete(section, &parser->data, parser_compare);
     free_section(item_section);
 }
-
-
 
 /* value expansion, 2 passes
  *
@@ -372,7 +420,7 @@ static int expand_line(char *line, int pass) {
 
     int escaped = 0;
 
-    for (;;src++) {
+    for (;; src++) {
         if (!escaped) {
             if (*src == '\\')
                 escaped = 1;
@@ -395,7 +443,7 @@ static int expand_line(char *line, int pass) {
                     case 't': *dst = '\t'; break;
                     case 'n': *dst = '\n'; break;
                     case 'r': *dst = '\r'; break;
-                    default :
+                    default:
                         *dst = '\\';
                         dst++;
                         *dst = *src;
@@ -405,7 +453,7 @@ static int expand_line(char *line, int pass) {
             else if (pass == 2) {
                 switch (*src) {
                     case '"': *dst = '"'; break;
-                    default :
+                    default:
                         *dst = '\\';
                         dst++;
                         *dst = *src;
@@ -420,7 +468,7 @@ static int expand_line(char *line, int pass) {
             break;
     }
 
-    return (dst - line);
+    return (dst - line) - 1;
 }
 
 /* Parse a file */
@@ -435,16 +483,16 @@ void parser_read(const char *confFile, parser_context_t *parser) {
     size_t line_len = 0; // length of the line buffer
     ssize_t r; // length of the line
     char *token; // word
-    char name[CONF_NAME_LENGTH]; // option name
-    char value[CONF_VALUE_LENGTH]; // option value
-    char section[CONF_NAME_LENGTH]; // current section
+    char *name = NULL; // option name
+    char *value = NULL; // option value
+    char *section = NULL; // current section
+    size_t name_length = 0, value_length = 0, section_length = 0;
 
     //    int res;
     char *token_end;
     char *line_eq;
     char *eol;
     int nline = 0;
-    section[0] = '\0';
 
     /* Read the configuration file */
     while ((r = getline(&line, &line_len, conf)) != -1) {
@@ -471,22 +519,34 @@ void parser_read(const char *confFile, parser_context_t *parser) {
 
         // section ?
         if (token[0] == '[') {
+            token++;
             token_end = index(token, ']');
-            if (token_end == NULL || token_end == token + 1) {
+            if (token_end == NULL || token_end == token) {
                 log_message("[%s:%d] Syntax error, empty section", confFile,
                         nline);
                 continue;
             }
             *token_end = '\0';
-            strncpy(section, token + 1, CONF_NAME_LENGTH);
+            if (section_length < (token_end - token + 1)) {
+                section_length = token_end - token + 1;
+                free(section);
+                section = malloc(section_length);
+            }
+            strcpy(section, token);
 
             continue;
         }
 
         // something outside of a section ?
-        if (*section == '\0') {
-            if (parser->allow_default)
-                strncpy(section, "DEFAULT", CONF_NAME_LENGTH);
+        if (section == NULL) {
+            if (parser->allow_default) {
+                section = strdup(SECTION_DEFAULT);
+                if (section == NULL) {
+                    log_error("Could not allocate string (parser_config)");
+                    exit(EXIT_FAILURE);
+                }
+                section_length = strlen(SECTION_DEFAULT) + 1;
+            }
             else {
                 log_message(
                         "[%s:%d] Syntax error, option outside of a section",
@@ -510,7 +570,12 @@ void parser_read(const char *confFile, parser_context_t *parser) {
             token_end--;
         // copy name:
         *token_end = '\0';
-        strncpy(name, token, CONF_NAME_LENGTH);
+        if (name_length < (token_end - token + 1)) {
+            name_length = token_end - token + 1;
+            free(name);
+            name = malloc(name_length);
+        }
+        strcpy(name, token);
 
         // get the value
         token = line_eq + 1;
@@ -539,10 +604,14 @@ void parser_read(const char *confFile, parser_context_t *parser) {
         }
 
         // expands \"
-        expand_line(token, 2);
+        r = expand_line(token, 2);
 
-
-        strncpy(value, token, CONF_VALUE_LENGTH);
+        if (value_length < r + 1) {
+            value_length = r + 1;
+            free(value);
+            value = malloc(value_length);
+        }
+        strcpy(value, token);
 
         if (config.debug) {
             printf("[%s:%d] [%s] '%s' = '%s'\n", confFile, nline, section,
@@ -555,18 +624,26 @@ void parser_read(const char *confFile, parser_context_t *parser) {
     if (line) {
         free(line);
     }
+    if (section)
+        free(section);
+    if (name)
+        free(name);
+    if (value)
+        free(value);
 
     fclose(conf);
 }
 
 /* internal, write an option and it's value into parser->dump_file */
-static void parser_write_option(const void *nodep, const VISIT which, const int depth) {
+static void parser_write_option(const void *nodep, const VISIT which,
+        const int depth) {
     item_value_t *item;
     switch (which) {
         case postorder:
         case leaf:
             item = *(item_value_t **) nodep;
-            fprintf(item->section->parser->dump_file, "%s = \"%s\"\n", item->name, item->value);
+            fprintf(item->section->parser->dump_file, "%s = \"%s\"\n",
+                    item->name, item->value);
             break;
         default:
             break;
@@ -574,7 +651,8 @@ static void parser_write_option(const void *nodep, const VISIT which, const int 
 }
 
 /* internal, write a complete section into parser->dump_file */
-static void parser_write_section(const void *nodep, const VISIT which, const int depth) {
+static void parser_write_section(const void *nodep, const VISIT which,
+        const int depth) {
     item_section_t *item;
     switch (which) {
         case postorder:
@@ -595,22 +673,23 @@ void parser_write(FILE *file, parser_context_t *parser) {
     twalk(parser->data, parser_write_section);
 }
 
-
-
-static void parser_forall_option(const void *nodep, const VISIT which, const int depth) {
+static void parser_forall_option(const void *nodep, const VISIT which,
+        const int depth) {
     item_value_t *item;
     switch (which) {
         case postorder:
         case leaf:
             item = *(item_value_t **) nodep;
-            item->section->parser->forall_function(item->section->name, item->name, item->value, item->nline);
+            item->section->parser->forall_function(item->section->name,
+                    item->name, item->value, item->nline);
             break;
         default:
             break;
     }
 }
 
-static void parser_forall_section(const void *nodep, const VISIT which, const int depth) {
+static void parser_forall_section(const void *nodep, const VISIT which,
+        const int depth) {
     item_section_t *item;
     switch (which) {
         case postorder:
