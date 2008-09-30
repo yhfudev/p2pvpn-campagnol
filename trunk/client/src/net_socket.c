@@ -33,7 +33,7 @@
 /* Create the UDP socket
  * Bind it to config.localIP
  *            config.localport (localport > 0)
- *            config.iface (strlen(iface) > 0)
+ *            config.iface (iface != NULL)
  */
 int create_socket(void) {
     int sockfd;
@@ -48,7 +48,7 @@ int create_socket(void) {
     }
 
 #ifdef HAVE_LINUX
-    if (strlen(config.iface) != 0) {
+    if (config.iface != NULL) {
         struct ifreq ifr;
         memset(&ifr, 0, sizeof(ifr));
         strncpy(ifr.ifr_name, config.iface, IFNAMSIZ);

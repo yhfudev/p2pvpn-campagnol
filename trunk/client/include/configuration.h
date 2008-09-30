@@ -25,10 +25,6 @@
 
 #include <openssl/ssl.h>
 
-/* Option name and value lengths in the configuration value */
-#define CONF_NAME_LENGTH 20
-#define CONF_VALUE_LENGTH 200
-
 struct configuration {
     int verbose;                                // verbose
     int debug;                                  // more verbose
@@ -37,14 +33,14 @@ struct configuration {
     unsigned int localport;                     // local UDP port
     struct sockaddr_in serverAddr;              // rendezvous server inet address
     struct in_addr vpnIP;                       // VPN IP address
-    char network[CONF_VALUE_LENGTH];            // VPN subnetwork
+    char *network;                              // VPN subnetwork
     int tun_mtu;                                // MTU of the tun device
     struct in_addr vpnBroadcastIP;              // "broadcast" IP, computed from vpnIP and network
-    char iface[CONF_VALUE_LENGTH];              // bind to a specific network interface
-    char certificate_pem[CONF_VALUE_LENGTH];    // PEM formated file containing the client certificate
-    char key_pem[CONF_VALUE_LENGTH];            // PEM formated file containing the client private key
-    char verif_pem[CONF_VALUE_LENGTH];          // PEM formated file containing the root certificates
-    char cipher_list[CONF_VALUE_LENGTH];        // ciphers list for SSL_CTX_set_cipher_list
+    char *iface;                                // bind to a specific network interface
+    char *certificate_pem;                      // PEM formated file containing the client certificate
+    char *key_pem;                              // PEM formated file containing the client private key
+    char *verif_pem;                            // PEM formated file containing the root certificates
+    char *cipher_list;                          // ciphers list for SSL_CTX_set_cipher_list
                                                 // see openssl ciphers man page
     X509_CRL *crl;                              // The parsed CRL or NULL
     int FIFO_size;                              // Size of the FIFO list for the incoming packets
@@ -53,12 +49,15 @@ struct configuration {
 };
 
 extern void parseConfFile(char *file);
+extern void freeConfig(void);
 
 /* names of sections and options */
 #define SECTION_NETWORK     "NETWORK"
 #define SECTION_VPN         "VPN"
 #define SECTION_CLIENT      "CLIENT"
 #define SECTION_SECURITY    "SECURITY"
+
+#define SECTION_DEFAULT     "DEFAULT"
 
 #define OPT_LOCAL_HOST      "local_host"
 #define OPT_LOCAL_PORT      "local_port"

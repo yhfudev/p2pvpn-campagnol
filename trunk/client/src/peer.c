@@ -330,7 +330,7 @@ int createClientSSL(struct client *peer, int recreate) {
     /* No zlib compression */
     peer->ssl->ctx->comp_methods = NULL;
     /* Algorithms */
-    if (strlen(config.cipher_list) != 0) {
+    if (config.cipher_list != NULL) {
         if (! SSL_CTX_set_cipher_list(peer->ssl->ctx, config.cipher_list)){
             log_error("SSL_CTX_set_cipher_list");
             ERR_print_errors_fp(stderr);

@@ -73,20 +73,28 @@ struct parser_context {
 };
 typedef struct parser_context parser_context_t;
 
+#define __ITEM_COMMON \
+    char *name
+
 struct item_section {
-    char name[CONF_NAME_LENGTH];
+    __ITEM_COMMON;
     void *values_tree;
     parser_context_t *parser; // pointer to its parser_context
 };
 typedef struct item_section item_section_t;
 
 struct item_value {
-    char name[CONF_NAME_LENGTH];
-    char value[CONF_VALUE_LENGTH];
+    __ITEM_COMMON;
+    char *value;
     int nline;
     item_section_t *section; // pointer to its section item
 };
 typedef struct item_value item_value_t;
+
+struct item_common {
+    __ITEM_COMMON;
+};
+typedef struct item_common item_common_t;
 
 /* Initialize a parser_context_t structure */
 extern void parser_init(parser_context_t *parser, int allow_default_section,
