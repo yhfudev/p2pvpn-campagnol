@@ -23,7 +23,7 @@ AC_ARG_WITH([openssl-libs], [AS_HELP_STRING([--with-openssl-libs=DIR],[OpenSSL l
             ]
            )
 if test $openssl_set == 1; then
-        AC_SEARCH_LIBS([dlopen], [ld], [OPENSSL_LIBS+=" -lld"])
+        AC_CHECK_FUNC([dlopen],[],[AC_SEARCH_LIBS([dlopen], [dl], [OPENSSL_LIBS+=" -ldl"])])
         AC_SUBST(OPENSSL_CFLAGS)
         AC_SUBST(OPENSSL_LIBS)
 else
