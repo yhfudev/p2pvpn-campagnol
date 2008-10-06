@@ -20,6 +20,37 @@ Feel free to mail me any questions/comments that you may have at
 fbondoux@resel.fr especially since Campagnol is a young project.
 
 
+Introduction
+------------
+
+Campagnol is a distributed IP-based VPN software.
+It's able to open new connections through NATs or firewalls using UDP hole
+punching.
+
+This technique requires a dedicated server: the rendezvous server. This
+server is lightweight. It's only needed to open new connections and does
+not bear the VPN communications. This server is for the time being coded
+in Java.
+Each participant of the VPN runs the client programm.
+
+The communications between two peers are opened when needed and are fully
+authenticated and encrypted thanks to DTLS.
+Actually it's an X.509 certificate based security. Each client needs to
+own a valid certificate and it's associated key pair. Therefore a typical
+usage is to have a minimum PKI to manage the VPN. You will for instance
+generate:
+    * a private key (your CA) and an associated trusted root certificate
+distributed to all the clients
+    * one private key and one signed certificate per client
+    * possibly a certificate revocation list to manage the old client's
+certificates
+
+To finish off, keep in mind that UDP hole punching has some limitations
+especially if you want to connect two clients which are behind the same
+NAT. You can find a description and analysis of this technique here:
+http://www.bford.info/pub/net/p2pnat/.
+
+
 Compilation
 -----------
 
@@ -28,10 +59,14 @@ In order to compile Campagnol you need:
 - OpenSSL library version >= 0.9.8g http://www.openssl.org/
 - Universal TUN/TAP driver          http://vtun.sourceforge.net/tun
 
-To build the server, build every .java file in the rdvserver directory:
-$ javac *.java
+To build the server, build every .java file in the rdvserver
+sub-directories:
+$ javac net/sourceforge/campagnol/*.java
 or if you have Ant installed:
 $ ant compile
+Classes will be outputed in the "classes" directory. You can also build a
+jar archive from the RDV server:
+$ ant jar
 
 To build the client, go in the 'client' directory and run:
 $ ./configure
@@ -39,15 +74,24 @@ $ make
 If you don't have pkg-config or if you have installed OpenSSL in a
 non standard directory, you should have a look at the --with-openssl*
 options for the 'configure' script.
+For instance if you want to use an /usr/local based openssl, run
+$ ./configure --with-openssl=/usr/local
 
 
 Creating the certificates
 -------------------------
 
+The "samples" directory in the client sources contains a few certificates
+useful for testing purpose only.
+
 First, you need to create a private key and a root certificate for the
 VPN. The private key will be used to create and sign every certificates
 used on the VPN. You can use "openssl req" to create the key and the
 certificate. It will ask you a password to protect your private key.
+
+OpenSSL also comes with a small wrapper script around its "ca" command.
+It's usually installed in /usr/lib/ssl/misc or /etc/ssl/misc. But you will
+still need to edit OpenSSL's default configuration file.
 
 The following example will create a minimal CA.
 
@@ -126,7 +170,13 @@ Configuration
 -------------
 
 You have to edit the sample campagnol configuration file for each
-client. A few options are mandatory.
+client. A few options are mandatory. Options are described in the sample
+files.
+
+This file has an INI-like syntax. Comments start with a ';' or a '#' and
+continue to then end of the line. Values may be quoted between double
+quotation marks ("...") and special characters can be escaped with '\'
+(\\, \n, \# ...)
 
 Be sure to set the same values for the following options on every clients:
   server_host
@@ -144,15 +194,20 @@ Run the rendezvous server on a publicly accessible computer (for every
 clients of the VPN). The server uses the default UDP port 57888. Be sure
 that this port is reachable. The main Java class is "CampagnolServer". The
 server doesn't require superuser privileges.
-  java CampagnolServer
+$  java net.sourceforge.campagnol.CampagnolServer
 To start the server on another port:
-  java CampagnolServer --port=34567
+$  java net.sourceforge.campagnol.CampagnolServer --port=34567
 You can also start a small GUI to check if everything is in order:
-  java CampagnolServer --gui
+$  java net.sourceforge.campagnol.CampagnolServer --gui
+Alternatively if you have built the jar archive, you can launch the server
+with:
+$ java -jar CampagnolServer.jar
 
 To start a client, run:
-  campagnol conf_file.conf
+$  campagnol conf_file.conf
 To start the client as a daemon:
-  campagnol --daemon conf_file.conf
+$  campagnol --daemon conf_file.conf
 Send a SIGTERM ou SIGINT signal to the client to kill it cleanly.
+If no configuration file is given, campagnol will search for a default
+/etc/campagnol.conf file.
 
