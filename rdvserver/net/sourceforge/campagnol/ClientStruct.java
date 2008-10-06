@@ -46,7 +46,7 @@ public class ClientStruct {
         this.port = this.sAddr.getPort();
         this.realIP = this.sAddr.getAddress().getAddress();
         this.vpnIP = IP;
-        this.vpnIPString = MsgServStruct.unMapAddress(IP);
+        this.vpnIPString = MsgServStruct.convertIPtoString(IP);
         try {
             this.vpnInet = InetAddress.getByAddress(IP);
         } catch (UnknownHostException e) {
