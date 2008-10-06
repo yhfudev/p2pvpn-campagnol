@@ -27,7 +27,6 @@
  * - Sections
  *   - sections are defined between square brackets : [section]
  *   - sections ends at the next section declaration or at EOF
- *   - the maximum length for a section's name is CONF_NAME_LENGTH
  *   - section's names are case sensitive and whitespaces are not stripped
  * - Options
  *   - the only valid syntax is : name = value
