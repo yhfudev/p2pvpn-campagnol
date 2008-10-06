@@ -194,7 +194,7 @@ public class CampagnolServer {
     public void analyse(DatagramPacket packet) {
         ClientStruct client = getClientFromIp(packet.getSocketAddress());
         ClientStruct requestedClient;
-        MsgServStruct message = MsgServStruct.get(packet.getData());
+        MsgServStruct message = MsgServStruct.fromBytes(packet.getData());
         if (message != null) {
             if (client == null && message.type != MsgServStruct.HELLO) {
                 sendRECONNECT(packet.getSocketAddress());
@@ -267,7 +267,7 @@ public class CampagnolServer {
                     if (requestedClient == null) {
                         /** unknown peer */
                         sendREJECT(packet.getSocketAddress(), message.ip1);
-                        if (CampagnolServer.debug) System.out.println("Peer "+MsgServStruct.unMapAddress(message.ip1)+" doesn't exist");
+                        if (CampagnolServer.debug) System.out.println("Peer "+MsgServStruct.convertIPtoString(message.ip1)+" doesn't exist");
                     } else {
                         /** known peer */
                         Connection connection = getConnection(client.vpnIP, requestedClient.vpnIP);
@@ -348,9 +348,8 @@ public class CampagnolServer {
     /** nok message specifying the unexisting peer for which an ASK_CONNECTION as been made */
     public void sendREJECT(SocketAddress address, byte[] IP) {
         try {
-            MsgServStruct message = new MsgServStruct(MsgServStruct.REJ_CONNECTION);
-            message.ip1 = IP;
-            this.socket.send(new DatagramPacket(MsgServStruct.set(message), MsgServStruct.MSG_LENGTH, address));
+            MsgServStruct message = new MsgServStruct(MsgServStruct.REJ_CONNECTION, 0, IP, null);
+            this.socket.send(new DatagramPacket(message.toBytes(), MsgServStruct.MSG_LENGTH, address));
             if (CampagnolServer.debug) System.out.println(">> REJECT send to client "+address.toString());
         } catch (Exception ex) {
             System.err.println("Error in sendREJECT:");
@@ -380,11 +379,8 @@ public class CampagnolServer {
     
     public void sendANS(ClientStruct client, ClientStruct requestedClient) {
         try {
-            MsgServStruct message = new MsgServStruct(MsgServStruct.ANS_CONNECTION);
-            message.port = requestedClient.port;        // public port to punch
-            message.ip1 = requestedClient.realIP;        // public address to punch
-            message.ip2 = requestedClient.vpnIP;        // corresponding VPN IP (the address asked)
-            this.socket.send(new DatagramPacket(MsgServStruct.set(message), MsgServStruct.MSG_LENGTH, client.sAddr));
+            MsgServStruct message = new MsgServStruct(MsgServStruct.ANS_CONNECTION, requestedClient.port, requestedClient.realIP, requestedClient.vpnIP);
+            this.socket.send(new DatagramPacket(message.toBytes(), MsgServStruct.MSG_LENGTH, client.sAddr));
             if (CampagnolServer.debug) System.out.println(">> ANS_CONNECTION sent to client "+client.sAddr.toString());
         } catch (Exception ex) {
             System.err.println("Error in sendANS:");
@@ -394,11 +390,8 @@ public class CampagnolServer {
     
     public void sendFWD(ClientStruct client, ClientStruct requestedClient) {
         try {
-            MsgServStruct message = new MsgServStruct(MsgServStruct.FWD_CONNECTION);
-            message.port = requestedClient.port;        // public port to punch
-            message.ip1 = requestedClient.realIP;        // public address to punch
-            message.ip2 = requestedClient.vpnIP;        // corresponding VPN IP
-            this.socket.send(new DatagramPacket(MsgServStruct.set(message), MsgServStruct.MSG_LENGTH, client.sAddr));
+            MsgServStruct message = new MsgServStruct(MsgServStruct.FWD_CONNECTION, requestedClient.port, requestedClient.realIP, requestedClient.vpnIP);
+            this.socket.send(new DatagramPacket(message.toBytes(), MsgServStruct.MSG_LENGTH, client.sAddr));
             if (CampagnolServer.debug) System.out.println(">> FWD_CONNECTION sent to client "+client.sAddr.toString());
         } catch (Exception ex) {
             System.err.println("Error in sendFWD:");

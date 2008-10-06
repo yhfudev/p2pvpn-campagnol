@@ -49,6 +49,8 @@ public class MsgServStruct {
     public static final byte[] MSG_PONG = {PONG,0,0,0,0,0,0,0,0,0,0};           // pong msg
     public static final byte[] MSG_PUNCH = {PUNCH,0,0,0,0,0,0,0,0,0,0};         // punch msg
     public static final byte[] MSG_RECONNECT = {RECONNECT,0,0,0,0,0,0,0,0,0,0}; // reconnect message
+    /** pre formated IP */
+    public static final byte[] EMPTY_IP = {0,0,0,0};                            // dummy ip
     /** constants */
     public static final int MSG_LENGTH = 11;
     
@@ -57,12 +59,53 @@ public class MsgServStruct {
     public int port;                                                            // port number
     public byte[] ip1 = new byte[4];                                            // IPv4 address
     public byte[] ip2 = new byte[4];                                            // IPv4 address
+
+    public MsgServStruct(byte type, int port, byte[] ip1, byte[] ip2) {
+        this.type = type;
+        this.port = port;
+        if (ip1 != null)
+            this.ip1 = ip1;
+        else
+            this.ip1 = EMPTY_IP;
+        if (ip2 != null)
+            this.ip2 = ip2;
+        else
+            this.ip2 = EMPTY_IP;
+    }
     
-    public MsgServStruct() {}
-    public MsgServStruct(byte type) {this.type = type;}
+    /**  constructor from a packet's byte array */
+    public MsgServStruct(byte[] data) {
+        java.nio.ByteBuffer bb = java.nio.ByteBuffer.wrap(data);
+        this.type = bb.get();
+        this.port = bb.getShort();
+        bb.get(this.ip1);
+        bb.get(this.ip2);
+    }
+    
+    /**  try to create a MsgServStruct from a packet's byte array
+     * or return null if the data array is too short
+     */
+    public static MsgServStruct fromBytes(byte[] data) {
+        if (data.length<MSG_LENGTH) return null;
+        MsgServStruct message = new MsgServStruct(data);
+        if (CampagnolServer.dump) System.out.println(message);
+        return message;
+    }
+    
+    /** return the byte array corresponding to the MsgServStruct */
+    public byte[] toBytes() {
+        byte[] array = new byte[MSG_LENGTH];
+        java.nio.ByteBuffer bb = java.nio.ByteBuffer.wrap(array);
+        bb.put(this.type);
+        bb.putShort((short) this.port);
+        bb.put(this.ip1);
+        bb.put(this.ip2);
+        if (CampagnolServer.dump) System.out.println(this);
+        return array;
+    }
     
     /** return a String representation of a byte array IP */
-    public static String unMapAddress(byte[] address) {
+    public static String convertIPtoString(byte[] address) {
         if (address == null) return null;
         try {
             return java.net.Inet4Address.getByAddress(address).getHostAddress();
@@ -70,31 +113,6 @@ public class MsgServStruct {
             e.printStackTrace();
             return null;
         }
-    }
-    
-    /**    return the msgServStruct from the packet's byte array */
-    public static MsgServStruct get(byte[] data) {
-        if (data.length<MSG_LENGTH) return null;
-        MsgServStruct message = new MsgServStruct();
-        java.nio.ByteBuffer bb = java.nio.ByteBuffer.wrap(data);
-        message.type = bb.get();
-        message.port = bb.getShort();
-        bb.get(message.ip1);
-        bb.get(message.ip2);
-        if (CampagnolServer.dump) System.out.println(message);
-        return message;
-    }
-    
-    /** return the byte array corresponding to the MsgServStruct */
-    public static byte[] set(MsgServStruct message) {
-        byte[] array = new byte[MSG_LENGTH];
-        java.nio.ByteBuffer bb = java.nio.ByteBuffer.wrap(array);
-        bb.put(message.type);
-        bb.putShort((short) message.port);
-        bb.put(message.ip1);
-        bb.put(message.ip2);
-        if (CampagnolServer.dump) System.out.println(message);
-        return array;
     }
     
     public String toString() {
@@ -149,9 +167,9 @@ public class MsgServStruct {
         }
         c = "| "+this.port;
         while (c.length()<8) c+=" ";
-        d = "| "+unMapAddress(this.ip1);
+        d = "| "+convertIPtoString(this.ip1);
         while (d.length()<18) d+=" ";
-        e = "| "+unMapAddress(this.ip2);
+        e = "| "+convertIPtoString(this.ip2);
         while (e.length()<18) e+=" ";
         return (s+a+c+d+e+"|\n-----------------------------------------------------");
     }
