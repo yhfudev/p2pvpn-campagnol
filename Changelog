@@ -1,10 +1,19 @@
 v 0.3:
 	client:
-	Now using the autotools and supports FreeBSD.
-	Use a default configuration file.
-	Various cleanings in order to prepare the FreeBSD port and more robust
-	code. Better checking of loopback interfaces when searching the local
-	IP. Less buggy configuration parser.
+	Now using the autotools.
+	FreeBSD port. Various cleanings in order to prepare the FreeBSD port and
+	more robust code.
+	New and faster SSL queues.
+	Configuration: new INI-like format with a less buggy file parser. Now
+	use a default configuration file.
+	Better checking of loopback interfaces when searching the local
+	IP and use getifaddrs when available.
+	Fix some memory leaks with pthreads and OpenSSL.
+
+	rdv server:
+	Move the file into the net.sourceforge.campagnol package.
+	Small cleanings.
+	Better ANT build file.
 
 v 0.2:
 	client: use syslog to log important messages when the client is
