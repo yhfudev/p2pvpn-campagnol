@@ -92,7 +92,7 @@ void decr_ref(struct client *peer) {
  * just call decr_ref to remove the last reference from "clients":
  * This will remove the client from the linked list and free it's memory
  */
-struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct in_addr clientIP, u_int16_t clientPort, struct in_addr vpnIP, int is_dtls_client) {
+struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct in_addr clientIP, uint16_t clientPort, struct in_addr vpnIP, int is_dtls_client) {
     int r;
 
     if (n_clients >= config.max_clients) {
