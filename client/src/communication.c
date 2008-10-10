@@ -26,8 +26,6 @@
 #include <time.h>
 #include <pthread.h>
 
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <arpa/inet.h>
 #include <sys/time.h>
 #include <signal.h>
@@ -81,7 +79,7 @@
 //}
 
 /* Initialise a message with the given fields */
-inline void init_smsg(struct message *smsg, unsigned char type, u_int32_t ip1, u_int32_t ip2) {
+inline void init_smsg(struct message *smsg, unsigned char type, uint32_t ip1, uint32_t ip2) {
     bzero(smsg, sizeof(struct message));
     smsg->type = type;
     smsg->ip1.s_addr = ip1;
