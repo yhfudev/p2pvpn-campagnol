@@ -109,7 +109,7 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct
         return NULL;
     }
     peer->time = time;
-    bzero(&(peer->clientaddr), sizeof(peer->clientaddr));
+    memset(&(peer->clientaddr), 0, sizeof(peer->clientaddr));
     peer->clientaddr.sin_family = AF_INET;
     peer->clientaddr.sin_addr = clientIP;
     peer->clientaddr.sin_port = clientPort;

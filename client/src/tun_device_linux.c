@@ -51,7 +51,7 @@ int init_tun(int istun) {
          return -1;
     }
 
-    bzero(&ifr, sizeof(ifr));
+    memset(&ifr, 0, sizeof(ifr));
 
     /** Flags:  IFF_TUN   - TUN device (no Ethernet headers)
                 IFF_TAP   - TAP device

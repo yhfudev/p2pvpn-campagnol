@@ -80,7 +80,7 @@
 
 /* Initialise a message with the given fields */
 inline void init_smsg(struct message *smsg, unsigned char type, uint32_t ip1, uint32_t ip2) {
-    bzero(smsg, sizeof(struct message));
+    memset(smsg, 0, sizeof(struct message));
     smsg->type = type;
     smsg->ip1.s_addr = ip1;
     smsg->ip2.s_addr = ip2;
