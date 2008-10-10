@@ -38,26 +38,22 @@ AC_SEARCH_LIBS([clock_gettime], [rt], [], [AC_MSG_ERROR([Requires clock_gettime]
 AC_CACHE_SAVE
 
 # Checks for header files.
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h ifaddrs.h netdb.h netinet/in.h string.h sys/ioctl.h sys/socket.h sys/time.h syslog.h unistd.h])
+AC_CHECK_HEADERS([ifaddrs.h])
 AC_HEADER_ASSERT
 
 # Checks for typedefs, structures, and compiler characteristics.
-AC_C_CONST
 AC_C_INLINE
 AC_TYPE_INT32_T
-AC_TYPE_SIZE_T
-AC_TYPE_SSIZE_T
-AC_CHECK_MEMBERS([struct stat.st_rdev])
-AC_HEADER_TIME
 AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
+AC_TYPE_SIZE_T
+AC_TYPE_SSIZE_T
+AC_HEADER_TIME
 
 # Checks for library functions.
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
-AC_FUNC_SELECT_ARGTYPES
-AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([bzero gethostbyname getline inet_ntoa memset select socket strchr strerror strstr strtol tdestroy])
+AC_CHECK_FUNCS([getline tdestroy])
 
 AC_CONFIG_FILES([Makefile src/Makefile])
 AC_OUTPUT
