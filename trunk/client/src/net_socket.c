@@ -60,7 +60,7 @@ int create_socket(void) {
     }
 #endif
 
-    bzero(&localaddr, sizeof(localaddr));
+    memset(&localaddr, 0, sizeof(localaddr));
     localaddr.sin_family = AF_INET;
     localaddr.sin_addr.s_addr=config.localIP.s_addr;
     if (config.localport != 0) localaddr.sin_port=htons(config.localport);
