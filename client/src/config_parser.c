@@ -34,49 +34,46 @@ ssize_t campagnol_getline(char **lineptr, size_t *n, FILE *stream) {
     ASSERT(lineptr);
     ASSERT(n);
     ASSERT(stream);
-    char *p;
+    char *new_lineptr;
+    char c;
+    size_t pos = 0;
 
     if (*lineptr == NULL || *n == 0) {
         *n = 120;
-        *lineptr = (char *) malloc(*n);
-        if (*lineptr == NULL) {
+        new_lineptr = (char *) realloc(*lineptr, *n);
+        if (new_lineptr == NULL) {
             return -1;
         }
+        *lineptr = new_lineptr;
     }
-    p = *lineptr;
-    for (;;p++) {
-        if (p - *lineptr == *n) {
-            *lineptr = (char *)realloc(*lineptr, *n+120);
-            if (*lineptr == NULL) {
+    for (;;) {
+        c = fgetc(stream);
+
+        if (c == EOF) {
+            break;
+        }
+        // not enough space for next char + final \0
+        if (pos + 2 > *n) {
+            new_lineptr = (char *) realloc(*lineptr, *n+120);
+            if (new_lineptr == NULL) {
                 return -1;
             }
-            p = *lineptr + *n;
+            *lineptr = new_lineptr;
             *n = *n + 120;
         }
-        *p = fgetc(stream);
-        if (*p == EOF) {
-            p--;
-            break;
-        }
-        if (*p == '\n') {
+
+        (*lineptr)[pos] = c;
+        pos++;
+
+        if (c == '\n') {
             break;
         }
     }
 
-    if ((p - *lineptr + 1) == 0) return -1;
+    if (pos == 0) return -1;
 
-    p++;
-    if (p - *lineptr == *n) {
-        *lineptr = (char *)realloc(*lineptr, *n+120);
-        if (*lineptr == NULL) {
-            return -1;
-        }
-        p = *lineptr + *n;
-        *n = *n + 120;
-    }
-    *p = '\0';
-
-    return p - *lineptr+1;
+    (*lineptr)[pos] = '\0';
+    return pos;
 }
 
 #   define getline campagnol_getline
