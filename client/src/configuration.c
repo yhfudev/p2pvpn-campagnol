@@ -356,7 +356,7 @@ void parseConfFile(char *confFile) {
         char * search, * end;
         int len;
         /* no netmask len? */
-        if (!(search = strstr(config.network, "/"))) {
+        if (!(search = strchr(config.network, '/'))) {
             log_message("[%s] Parameter \""OPT_VPN_NETWORK"\" is not valid. Please give a netmask length (CIDR notation)", confFile);
             exit(EXIT_FAILURE);
         }
