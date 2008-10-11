@@ -252,7 +252,7 @@ void parseConfFile(char *confFile) {
     config.cipher_list = NULL;
 
     // init config parser. no DEFAULT section, no empty value
-    parser_init(&parser, 0, 0);
+    parser_init(&parser, 0, 0, 1);
 
     // parse the file
     parser_read(confFile, &parser);
