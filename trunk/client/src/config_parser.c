@@ -155,6 +155,7 @@ void parser_set(const char *section, const char *option, const char *value,
     else {
         item_value = *(void **) tmp;
         free(item_value->value);
+        free(item_value->expanded_value);
     }
 
     // set value
@@ -165,6 +166,8 @@ void parser_set(const char *section, const char *option, const char *value,
     }
     item_value->nline = nline;
     item_value->section = item_section;
+    item_value->expanded_value = NULL;
+    item_value->expanding = 0;
 }
 
 /* Create a new empty section
@@ -222,6 +225,115 @@ int parser_has_option(const char *section, const char *option,
     return tmp != NULL;
 }
 
+/* Perform option value substitution
+ * return a newly allocated string */
+static char*parser_substitution(const char *section, const char *value, parser_context_t *parser) {
+    size_t len, len_written;
+    const char *src;
+    char *end, *v;
+    char *new_value, *dst;
+    int escaped;
+    size_t i;
+
+    len = 0;
+    src = value;
+    escaped = 0;
+
+    // compute the length of value minus the expanded parts
+    // len includes the final null byte and the \$ -> $ transformation
+    for (;; src++) {
+        if (!escaped) {
+            // escape character
+            if (*src == '\\')
+                escaped = 1;
+            // ${ ... }, skip it
+            else if (*src == '$' && *(src+1) == '{' && (end = strchr(src+2, '}')) != NULL) {
+                src = end;
+            }
+            else // normal character
+                len++;
+        }
+        else {
+            if (*src != '$') len++;
+            len++;
+            escaped = 0;
+        }
+        if (*src == '\0')
+            break;
+    }
+
+
+    // Now create the exanded value into new_value
+
+    len_written = 0;    // number of char already written
+    new_value = malloc(len);
+    dst = new_value;    // dst pointer
+    *dst = '\0';
+    src = value;
+    escaped = 0;
+    for (;; src++) {
+        if (!escaped) {
+            if (*src == '\\')
+                escaped = 1;
+            // ${ ... }
+            else if (*src == '$' && *(src+1) == '{' && (end = strchr(src+2, '}')) != NULL) {
+                *end = '\0';
+                v = parser_get(section, src+2, NULL, parser);
+                if (v != NULL) { // replace ${...} by it's value after a realloc
+                    len += strlen(v);
+                    new_value = realloc(new_value, len);
+                    dst = new_value + len_written;
+                    for (i=0; i<strlen(v); i++) {
+                        dst[i] = v[i];
+                        len_written++;
+                    }
+                    dst = new_value + len_written;
+                    src = end;
+                }
+                else { // let the ${...} in place
+                    len += (end - src + 1);
+                    new_value = realloc(new_value, len);
+                    dst = new_value + len_written;
+                    for (i=0; i<(end - src); i++) {
+                        *dst = src[i];
+                        len_written++;
+                        dst++;
+                    }
+                    *dst = '}';
+                    len_written++;
+                    dst++;
+                    src = end;
+
+                }
+                *end = '}';
+            }
+            else {
+                *dst = *src;
+                len_written++;
+                dst++;
+            }
+        }
+        else {
+            if (*src != '$') {
+                *dst = '\\';
+                len_written ++;
+                dst++;
+            }
+            *dst = *src;
+            len_written++;
+            dst++;
+            escaped = 0;
+        }
+
+        if (*src == '\0')
+            break;
+    }
+
+    ASSERT(len == len_written);
+
+    return new_value;
+}
+
 /* Return the value of [section] option
  * If section or option is not defined, then return NULL
  * if nline is not NULL, copy the line number into nline
@@ -232,6 +344,7 @@ char *parser_get(const char *section, const char *option, int *nline,
     item_value_t *item_value;
     item_common_t tmp_item;
     void *tmp;
+    char *new_value;
 
     tmp_item.name = (char *) section;
     tmp = tfind(&tmp_item, &parser->data, parser_compare);
@@ -250,7 +363,22 @@ char *parser_get(const char *section, const char *option, int *nline,
     if (nline != NULL)
         *nline = item_value->nline;
 
-    return item_value->value;
+    // do we need to expand item_value->value
+    if (!parser->allow_value_expansions) {
+        return item_value->value;
+    }
+    else if (item_value->expanding) {
+        // value is beeing expanded
+        return "${RECURSION ERROR}";
+    }
+    else {
+        item_value->expanding = 1;
+        new_value = parser_substitution(section, item_value->value, parser);
+        free(item_value->expanded_value);
+        item_value->expanded_value = new_value;
+        item_value->expanding = 0;
+        return item_value->expanded_value;
+    }
 }
 
 /* Parse [section] option into value as an integer
@@ -328,6 +456,7 @@ int parser_getboolean(const char *section, const char *option, int *value,
 static void free_value(void *p) {
     item_value_t *v = (item_value_t *) p;
     free(v->value);
+    free(v->expanded_value);
     free(v->name);
     free(v);
 }
@@ -352,10 +481,11 @@ void parser_free(parser_context_t *parser) {
 
 /* Initialize a new parser */
 void parser_init(parser_context_t *parser, int allow_default_section,
-        int allow_empty_value) {
+        int allow_empty_value, int allow_value_expansions) {
     parser->data = NULL;
     parser->allow_default = allow_default_section;
     parser->allow_empty_value = allow_empty_value;
+    parser->allow_value_expansions = allow_value_expansions;
 }
 
 /* Remove a [section] option

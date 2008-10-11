@@ -40,7 +40,13 @@
  * - Comments
  *   - comments start with a ';' or a '#' and continue to the end of the line
  * - Blank lines are allowed
- * - Values can be quoted between "
+ * - Values
+ *   - values can be quoted between "
+ *   - values can reference other values from the same section:
+ *       [SECTION]
+ *       dir = /home/foo/
+ *       file = ${dir}file
+ *     file is equivalent to "/home/foo/file"
  * - Escaped characters
  *   - \t \n \r
  *   - \# for #
@@ -68,6 +74,7 @@ struct parser_context {
     int allow_default; // if true, options defined before the first section mark
                        // are put in a "DEFAULT" section
     int allow_empty_value; // allow option with empty value
+    int allow_value_expansions; // Resolve expansions foo = ${bar}text
 
     void *data; // tree
     FILE *dump_file; // tmp value
@@ -87,8 +94,10 @@ typedef struct item_section item_section_t;
 
 struct item_value {
     __ITEM_COMMON;
-    char *value;
+    char *value; // raw value
     int nline;
+    char *expanded_value; // result of the expansion
+    int expanding; // this value is beeing expanded
     item_section_t *section; // pointer to its section item
 };
 typedef struct item_value item_value_t;
@@ -100,7 +109,7 @@ typedef struct item_common item_common_t;
 
 /* Initialize a parser_context_t structure */
 extern void parser_init(parser_context_t *parser, int allow_default_section,
-        int allow_empty_value);
+        int allow_empty_value, int allow_value_expansions);
 /* Remove all the data associated with this context */
 extern void parser_free(parser_context_t *parser);
 
