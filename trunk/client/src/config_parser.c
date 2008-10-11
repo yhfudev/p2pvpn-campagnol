@@ -499,7 +499,7 @@ void parser_read(const char *confFile, parser_context_t *parser) {
         // end of line
         eol = strstr(line, "\r\n");
         if (eol == NULL)
-            eol = index(line, '\n');
+            eol = strchr(line, '\n');
         if (eol != NULL) {
             *eol = '\0';
         }
@@ -521,7 +521,7 @@ void parser_read(const char *confFile, parser_context_t *parser) {
             // strip leading spaces
             while (*token == ' ' || *token == '\t')
                 token++;
-            token_end = index(token, ']');
+            token_end = strrchr(token, ']');
             if (token_end == NULL) {
                 log_message("[%s:%d] Syntax error, section declaration", confFile,
                         nline);
@@ -567,7 +567,7 @@ void parser_read(const char *confFile, parser_context_t *parser) {
         parser_add_section(section, parser);
 
         // find first equal sign:
-        line_eq = index(token, '=');
+        line_eq = strchr(token, '=');
         token_end = line_eq;
         // no '=' or empty token:
         if (token_end == NULL || token_end == token) {
