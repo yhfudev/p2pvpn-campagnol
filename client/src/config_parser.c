@@ -409,7 +409,7 @@ void parser_remove_section(const char *section, parser_context_t *parser) {
  * remove comments # and ;
  *
  * if pass == 2
- * expand \"
+ * expand \" and '\ ' (spaces)
  */
 static int expand_line(char *line, int pass) {
     const char *src = line;
@@ -450,6 +450,7 @@ static int expand_line(char *line, int pass) {
             else if (pass == 2) {
                 switch (*src) {
                     case '"': *dst = '"'; break;
+                    case ' ': *dst = ' '; break;
                     default:
                         *dst = '\\';
                         dst++;
@@ -517,12 +518,23 @@ void parser_read(const char *confFile, parser_context_t *parser) {
         // section ?
         if (token[0] == '[') {
             token++;
+            // strip leading spaces
+            while (*token == ' ' || *token == '\t')
+                token++;
             token_end = index(token, ']');
-            if (token_end == NULL || token_end == token) {
+            if (token_end == NULL) {
+                log_message("[%s:%d] Syntax error, section declaration", confFile,
+                        nline);
+                continue;
+            }
+            if (token_end == token) {
                 log_message("[%s:%d] Syntax error, empty section", confFile,
                         nline);
                 continue;
             }
+            // strip trailing spaces
+            while (*(token_end - 1) == ' ' || *(token_end - 1) == '\t')
+                token_end--;
             *token_end = '\0';
             if (section_length < (token_end - token + 1)) {
                 section_length = token_end - token + 1;
@@ -655,7 +667,7 @@ static void parser_write_section(const void *nodep, const VISIT which,
         case postorder:
         case leaf:
             item = *(item_section_t **) nodep;
-            fprintf(item->parser->dump_file, "[%s]\n", item->name);
+            fprintf(item->parser->dump_file, "[ %s ]\n", item->name);
             twalk(item->values_tree, parser_write_option);
             fprintf(item->parser->dump_file, "\n");
             break;
