@@ -27,12 +27,14 @@
  * - Sections
  *   - sections are defined between square brackets : [section]
  *   - sections ends at the next section declaration or at EOF
- *   - section's names are case sensitive and whitespaces are not stripped
+ *   - section's names are case sensitive
+ *   - whitespaces around the section's name are stripped
+ *   - the name can contain whitespaces
  * - Options
  *   - the only valid syntax is : name = value
  *   - whitespaces around the option's name and around the value are stripped
  *   - options are case sensitive
- *   - options can contains whitespaces
+ *   - options can contain whitespaces
  *   - options may optionally be defined before the first section mark. They will be put in a "DEFAULT" section.
  *   - options may optionally accept empty values
  * - Comments
@@ -45,6 +47,7 @@
  *   - \; for ;
  *   - \\ for \
  *   - \" for "
+ *   - '\ ' (space) for ' '
  * - No hierarchy within sections
  *
  * The parser context is stored in a parser_context_t value.
