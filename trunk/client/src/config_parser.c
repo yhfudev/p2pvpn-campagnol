@@ -265,7 +265,7 @@ static char*parser_substitution(const char *section, const char *value, parser_c
 
     // Now create the exanded value into new_value
 
-    len_written = 0;    // number of char already written
+    len_written = 0;    // number of chars already written
     new_value = malloc(len);
     dst = new_value;    // dst pointer
     *dst = '\0';
@@ -290,7 +290,7 @@ static char*parser_substitution(const char *section, const char *value, parser_c
                     dst = new_value + len_written;
                     src = end;
                 }
-                else { // let the ${...} in place
+                else { // leave the ${...} in place
                     len += (end - src + 1);
                     new_value = realloc(new_value, len);
                     dst = new_value + len_written;
@@ -532,16 +532,8 @@ void parser_remove_section(const char *section, parser_context_t *parser) {
     free_section(item_section);
 }
 
-/* value expansion, 2 passes
- *
- * if pass == 1
- * expand characters \# \; \t \n \r \\
- * remove comments # and ;
- *
- * if pass == 2
- * expand \" and '\ ' (spaces)
- */
-static int expand_line(char *line, int pass) {
+/* remove comments # and ; */
+static int remove_comments(char *line) {
     const char *src = line;
     char *dst = line;
 
@@ -551,7 +543,7 @@ static int expand_line(char *line, int pass) {
         if (!escaped) {
             if (*src == '\\')
                 escaped = 1;
-            else if (pass == 1 && (*src == '#' || *src == ';')) {
+            else if (*src == '#' || *src == ';') {
                 *dst = '\0';
                 dst++;
                 break;
@@ -562,32 +554,9 @@ static int expand_line(char *line, int pass) {
             }
         }
         else {
-            if (pass == 1) {
-                switch (*src) {
-                    case '#': *dst = '#'; break;
-                    case ';': *dst = ';'; break;
-                    case '\\': *dst = '\\'; break;
-                    case 't': *dst = '\t'; break;
-                    case 'n': *dst = '\n'; break;
-                    case 'r': *dst = '\r'; break;
-                    default:
-                        *dst = '\\';
-                        dst++;
-                        *dst = *src;
-                        break;
-                }
-            }
-            else if (pass == 2) {
-                switch (*src) {
-                    case '"': *dst = '"'; break;
-                    case ' ': *dst = ' '; break;
-                    default:
-                        *dst = '\\';
-                        dst++;
-                        *dst = *src;
-                        break;
-                }
-            }
+            *dst = '\\';
+            dst++;
+            *dst = *src;
             dst++;
             escaped = 0;
         }
@@ -597,6 +566,62 @@ static int expand_line(char *line, int pass) {
     }
 
     return (dst - line) - 1;
+}
+
+/* value expansion
+ *
+ * expand characters \# \; \t \n \r \\ and \"
+ * if line is quoted, remove the quotes
+ */
+static int expand_token(char *token) {
+    const char *src = token;
+    char *dst = token;
+    int escaped = 0;
+    int quoted;
+
+    if (*src == '"') {
+        quoted = 1;
+        src++;
+    }
+
+    for (;; src++) {
+        if (!escaped) {
+            if (*src == '\\')
+                escaped = 1;
+            else if (*src == '"' && quoted) {
+                *dst = '\0';
+                dst++;
+                break;
+            }
+            else {
+                *dst = *src;
+                dst++;
+            }
+        }
+        else {
+            switch (*src) {
+                case '#': *dst = '#'; break;
+                case ';': *dst = ';'; break;
+                case '\\': *dst = '\\'; break;
+                case 't': *dst = '\t'; break;
+                case 'n': *dst = '\n'; break;
+                case 'r': *dst = '\r'; break;
+                case '"': *dst = '"'; break;
+                default:
+                    *dst = '\\';
+                    dst++;
+                    *dst = *src;
+                    break;
+            }
+            dst++;
+            escaped = 0;
+        }
+
+        if (*src == '\0')
+            break;
+    }
+
+    return (dst - token) - 1;
 }
 
 /* Parse a file */
@@ -634,15 +659,16 @@ void parser_read(const char *confFile, parser_context_t *parser) {
             *eol = '\0';
         }
 
-        // expands everything but \" and removes comments
-        r = expand_line(line, 1);
-
         token = line;
         // remove leading spaces:
         while (*token == ' ' || *token == '\t')
             token++;
+
+        // remove comments
+        r = remove_comments(token);
+
         // empty line:
-        if (*token == '\0')
+        if (r == 0)
             continue;
 
         // section ?
@@ -731,19 +757,13 @@ void parser_read(const char *confFile, parser_context_t *parser) {
             token_end--;
         *token_end = '\0';
 
-        // quotted value, remove quotes
-        if (*token == '"' && *(token_end - 1) == '"') {
-            token++;
-            token_end--;
-            *token_end = '\0';
-        }
-        if (!parser->allow_empty_value && token_end == token) {
+        // remove quotes and expand escaped chars
+        r = expand_token(token);
+
+        if (!parser->allow_empty_value && r == 0) {
             log_message("[%s:%d] Syntax error, empty value", confFile, nline);
             continue;
         }
-
-        // expands \"
-        r = expand_line(token, 2);
 
         if (value_length < r + 1) {
             value_length = r + 1;
