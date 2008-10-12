@@ -53,7 +53,6 @@
  *   - \; for ;
  *   - \\ for \
  *   - \" for "
- *   - '\ ' (space) for ' '
  * - No hierarchy within sections
  *
  * The parser context is stored in a parser_context_t value.
