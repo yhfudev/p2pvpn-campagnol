@@ -188,38 +188,6 @@ int load_CRL(char *crl_file) {
     return 0;
 }
 
-/* return immediately if [section] option is valid
- * print a warning otherwise
- */
-void check_options(const char *section, const char *option, const char *value, int nline) {
-    if (strcmp(section, SECTION_NETWORK) == 0) {
-        if (strcmp(option, OPT_LOCAL_HOST) == 0) return;
-        if (strcmp(option, OPT_LOCAL_PORT) == 0) return;
-        if (strcmp(option, OPT_SERVER_HOST) == 0) return;
-        if (strcmp(option, OPT_SERVER_PORT) == 0) return;
-        if (strcmp(option, OPT_TUN_MTU) == 0) return;
-        if (strcmp(option, OPT_INTERFACE) == 0) return;
-    }
-    else if (strcmp(section, SECTION_VPN) == 0) {
-        if (strcmp(option, OPT_VPN_IP) == 0) return;
-        if (strcmp(option, OPT_VPN_NETWORK) == 0) return;
-    }
-    else if (strcmp(section, SECTION_SECURITY) == 0) {
-        if (strcmp(option, OPT_CERTIFICATE) == 0) return;
-        if (strcmp(option, OPT_KEY) == 0) return;
-        if (strcmp(option, OPT_CA) == 0) return;
-        if (strcmp(option, OPT_CRL) == 0) return;
-        if (strcmp(option, OPT_CIPHERS) == 0) return;
-    }
-    else if (strcmp(section, SECTION_CLIENT) == 0) {
-        if (strcmp(option, OPT_FIFO) == 0) return;
-        if (strcmp(option, OPT_TIMEOUT) == 0) return;
-        if (strcmp(option, OPT_MAX_CLIENTS) == 0) return;
-    }
-
-    log_message("Unknown option [%s] '%s' = '%s' line %d", section, option, value, nline);
-}
-
 /*
  * Main parsing function
  */
@@ -256,9 +224,6 @@ void parseConfFile(char *confFile) {
 
     // parse the file
     parser_read(confFile, &parser);
-
-    // run check_options on each value
-    parser_forall(check_options, &parser);
 
     /* now get, check and save each value */
 
