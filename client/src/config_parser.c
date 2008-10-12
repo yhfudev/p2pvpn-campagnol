@@ -793,19 +793,33 @@ void parser_read(const char *confFile, parser_context_t *parser) {
     fclose(conf);
 }
 
-/* internal, write an option and it's value into parser->dump_file */
+/* internal, write an option and it's value into parser->dump_file
+ * escape # ; \ " \n \t \r
+ */
 static void parser_write_option(const void *nodep, const VISIT which,
         const int depth) {
     item_value_t *item;
-    switch (which) {
-        case postorder:
-        case leaf:
-            item = *(item_value_t **) nodep;
-            fprintf(item->section->parser->dump_file, "%s = \"%s\"\n",
-                    item->name, item->value);
-            break;
-        default:
-            break;
+    char *c;
+    if (which == postorder || which == leaf) {
+        item = *(item_value_t **) nodep;
+        fprintf(item->section->parser->dump_file, "%s = \"", item->name);
+        for (c = item->value; *c != '\0'; c++) {
+            switch (*c) {
+                case '#':
+                case ';':
+                case '\\':
+                case '"':;
+                    fprintf(item->section->parser->dump_file, "\\%c", *c);
+                    break;
+                case '\t': fprintf(item->section->parser->dump_file, "\\t"); break;
+                case '\n': fprintf(item->section->parser->dump_file, "\\n"); break;
+                case '\r': fprintf(item->section->parser->dump_file, "\\r"); break;
+                default:
+                    fprintf(item->section->parser->dump_file, "%c", *c);
+                    break;
+            }
+        }
+        fprintf(item->section->parser->dump_file, "\"\n");
     }
 }
 
