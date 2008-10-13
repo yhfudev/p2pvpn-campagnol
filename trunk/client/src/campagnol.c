@@ -30,6 +30,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/stat.h>
+#include <fcntl.h>
 #include <getopt.h>
 #include <openssl/conf.h>
 #include <openssl/engine.h>
@@ -43,6 +44,7 @@
 #include "pthread_wrap.h"
 
 int end_campagnol = 0;
+static char* pidfile = NULL;
 
 
 void usage(void) {
@@ -115,6 +117,34 @@ int parse_args(int argc, char **argv, char **configFile) {
     return 0;
 }
 
+static void remove_pidfile(void) {
+    unlink(pidfile);
+    free(pidfile);
+}
+
+static void create_pidfile(void) {
+    int fd;
+    FILE *file;
+
+    if (unlink(pidfile) != 0 && errno != ENOENT) {
+        return;
+    }
+    fd = open(pidfile, O_CREAT|O_WRONLY|O_TRUNC|O_NOFOLLOW, (mode_t) 00644);
+    if (fd == -1) {
+        return;
+    }
+    file = fdopen(fd, "w");
+    if (file == NULL) {
+        return;
+    }
+
+    fprintf(file, "%d\n", getpid());
+
+    fclose(file);
+
+    atexit(remove_pidfile);
+}
+
 void daemonize(void) {
     int r;
 
@@ -182,6 +212,12 @@ int main (int argc, char **argv) {
      * Empty the error stack
      */
     ERR_print_errors_fp(stderr);
+
+    if (config.daemonize) {
+        char *pidtmp = (config.pidfile != NULL) ? config.pidfile : DEFAULT_PID_FILE;
+        pidfile = strdup(pidtmp);
+        create_pidfile();
+    }
 
     if (config.verbose) {
         puts("Configuration:");

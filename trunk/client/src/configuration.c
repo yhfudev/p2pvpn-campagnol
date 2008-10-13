@@ -218,6 +218,7 @@ void parseConfFile(char *confFile) {
     config.key_pem = NULL;
     config.verif_pem = NULL;
     config.cipher_list = NULL;
+    config.pidfile = NULL;
 
     // init config parser. no DEFAULT section, no empty value
     parser_init(&parser, 0, 0, 1);
@@ -447,6 +448,15 @@ void parseConfFile(char *confFile) {
         exit(EXIT_FAILURE);
     }
 
+    value = parser_get(SECTION_CLIENT, OPT_PID_FILE, &nline, &parser);
+    if (value != NULL) {
+        config.pidfile = strdup(value);
+        if (config.pidfile == NULL) {
+            log_error("Could not allocate string (configuration)");
+            exit(EXIT_FAILURE);
+        }
+    }
+
 
 
     /* If no local IP address was given in the configuration file,
@@ -476,5 +486,6 @@ void freeConfig() {
     if (config.key_pem) free(config.key_pem);
     if (config.verif_pem) free(config.verif_pem);
     if (config.cipher_list) free(config.cipher_list);
+    if (config.pidfile) free(config.pidfile);
 }
 
