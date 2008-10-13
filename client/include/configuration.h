@@ -46,6 +46,7 @@ struct configuration {
     int FIFO_size;                              // Size of the FIFO list for the incoming packets
     int timeout;                                // wait timeout secs before closing a session for inactivity
     int max_clients;                            // maximum number of clients
+    char *pidfile;                              // PID file in daemon mode
 };
 
 extern void parseConfFile(char *file);
@@ -78,5 +79,6 @@ extern void freeConfig(void);
 #define OPT_FIFO            "fifo_size"
 #define OPT_TIMEOUT         "timeout"
 #define OPT_MAX_CLIENTS     "max_clients"
+#define OPT_PID_FILE        "pidfile"
 
 #endif /*CONFIGURATION_H_*/
