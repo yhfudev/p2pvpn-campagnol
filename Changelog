@@ -5,10 +5,11 @@ v 0.3:
 	more robust code.
 	New and faster SSL queues.
 	Configuration: new INI-like format with a less buggy file parser. Now
-	use a default configuration file.
+	use a default configuration file (/etc/campagnol.conf).
 	Better checking of loopback interfaces when searching the local
 	IP and use getifaddrs when available.
 	Fix some memory leaks with pthreads and OpenSSL.
+	Write the PID into /var/run/campagnol.pid or another location.
 
 	rdv server:
 	Move the file into the net.sourceforge.campagnol package.

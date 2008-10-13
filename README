@@ -210,4 +210,6 @@ $  campagnol --daemon conf_file.conf
 Send a SIGTERM ou SIGINT signal to the client to kill it cleanly.
 If no configuration file is given, campagnol will search for a default
 /etc/campagnol.conf file.
+When campagnol is lauchend as a daemon, it will write its PID into
+/var/run/campagnol.pid (or another file defined in the configuration).
 
