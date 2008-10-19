@@ -6,7 +6,7 @@ endif
 if HAVE_FREEBSD
 campagnol_SOURCES += tun_device_freebsd.c
 endif
-campagnol_CPPFLAGS = -I"$(srcdir)/../include" @OPENSSL_CFLAGS@
-campagnol_CFLAGS = -Wall -Wstrict-prototypes -DSYSCONFDIR="\"$(sysconfdir)\"" -DLOCALSTATEDIR="\"$(localstatedir)\""
+campagnol_CPPFLAGS = -I"$(srcdir)/../include" -DSYSCONFDIR="\"$(sysconfdir)\"" -DLOCALSTATEDIR="\"$(localstatedir)\"" @OPENSSL_CFLAGS@
+campagnol_CFLAGS = -Wall -Wstrict-prototypes
 campagnol_LDADD = @OPENSSL_LIBS@
 
