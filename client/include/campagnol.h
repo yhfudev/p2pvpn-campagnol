@@ -49,8 +49,8 @@
 #include "configuration.h"
 
 #define SERVER_PORT_DEFAULT 57888
-#define DEFAULT_CONF_FILE "/etc/campagnol.conf"
-#define DEFAULT_PID_FILE "/var/run/campagnol.pid"
+#define DEFAULT_CONF_FILE SYSCONFDIR "/campagnol.conf"
+#define DEFAULT_PID_FILE LOCALSTATEDIR "/run/campagnol.pid"
 
 extern int end_campagnol;
 extern struct configuration config;
