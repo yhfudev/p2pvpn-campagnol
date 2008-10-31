@@ -174,12 +174,14 @@ int load_CRL(char *crl_file) {
     // Read the CRL with a BIO
     if (BIO_read_filename(bfile, crl_file) <= 0) {
         if (config.debug) fprintf(stderr, "load_CRL: BIO_read_filename\n");
+        BIO_free(bfile);
         return -1;
     }
     crl = PEM_read_bio_X509_CRL(bfile, NULL, NULL, NULL);
 
     if (crl == NULL) {
-        if (config.debug) fprintf(stderr, "load_CRL: fichier CRL non compris\n");
+        if (config.debug) fprintf(stderr, "load_CRL: CRL file is not valid\n");
+        BIO_free(bfile);
         return -1;
     }
     config.crl = crl;
