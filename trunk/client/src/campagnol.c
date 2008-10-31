@@ -190,6 +190,7 @@ int main (int argc, char **argv) {
     char *configFile = NULL;
     int sockfd, tunfd;
     int pa;
+    int exit_status = EXIT_SUCCESS;
 
     pa = parse_args(argc, argv, &configFile);
     if (pa == 1) {
@@ -241,7 +242,8 @@ int main (int argc, char **argv) {
 
     sockfd = create_socket();
     if (sockfd < 0) {
-        exit(EXIT_FAILURE);
+        exit_status = EXIT_FAILURE;
+        goto clean_end;
     }
 
 
@@ -258,7 +260,8 @@ int main (int argc, char **argv) {
      * Now, register to the rendezvous server
      */
     if (register_rdv(sockfd)) {
-        exit(EXIT_FAILURE);
+        exit_status = EXIT_FAILURE;
+        goto clean_end;
     }
 
     tunfd = init_tun(1);
@@ -270,7 +273,8 @@ int main (int argc, char **argv) {
         smsg.type = BYE;
         if (config.debug) printf("Sending BYE\n");
         sendto(sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
-        exit(EXIT_FAILURE);
+        exit_status = EXIT_FAILURE;
+        goto clean_end;
     }
 
     log_message("Starting VPN");
@@ -283,6 +287,7 @@ int main (int argc, char **argv) {
     close(sockfd);
 
 
+    clean_end:
     /* try to clean up everything in openssl
      * OpenSSL has no cleanup function
      * IFAIK there is nothing to cleanup the compression methods
@@ -299,5 +304,5 @@ int main (int argc, char **argv) {
     EVP_cleanup();
     CRYPTO_cleanup_all_ex_data();
 
-    exit(EXIT_SUCCESS);
+    exit(exit_status);
 }
