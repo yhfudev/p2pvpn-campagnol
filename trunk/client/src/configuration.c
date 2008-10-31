@@ -171,7 +171,7 @@ int load_CRL(char *crl_file) {
     BIO *bfile = NULL;
     bfile = BIO_new(BIO_s_file());
 
-    // Lecture de la CRL à l'aide d'un BIO
+    // Read the CRL with a BIO
     if (BIO_read_filename(bfile, crl_file) <= 0) {
         if (config.debug) fprintf(stderr, "load_CRL: BIO_read_filename\n");
         return -1;
@@ -405,7 +405,7 @@ void parseConfFile(char *confFile) {
     value = parser_get(SECTION_SECURITY, OPT_CRL, &nline, &parser);
     if (value != NULL) {
         if (load_CRL(value)) {
-            log_message("[%s:"OPT_CIPHERS":%d] Error while loading the CRL file \"%s\"", confFile, nline, value);
+            log_message("[%s:"OPT_CRL":%d] Error while loading the CRL file \"%s\"", confFile, nline, value);
             //non fatal error
         }
     }

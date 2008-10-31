@@ -55,7 +55,7 @@ void usage(void) {
     fprintf(stderr, " -d, --debug\t\t\tdebug mode\n");
     fprintf(stderr, " -h, --help\t\t\tthis help message\n");
     fprintf(stderr, " -V, --version\t\t\tshow version information and exit\n\n");
-    fprintf(stderr, "If no configuration file is given, the default is /etc/campagnol.conf\n");
+    fprintf(stderr, "If no configuration file is given, the default is " DEFAULT_CONF_FILE "\n");
     exit(EXIT_FAILURE);
 }
 
