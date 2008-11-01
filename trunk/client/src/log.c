@@ -107,7 +107,10 @@ void log_message_syslog(const char *format, ...) {
  */
 void __log_error(const char *filename, unsigned int linenumber, const char *functionname, const char *s) {
     if (log_enabled) {
-        syslog(LOG_NOTICE, "%s:%u:%s: %s: %s", filename, linenumber, functionname, s, strerror(errno));
+        if (s)
+            syslog(LOG_NOTICE, "%s:%u:%s: %s: %s", filename, linenumber, functionname, s, strerror(errno));
+        else
+            syslog(LOG_NOTICE, "%s:%u:%s: %s", filename, linenumber, functionname, strerror(errno));
     }
     else {
         fprintf(stderr, "%s:%u:%s: ", filename, linenumber, functionname);
