@@ -761,11 +761,7 @@ void * comm_tun(void * argument) {
  */
 void start_vpn(int sockfd, int tunfd) {
     struct message smsg;
-    struct comm_args *args = (struct comm_args*) malloc(sizeof(struct comm_args));
-    if (args == NULL) {
-        log_error("Could not allocate structure (start_vpn)");
-        exit(EXIT_FAILURE);
-    }
+    struct comm_args *args = (struct comm_args*) CHECK_ALLOC_FATAL(malloc(sizeof(struct comm_args)));
     args->sockfd = sockfd;
     args->tunfd = tunfd;
 

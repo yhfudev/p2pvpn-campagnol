@@ -97,10 +97,7 @@ void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
     do {
         ++size;
         /* realloc buffer size until no overflow occurs  */
-        if (NULL == (ifc.ifc_req = realloc(ifc.ifc_req, IFRSIZE))) {
-            log_error("realloc");
-            exit(EXIT_FAILURE);
-        }
+        ifc.ifc_req = CHECK_ALLOC_FATAL(realloc(ifc.ifc_req, IFRSIZE));
         ifc.ifc_len = IFRSIZE;
         if (ioctl(sockfd, SIOCGIFCONF, &ifc)) {
             log_error("ioctl SIOCGIFCONF");
@@ -246,11 +243,7 @@ void parseConfFile(char *confFile) {
 
     value = parser_get(SECTION_NETWORK, OPT_INTERFACE, &nline, &parser);
     if (value != NULL) {
-        config.iface = strdup(value);
-        if (config.iface == NULL) {
-            log_error("Could not allocate string (configuration)");
-            exit(EXIT_FAILURE);
-        }
+        config.iface = CHECK_ALLOC_FATAL(strdup(value));
     }
 
     value = parser_get(SECTION_NETWORK, OPT_SERVER_HOST, &nline, &parser);
@@ -314,11 +307,7 @@ void parseConfFile(char *confFile) {
 
     value = parser_get(SECTION_VPN, OPT_VPN_NETWORK, &nline, &parser);
     if (value != NULL) {
-        config.network = strdup(value);
-        if (config.network == NULL) {
-            log_error("Could not allocate string (configuration)");
-            exit(EXIT_FAILURE);
-        }
+        config.network = CHECK_ALLOC_FATAL(strdup(value));
 
         /* compute the broadcast address */
         char * search, * end;
@@ -358,11 +347,7 @@ void parseConfFile(char *confFile) {
 
     value = parser_get(SECTION_SECURITY, OPT_CERTIFICATE, &nline, &parser);
     if (value != NULL) {
-        config.certificate_pem = strdup(value);
-        if (config.certificate_pem == NULL) {
-            log_error("Could not allocate string (configuration)");
-            exit(EXIT_FAILURE);
-        }
+        config.certificate_pem = CHECK_ALLOC_FATAL(strdup(value));
     }
     else {
         log_message("[%s] Parameter \""OPT_CERTIFICATE"\" is mandatory", confFile);
@@ -371,11 +356,7 @@ void parseConfFile(char *confFile) {
 
     value = parser_get(SECTION_SECURITY, OPT_KEY, &nline, &parser);
     if (value != NULL) {
-        config.key_pem = strdup(value);
-        if (config.key_pem == NULL) {
-            log_error("Could not allocate string (configuration)");
-            exit(EXIT_FAILURE);
-        }
+        config.key_pem = CHECK_ALLOC_FATAL(strdup(value));
     }
     else {
         log_message("[%s] Parameter \""OPT_KEY"\" is mandatory", confFile);
@@ -384,11 +365,7 @@ void parseConfFile(char *confFile) {
 
     value = parser_get(SECTION_SECURITY, OPT_CA, &nline, &parser);
     if (value != NULL) {
-        config.verif_pem = strdup(value);
-        if (config.verif_pem == NULL) {
-            log_error("Could not allocate string (configuration)");
-            exit(EXIT_FAILURE);
-        }
+        config.verif_pem = CHECK_ALLOC_FATAL(strdup(value));
     }
     else {
         log_message("[%s] Parameter \""OPT_CA"\" is mandatory", confFile);
@@ -397,11 +374,7 @@ void parseConfFile(char *confFile) {
 
     value = parser_get(SECTION_SECURITY, OPT_CIPHERS, &nline, &parser);
     if (value != NULL) {
-        config.cipher_list = strdup(value);
-        if (config.cipher_list == NULL) {
-            log_error("Could not allocate string (configuration)");
-            exit(EXIT_FAILURE);
-        }
+        config.cipher_list = CHECK_ALLOC_FATAL(strdup(value));
     }
 
     value = parser_get(SECTION_SECURITY, OPT_CRL, &nline, &parser);
@@ -452,11 +425,7 @@ void parseConfFile(char *confFile) {
 
     value = parser_get(SECTION_CLIENT, OPT_PID_FILE, &nline, &parser);
     if (value != NULL) {
-        config.pidfile = strdup(value);
-        if (config.pidfile == NULL) {
-            log_error("Could not allocate string (configuration)");
-            exit(EXIT_FAILURE);
-        }
+        config.pidfile = CHECK_ALLOC_FATAL(strdup(value));
     }
 
 

@@ -118,17 +118,9 @@ void parser_set(const char *section, const char *option, const char *value,
     tmp_item.name = (char *) section;
     tmp = tsearch(&tmp_item, &parser->data, parser_compare);
     if (*(void **) tmp == &tmp_item) {
-        item_section = (item_section_t *) malloc(sizeof(item_section_t));
-        if (item_section == NULL) {
-            log_error("Could not allocate structure (parser_config)");
-            exit(EXIT_FAILURE);
-        }
+        item_section = (item_section_t *) CHECK_ALLOC_FATAL(malloc(sizeof(item_section_t)));
         *(void **) tmp = item_section;
-        item_section->name = strdup(section);
-        if (item_section->name == NULL) {
-            log_error("Could not allocate string (parser_config)");
-            exit(EXIT_FAILURE);
-        }
+        item_section->name = CHECK_ALLOC_FATAL(strdup(section));
         item_section->values_tree = NULL;
         item_section->parser = parser;
     }
@@ -140,17 +132,9 @@ void parser_set(const char *section, const char *option, const char *value,
     tmp_item.name = (char *) option;
     tmp = tsearch(&tmp_item, &item_section->values_tree, parser_compare);
     if (*(void **) tmp == &tmp_item) {
-        item_value = (item_value_t *) malloc(sizeof(item_value_t));
-        if (item_value == NULL) {
-            log_error("Could not allocate structure (parser_config)");
-            exit(EXIT_FAILURE);
-        }
+        item_value = (item_value_t *) CHECK_ALLOC_FATAL(malloc(sizeof(item_value_t)));
         *(void **) tmp = item_value;
-        item_value->name = strdup(option);
-        if (item_value->name == NULL) {
-            log_error("Could not allocate structure (parser_config)");
-            exit(EXIT_FAILURE);
-        }
+        item_value->name = CHECK_ALLOC_FATAL(strdup(option));
     }
     else {
         item_value = *(void **) tmp;
@@ -159,11 +143,7 @@ void parser_set(const char *section, const char *option, const char *value,
     }
 
     // set value
-    item_value->value = strdup(value);
-    if (item_value->value == NULL) {
-        log_error("Could not allocate string (parser_config)");
-        exit(EXIT_FAILURE);
-    }
+    item_value->value = CHECK_ALLOC_FATAL(strdup(value));
     item_value->nline = nline;
     item_value->section = item_section;
     item_value->expanded_value = NULL;
@@ -179,17 +159,9 @@ void parser_add_section(const char *section, parser_context_t *parser) {
     tmp_section.name = (char *) section;
     tmp = tsearch(&tmp_section, &parser->data, parser_compare);
     if (*(void **) tmp == &tmp_section) {
-        item_section = (item_section_t *) malloc(sizeof(item_section_t));
-        if (item_section == NULL) {
-            log_error("Could not allocate structure (parser_config)");
-            exit(EXIT_FAILURE);
-        }
+        item_section = (item_section_t *) CHECK_ALLOC_FATAL(malloc(sizeof(item_section_t)));
         *(void **) tmp = item_section;
-        item_section->name = strdup(section);
-        if (item_section->name == NULL) {
-            log_error("Could not allocate string (parser_config)");
-            exit(EXIT_FAILURE);
-        }
+        item_section->name = CHECK_ALLOC_FATAL(strdup(section));
         item_section->values_tree = NULL;
         item_section->parser = parser;
     }
@@ -705,11 +677,7 @@ void parser_read(const char *confFile, parser_context_t *parser) {
         // something outside of a section ?
         if (section == NULL) {
             if (parser->allow_default) {
-                section = strdup(SECTION_DEFAULT);
-                if (section == NULL) {
-                    log_error("Could not allocate string (parser_config)");
-                    exit(EXIT_FAILURE);
-                }
+                section = CHECK_ALLOC_FATAL(strdup(SECTION_DEFAULT));
                 section_length = strlen(SECTION_DEFAULT) + 1;
             }
             else {

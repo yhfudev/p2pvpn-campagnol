@@ -31,6 +31,19 @@ extern void log_message_syslog(const char *format, ...);
 extern void __log_error(const char *filename, unsigned int linenumber, const char *functionname, const char *s);
 #define log_error(msg)      __log_error(__FILE__, __LINE__, __func__, msg)
 
+/* log and exit(1) if __ptr == NULL
+ * return __ptr otherwise
+ */
+#define CHECK_ALLOC_FATAL(__ptr)    ({\
+    void *ptr = __ptr;  \
+    if (ptr == NULL)  {\
+        log_error(NULL);    \
+        exit(EXIT_FAILURE); \
+    }   \
+    ptr;    \
+    })
+
+
 /*
  * ASSERT: if campagnol run as a daemon, log the assertion error message with syslog
  * otherwise, same as assert.
