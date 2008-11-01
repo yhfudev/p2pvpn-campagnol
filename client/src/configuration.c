@@ -121,7 +121,7 @@ void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
             continue; // local interface, skip it
         }
 
-        if (iface != NULL || strcmp (ifr->ifr_name, iface) == 0) {
+        if (iface == NULL || strcmp (ifr->ifr_name, iface) == 0) {
             *ip = (((struct sockaddr_in *) &(ifr->ifr_addr))->sin_addr);
             *localIPset = 1;
             break;
