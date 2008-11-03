@@ -76,16 +76,18 @@ extern void decr_ref(struct client *peer);
 
 /* get_client_VPN and get_client_real check the cache before calling _get_client_* */
 #define get_client_VPN(__address) ({    \
+    struct in_addr *address = __address;    \
     (cache_client_VPN != NULL    \
-        && cache_client_VPN->vpnIP.s_addr == (__address)->s_addr) ? \
-                incr_ref(cache_client_VPN), cache_client_VPN : _get_client_VPN((__address));    \
+        && cache_client_VPN->vpnIP.s_addr == (address)->s_addr) ? \
+                incr_ref(cache_client_VPN), cache_client_VPN : _get_client_VPN((address));    \
     })
 
 #define get_client_real(__address) ({   \
+    struct sockaddr_in *address = __address;    \
     (cache_client_real != NULL   \
-        && cache_client_real->clientaddr.sin_addr.s_addr == (__address)->sin_addr.s_addr    \
-        && cache_client_real->clientaddr.sin_port == (__address)->sin_port) ?   \
-                incr_ref(cache_client_real), cache_client_real : _get_client_real((__address)); \
+        && cache_client_real->clientaddr.sin_addr.s_addr == (address)->sin_addr.s_addr    \
+        && cache_client_real->clientaddr.sin_port == (address)->sin_port) ?   \
+                incr_ref(cache_client_real), cache_client_real : _get_client_real((address)); \
     })
 
 #endif /*PEER_H_*/
