@@ -178,7 +178,6 @@ void remove_client(struct client *peer) {
  * return NULL if the client is unknown
  */
 struct client * _get_client_VPN(struct in_addr *address) {
-    if (config.debug) printf("get %s\n", inet_ntoa(*address));
     struct client *peer = clients;
     while (peer != NULL) {
         if (peer->vpnIP.s_addr == address->s_addr) {
@@ -197,7 +196,6 @@ struct client * _get_client_VPN(struct in_addr *address) {
  * return NULL if the client is unknown
  */
 struct client * _get_client_real(struct sockaddr_in *cl_address) {
-    if (config.debug) printf("get by client IP %s\n", inet_ntoa(cl_address->sin_addr));
     struct client *peer = clients;
     while (peer != NULL) {
         if (peer->clientaddr.sin_addr.s_addr == cl_address->sin_addr.s_addr

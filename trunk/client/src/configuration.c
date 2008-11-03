@@ -61,8 +61,9 @@ void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
             continue; // local interface, skip it
         }
         if (iface == NULL || strcmp (ifap->ifa_name, iface) == 0) {
-            /* If the iface is a TUN device and getifaddrs want to
-             * show us its AF_PACKET level address, ifap->ifa_addr is NULL (phew!)
+            /* If the interface has no link level address (like a TUN device),
+             * then ifap->ifa_addr is NULL.
+             * Only look for AF_INET addresses
              */
             if (ifap->ifa_addr != NULL && ifap->ifa_addr->sa_family == AF_INET) {
                 *ip = (((struct sockaddr_in *) ifap->ifa_addr)->sin_addr);
