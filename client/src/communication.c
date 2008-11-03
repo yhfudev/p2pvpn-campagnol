@@ -661,7 +661,7 @@ void * comm_tun(void * argument) {
                     clock_gettime(CLOCK_REALTIME, &timeout_connect);
                     timeout_connect.tv_sec += 3; // wait 3 secs
                     MUTEXLOCK;
-                    if (conditionTimedwait(&peer->cond_connected, &mutex_clients, &timeout_connect) == 0) {
+                    if (peer->state != CLOSED && conditionTimedwait(&peer->cond_connected, &mutex_clients, &timeout_connect) == 0) {
                         decr_ref(peer);
                         peer = get_client_VPN(&dest);
                         if (peer != NULL) {// the new connection is opened
@@ -699,7 +699,7 @@ void * comm_tun(void * argument) {
                         clock_gettime(CLOCK_REALTIME, &timeout_connect);
                         timeout_connect.tv_sec += 3;
                         MUTEXLOCK;
-                        if (conditionTimedwait(&peer->cond_connected, &mutex_clients, &timeout_connect) == 0) {
+                        if (peer->state != CLOSED && conditionTimedwait(&peer->cond_connected, &mutex_clients, &timeout_connect) == 0) {
                             decr_ref(peer);
                             peer = get_client_VPN(&dest);
                             if (peer != NULL) {// the new connection is opened
