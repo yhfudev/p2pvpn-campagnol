@@ -10,6 +10,8 @@ v 0.3:
 	IP and use getifaddrs when available.
 	Fix some memory leaks with pthreads and OpenSSL.
 	Write the PID into /var/run/campagnol.pid or another location.
+	Add a receiving timeout so that openssl can detect a packet loss
+	during a handshake and resend.
 
 	rdv server:
 	Move the file into the net.sourceforge.campagnol package.

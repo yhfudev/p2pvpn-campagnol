@@ -9,7 +9,6 @@ Known issues
 
 Plans
 -----
-- Try to cope with the loss of important DTLS datagrams.
 - Rewrite the rendezvous server in C.
 - Use DTLS between the rendezvous server and the peers, except for the ping messages.
 - Possibility to define the common options in the rendezvous server and to distribute them to the peers.
