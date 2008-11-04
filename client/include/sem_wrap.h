@@ -33,6 +33,7 @@
 static inline void semInit(sem_t *sem, int pshared, unsigned int value);
 static inline void semDestroy(sem_t *sem);
 static inline void semWait(sem_t *sem);
+static inline int semTimedwait(sem_t *sem, const struct timespec *abs_timeout);
 static inline void semPost(sem_t *sem);
 static inline void semGetValue(sem_t *sem, int *sval);
 
@@ -61,6 +62,17 @@ void semWait(sem_t *sem) {
         log_message("Error sem_wait(): %s", strerror(errno));
         exit(EXIT_FAILURE);
     }
+}
+
+int semTimedwait(sem_t *sem, const struct timespec *abs_timeout) {
+    ASSERT(sem);
+    ASSERT(abs_timeout);
+    int r = sem_timedwait(sem, abs_timeout);
+    if (r != 0 && errno != ETIMEDOUT) {
+        log_message("Error sem_timedwait(): %s", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+    return r;
 }
 
 void semPost(sem_t *sem) {
