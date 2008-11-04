@@ -97,6 +97,9 @@ int fifo_allocate(BIO *bi, int len, int data_size) {
     d->index_read = 0;
     d->index_write = 0;
     d->size = len;
+    d->rcv_timer_exp = 0;
+    d->rcv_timeout_nsec = 0;
+    d->rcv_timeout_sec = 0;
 
     d->fifo = (struct fifo_item *) malloc(d->size * sizeof(struct fifo_item));
     if (d->fifo == NULL) {
@@ -169,22 +172,42 @@ static int fifo_free(BIO *bi) {
  * Blocking read from the FIFO
  */
 static int fifo_read(BIO *b, char *out, int outl) {
-    int ret = -1, len;
+    int ret = -1, len, r = 0;
     struct fifo_data *d;
     struct fifo_item *item;
+    struct timespec timeout;
 
     d = (struct fifo_data *) b->ptr;
-    semWait(&d->sem_read);
+
+    if (d->rcv_timeout_sec || d->rcv_timeout_nsec) {
+        clock_gettime(CLOCK_REALTIME, &timeout);
+        timeout.tv_nsec += d->rcv_timeout_nsec;
+        timeout.tv_sec += d->rcv_timeout_sec;
+        if (timeout.tv_nsec >= 1000000000L) { // overflow
+            timeout.tv_nsec -= 1000000000L;
+            timeout.tv_sec ++;
+        }
+        r = semTimedwait(&d->sem_read, &timeout);
+    }
+    else {
+        semWait(&d->sem_read);
+    }
     BIO_clear_retry_flags(b);
 
-    item = &d->fifo[d->index_read];
-    len = item->size;
-    ret = (outl >= len) ? len : outl; // is "out" big enough to store the packet
-    if ((out != NULL)) {
-        memcpy(out, item->data, ret); // copy the data into "out" and update the queue
+    if (r == -1) {
+        BIO_set_retry_read(b);
+        d->rcv_timer_exp = 1;
     }
-    (d->index_read == d->size - 1) ? d->index_read = 0 : d->index_read++;
-    semPost(&d->sem_write);
+    else {
+        item = &d->fifo[d->index_read];
+        len = item->size;
+        ret = (outl >= len) ? len : outl; // is "out" big enough to store the packet
+        if ((out != NULL)) {
+            memcpy(out, item->data, ret); // copy the data into "out" and update the queue
+        }
+        (d->index_read == d->size - 1) ? d->index_read = 0 : d->index_read++;
+        semPost(&d->sem_write);
+    }
     return ret;
 }
 
@@ -258,10 +281,25 @@ static long fifo_ctrl(BIO *b, int cmd, long num, void *ptr) {
         case BIO_CTRL_FLUSH:
             ret = 1;
             break;
+        case BIO_CTRL_FIFO_SET_RECV_TIMEOUT:
+            d->rcv_timeout_nsec = ((struct timespec *) ptr)->tv_nsec;
+            d->rcv_timeout_sec = ((struct timespec *) ptr)->tv_sec;
+            break;
+        case BIO_CTRL_FIFO_GET_RECV_TIMEOUT:
+            ((struct timespec *) ptr)->tv_nsec = d->rcv_timeout_nsec;
+            ((struct timespec *) ptr)->tv_sec = d->rcv_timeout_sec;
+            break;
+        case BIO_CTRL_FIFO_GET_RECV_TIMER_EXP:
+            if (d->rcv_timer_exp) {
+                ret = 1;
+                d->rcv_timer_exp = 0;
+            }
+            else
+                ret = 0;
+            break;
         case BIO_CTRL_PUSH:
         case BIO_CTRL_POP:
-        case BIO_CTRL_DGRAM_GET_SEND_TIMER_EXP:
-        case BIO_CTRL_DGRAM_GET_RECV_TIMER_EXP:
+        case BIO_CTRL_FIFO_GET_SEND_TIMER_EXP:
         default:
             ret = 0;
             break;
