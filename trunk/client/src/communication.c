@@ -296,8 +296,18 @@ void * SSL_reading(void * args) {
                 continue;
             }
             int err = SSL_get_error(peer->ssl, r);
-            log_message("SSL_read %d %d", err, errno);
-            continue;
+            if (err == SSL_ERROR_SSL) {
+                ERR_print_errors_fp(stderr);
+            }
+            log_message("DTLS error, shutting down the connexion.");
+            MUTEXLOCK;
+            peer->thread_ssl_running = 0;
+            peer->state = CLOSED;
+            decr_ref(peer);
+            decr_ref(peer);
+            ERR_remove_state(0);
+            MUTEXUNLOCK;
+            return NULL;
         }
         MUTEXLOCK;
         if (r == 0) { // close connection
