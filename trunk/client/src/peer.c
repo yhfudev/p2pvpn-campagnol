@@ -265,6 +265,8 @@ void ctx_info_callback(const SSL *ssl, int where, int ret) {
  * if recreate is true, delete existing structures
  */
 int createClientSSL(struct client *peer, int recreate) {
+    struct timespec recv_timeout;
+
     if (recreate) {
         SSL_CTX_free(peer->ctx);
         SSL_free(peer->ssl);
@@ -323,6 +325,9 @@ int createClientSSL(struct client *peer, int recreate) {
         SSL_CTX_free(peer->ctx);
         return -1;
     }
+    recv_timeout.tv_nsec = PEER_RECV_TIMEMOUT_NSEC;
+    recv_timeout.tv_sec = PEER_RECV_TIMEOUT_SEC;
+    BIO_ctrl(peer->rbio, BIO_CTRL_FIFO_SET_RECV_TIMEOUT, 0, &recv_timeout);
     SSL_set_bio(peer->ssl, peer->rbio, peer->wbio);
 
     /* No zlib compression */
