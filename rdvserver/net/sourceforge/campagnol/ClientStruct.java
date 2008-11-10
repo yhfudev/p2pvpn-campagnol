@@ -32,7 +32,7 @@ import java.net.*;
 public class ClientStruct {
     
     public static final long TIMEOUT = 5000;    // 5s
-    public int port;                            // public client port
+    public short port;                            // public client port
     public byte[] realIP;
     public long timeoutMillis;
     public long createTime;
@@ -43,7 +43,7 @@ public class ClientStruct {
     
     public ClientStruct(SocketAddress sAddr, byte[] IP) {
         this.sAddr = (InetSocketAddress)sAddr;
-        this.port = this.sAddr.getPort();
+        this.port = (short) this.sAddr.getPort();
         this.realIP = this.sAddr.getAddress().getAddress();
         this.vpnIP = IP;
         this.vpnIPString = MsgServStruct.convertIPtoString(IP);

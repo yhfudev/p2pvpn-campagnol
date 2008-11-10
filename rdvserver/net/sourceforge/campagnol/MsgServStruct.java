@@ -56,11 +56,11 @@ public class MsgServStruct {
     
     /** content of the message */
     public byte type;                                                           // place for the message type
-    public int port;                                                            // port number
+    public short port;                                                            // port number
     public byte[] ip1 = new byte[4];                                            // IPv4 address
     public byte[] ip2 = new byte[4];                                            // IPv4 address
 
-    public MsgServStruct(byte type, int port, byte[] ip1, byte[] ip2) {
+    public MsgServStruct(byte type, short port, byte[] ip1, byte[] ip2) {
         this.type = type;
         this.port = port;
         if (ip1 != null)
@@ -97,7 +97,7 @@ public class MsgServStruct {
         byte[] array = new byte[MSG_LENGTH];
         java.nio.ByteBuffer bb = java.nio.ByteBuffer.wrap(array);
         bb.put(this.type);
-        bb.putShort((short) this.port);
+        bb.putShort(this.port);
         bb.put(this.ip1);
         bb.put(this.ip2);
         if (CampagnolServer.dump) System.out.println(this);
@@ -165,7 +165,7 @@ public class MsgServStruct {
                 a = "|   ?   ";
                 break;
         }
-        c = "| "+this.port;
+        c = "| " + ((int) this.port & 0xFFFF);
         while (c.length()<8) c+=" ";
         d = "| "+convertIPtoString(this.ip1);
         while (d.length()<18) d+=" ";
