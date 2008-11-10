@@ -116,7 +116,7 @@ public class CampagnolGUI extends javax.swing.JFrame {
  * Table model used to show the registered clients
  */
 class ClientsTableModel extends AbstractTableModel {
-    private String[] columnNames = {"VPN IP", "Real IP", "Port", "Registration date", "timeout"};
+    private String[] columnNames = {"VPN IP", "Real IP", "Port", "Local IP", "Local port", "Registration date", "timeout"};
     private Object[][]data = null;
     private HashMap clients;
     
@@ -166,6 +166,10 @@ class ClientsTableModel extends AbstractTableModel {
             case 3:
                 return String.class;
             case 4:
+                return Integer.class;
+            case 5:
+                return String.class;
+            case 6:
                 return Boolean.class;
             default:
                 return Object.class;
@@ -181,8 +185,10 @@ class ClientsTableModel extends AbstractTableModel {
             data[n][0] = cl.vpnIPString;
             data[n][1] = MsgServStruct.convertIPtoString(cl.realIP);
             data[n][2] = new Integer((int) cl.port & 0xFFFF);
-                data[n][3] = cl.getStartTime();
-            data[n][4] = new Boolean(cl.isTimeout());
+            data[n][3] = MsgServStruct.convertIPtoString(cl.localIP);
+            data[n][4] = cl.localPort == 0 ? null : new Integer((int) cl.localPort & 0xFFFF);
+            data[n][5] = cl.getStartTime();
+            data[n][6] = new Boolean(cl.isTimeout());
             n++;
         }
         this.fireTableDataChanged();
