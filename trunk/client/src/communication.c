@@ -137,6 +137,8 @@ uint16_t compute_csum(uint16_t *addr, size_t count){
 int register_rdv(int sockfd) {
     struct message smsg, rmsg;
     struct timeval timeout;
+    struct sockaddr_in tmp_addr;
+    socklen_t tmp_addr_len;
 
     int s,r;
     int notRegistered = 1;
@@ -145,7 +147,16 @@ int register_rdv(int sockfd) {
 
     /* Create a HELLO message */
     log_message_verb("Registering with the RDV server...");
-    init_smsg(&smsg, HELLO, config.vpnIP.s_addr, 0);
+    if (config.send_local_addr) {
+        init_smsg(&smsg, HELLO, config.vpnIP.s_addr, config.localIP.s_addr);
+        // get the local port
+        tmp_addr_len = sizeof(tmp_addr);
+        getsockname(sockfd, &tmp_addr, &tmp_addr_len);
+        smsg.port = tmp_addr.sin_port;
+    }
+    else {
+        init_smsg(&smsg, HELLO, config.vpnIP.s_addr, 0);
+    }
 
     while (notRegistered && registeringTries<MAX_REGISTERING_TRIES && !end_campagnol) {
         /* sending HELLO to the server */
