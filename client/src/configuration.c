@@ -207,6 +207,7 @@ void parseConfFile(char *confFile) {
     config.serverAddr.sin_family = AF_INET;
     config.serverAddr.sin_port=htons(SERVER_PORT_DEFAULT);
     memset(&config.vpnIP, 0, sizeof(config.localIP));
+    config.send_local_addr = 1;
     config.tun_mtu = TUN_MTU_DEFAULT;
     config.crl = NULL;
     config.FIFO_size = 50;
@@ -288,6 +289,12 @@ void parseConfFile(char *confFile) {
     }
     else if (res == 0) {
         log_message("[%s:"OPT_TUN_MTU":%d] MTU of the tun device is not valid: \"%s\"", confFile, nline, value);
+        exit(EXIT_FAILURE);
+    }
+
+    res = parser_getboolean(SECTION_NETWORK, OPT_SEND_LOCAL, &config.send_local_addr, &value, &nline, &parser);
+    if (res == 0) {
+        log_message("[%s:"OPT_SEND_LOCAL":%d] Invalid value (use \"yes\" or \"no\"): \"%s\"", confFile, nline, value);
         exit(EXIT_FAILURE);
     }
 
@@ -442,6 +449,12 @@ void parseConfFile(char *confFile) {
      */
     if (!localIP_set) {
         log_message("Could not find a valid local IP address. Please check %s", confFile);
+        exit(EXIT_FAILURE);
+    }
+
+    /* Need a non-"any" local IP if config.send_local_addr is true */
+    if (config.send_local_addr && config.localIP.s_addr == INADDR_ANY) {
+        log_message("["SECTION_NETWORK"]" OPT_SEND_LOCAL" requires a valid local IP (option \""OPT_LOCAL_HOST"\")");
         exit(EXIT_FAILURE);
     }
 
