@@ -348,7 +348,7 @@ public class CampagnolServer {
     /** nok message specifying the unexisting peer for which an ASK_CONNECTION as been made */
     public void sendREJECT(SocketAddress address, byte[] IP) {
         try {
-            MsgServStruct message = new MsgServStruct(MsgServStruct.REJ_CONNECTION, 0, IP, null);
+            MsgServStruct message = new MsgServStruct(MsgServStruct.REJ_CONNECTION, (short) 0, IP, null);
             this.socket.send(new DatagramPacket(message.toBytes(), MsgServStruct.MSG_LENGTH, address));
             if (CampagnolServer.debug) System.out.println(">> REJECT send to client "+address.toString());
         } catch (Exception ex) {
