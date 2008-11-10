@@ -40,6 +40,8 @@ public class ClientStruct {
     public String vpnIPString;                  // stringified VPN IP for debuging and GUI
     public InetAddress vpnInet;                 // InetAddress containing the VPN IP
     public byte[] vpnIP;                        // client VPN IP
+    public byte[] localIP;                      // client's local ip
+    public short localPort;                     // client's local port
     
     public ClientStruct(SocketAddress sAddr, byte[] IP) {
         this.sAddr = (InetSocketAddress)sAddr;
@@ -54,6 +56,14 @@ public class ClientStruct {
         }
         this.timeoutMillis = System.currentTimeMillis();
         this.createTime = this.timeoutMillis;
+        this.localIP = null;
+        this.localPort = 0;
+    }
+    
+    public ClientStruct(SocketAddress sAddr, byte[] IP, byte[] localIP, short localPort) {
+        this(sAddr, IP);
+        this.localIP = localIP;
+        this.localPort = localPort;
     }
     
     public void updateTime() {
