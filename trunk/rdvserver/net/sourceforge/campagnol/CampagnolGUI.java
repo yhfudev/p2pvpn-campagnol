@@ -180,7 +180,7 @@ class ClientsTableModel extends AbstractTableModel {
             ClientStruct cl = (ClientStruct) it.next();
             data[n][0] = cl.vpnIPString;
             data[n][1] = MsgServStruct.convertIPtoString(cl.realIP);
-            data[n][2] = new Integer(cl.port);
+            data[n][2] = new Integer((int) cl.port & 0xFFFF);
                 data[n][3] = cl.getStartTime();
             data[n][4] = new Boolean(cl.isTimeout());
             n++;
