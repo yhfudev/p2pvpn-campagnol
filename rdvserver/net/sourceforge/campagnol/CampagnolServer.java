@@ -206,7 +206,13 @@ public class CampagnolServer {
                     if (CampagnolServer.debug) System.out.println("<< HELLO received from "+packet.getSocketAddress().toString());
                     if (client == null) {
                         /**    client isn't yet registered */
-                        client = new ClientStruct(packet.getSocketAddress(), message.ip1);
+                        if (message.port != 0) {
+                            /** the client gave its local port and local IP */
+                            client = new ClientStruct(packet.getSocketAddress(), message.ip1, message.ip2, message.port);
+                        }
+                        else {
+                            client = new ClientStruct(packet.getSocketAddress(), message.ip1);
+                        }
                         ClientStruct clientByID = getClientFromId(client.vpnInet);
                         if (clientByID == null) {
                             /** OK for registering with this vpn IP on this vpn id*/
@@ -233,7 +239,13 @@ public class CampagnolServer {
                             } else {// another VPNIP
                                 removeConnectionsWithClient(client);
                                 removeClient(client);
-                                ClientStruct newClient = new ClientStruct(packet.getSocketAddress(), message.ip1);
+                                ClientStruct newClient = null;
+                                if (message.port != 0) {
+                                    newClient = new ClientStruct(packet.getSocketAddress(), message.ip1, message.ip2, message.port);
+                                }
+                                else {
+                                    newClient = new ClientStruct(packet.getSocketAddress(), message.ip1);
+                                }
                                 addClient(newClient);
                                 client = null;
                                 sendOK(packet.getSocketAddress());
@@ -281,6 +293,11 @@ public class CampagnolServer {
                             requestedClient = null;
                             break;
                         }
+                        /** should we send the local or remote IP/port ?*/
+                        boolean send_local_ip = (client.localPort != 0)
+                            && (requestedClient.localPort != 0)
+                            && Arrays.equals(client.realIP,
+                                    requestedClient.realIP);
                         if (connection == null) {
                             /** test if the reverse connection exist */
                             Connection reverseConnection = getConnection(requestedClient.vpnIP, client.vpnIP);
@@ -288,20 +305,20 @@ public class CampagnolServer {
                                 /** connection demand doesn't already exist */
                                 connection = new Connection(client, requestedClient);    // instantiating the connection
                                 addConnection(connection);
-                                sendANS(client, requestedClient);
-                                sendFWD(requestedClient, client);
+                                sendANS(client, requestedClient, send_local_ip);
+                                sendFWD(requestedClient, client, send_local_ip);
                             } else {
                                 removeConnection(reverseConnection);
                                 reverseConnection = null;
                                 connection = new Connection(client, requestedClient);    // instantiating the connection
                                 addConnection(connection);
-                                sendANS(client, requestedClient);
-                                sendFWD(requestedClient, client);
+                                sendANS(client, requestedClient, send_local_ip);
+                                sendFWD(requestedClient, client, send_local_ip);
                             }
                         } else {
                             /** connection demand already exists */
-                            sendANS(connection.client1, connection.client2);
-                            sendFWD(connection.client2, connection.client1);
+                            sendANS(connection.client1, connection.client2, send_local_ip);
+                            sendFWD(connection.client2, connection.client1, send_local_ip);
                             connection.updateTime();
                         }
                     }
@@ -377,9 +394,15 @@ public class CampagnolServer {
         }
     }
     
-    public void sendANS(ClientStruct client, ClientStruct requestedClient) {
+    public void sendANS(ClientStruct client, ClientStruct requestedClient, boolean send_local) {
         try {
-            MsgServStruct message = new MsgServStruct(MsgServStruct.ANS_CONNECTION, requestedClient.port, requestedClient.realIP, requestedClient.vpnIP);
+            MsgServStruct message = null;
+            if (send_local) {
+                message = new MsgServStruct(MsgServStruct.ANS_CONNECTION, requestedClient.localPort, requestedClient.localIP, requestedClient.vpnIP);
+            }
+            else {
+                message = new MsgServStruct(MsgServStruct.ANS_CONNECTION, requestedClient.port, requestedClient.realIP, requestedClient.vpnIP);
+            }
             this.socket.send(new DatagramPacket(message.toBytes(), MsgServStruct.MSG_LENGTH, client.sAddr));
             if (CampagnolServer.debug) System.out.println(">> ANS_CONNECTION sent to client "+client.sAddr.toString());
         } catch (Exception ex) {
@@ -388,9 +411,15 @@ public class CampagnolServer {
         }
     }
     
-    public void sendFWD(ClientStruct client, ClientStruct requestedClient) {
+    public void sendFWD(ClientStruct client, ClientStruct requestedClient, boolean send_local) {
         try {
-            MsgServStruct message = new MsgServStruct(MsgServStruct.FWD_CONNECTION, requestedClient.port, requestedClient.realIP, requestedClient.vpnIP);
+            MsgServStruct message = null;
+            if (send_local) {
+                message = new MsgServStruct(MsgServStruct.FWD_CONNECTION, requestedClient.localPort, requestedClient.localIP, requestedClient.vpnIP);
+            }
+            else {
+                message = new MsgServStruct(MsgServStruct.FWD_CONNECTION, requestedClient.port, requestedClient.realIP, requestedClient.vpnIP);
+            }
             this.socket.send(new DatagramPacket(message.toBytes(), MsgServStruct.MSG_LENGTH, client.sAddr));
             if (CampagnolServer.debug) System.out.println(">> FWD_CONNECTION sent to client "+client.sAddr.toString());
         } catch (Exception ex) {
