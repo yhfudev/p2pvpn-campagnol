@@ -45,9 +45,10 @@ distributed to all the clients
     * possibly a certificate revocation list to manage the old client's
 certificates
 
-To finish off, keep in mind that UDP hole punching has some limitations
-especially if you want to connect two clients which are behind the same
-NAT. You can find a description and analysis of this technique here:
+To finish off, keep in mind that UDP hole punching has some limitations as
+the NATs involved need to meet some requirements and certain cases require
+UDP hairpin translation which is still not common.
+You can find a description and analysis of this technique here:
 http://www.bford.info/pub/net/p2pnat/.
 
 
@@ -174,7 +175,7 @@ client. A few options are mandatory. Options are described in the sample
 files.
 
 This file has an INI-like syntax. Comments start with a ';' or a '#' and
-continue to then end of the line. Values may be quoted between double
+continue to the end of the line. Values may be quoted between double
 quotation marks ("...") and special characters can be escaped with '\'
 (\\, \n, \# ...)
 

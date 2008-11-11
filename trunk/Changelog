@@ -12,11 +12,14 @@ v 0.3:
 	Write the PID into /var/run/campagnol.pid or another location.
 	Add a receiving timeout so that openssl can detect a packet loss
 	during a handshake and resend.
+	Add the possibility to send the local IP and port to the RDV server.
 
 	rdv server:
 	Move the file into the net.sourceforge.campagnol package.
 	Small cleanings.
 	Better ANT build file.
+	When two peers are behind the same NAT and their local addresses are
+	kown, use the local adresses intead of the public addresses.
 
 v 0.2:
 	client: use syslog to log important messages when the client is
