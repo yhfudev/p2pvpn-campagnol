@@ -112,11 +112,11 @@
 /*
  * Number of punch messages
  */
-#define PUNCH_NUMBER 5
+#define PUNCH_NUMBER 25
 /*
  * Duration between two punch messages
  */
-#define PUNCH_DELAY_USEC 1000000
+#define PUNCH_DELAY_USEC 200000
 
 
 
