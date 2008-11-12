@@ -67,7 +67,7 @@ extern void freeConfig(void);
 #define OPT_SERVER_PORT     "server_port"
 #define OPT_TUN_MTU         "tun_mtu"
 #define OPT_INTERFACE       "interface"
-#define OPT_SEND_LOCAL      "send_local_addr"
+#define OPT_SEND_LOCAL      "use_local_addr"
 
 #define OPT_VPN_IP          "vpn_ip"
 #define OPT_VPN_NETWORK     "network"
