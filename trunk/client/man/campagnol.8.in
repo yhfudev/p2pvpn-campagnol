@@ -1,0 +1,110 @@
+.TH "Campagnol client" 8 "October 21, 2008" "0.3"
+.SH NAME
+campagnol - Decentralized VPN over UDP tunneling
+.SH SYNOPSIS
+.B campagnol
+.RB [ \-vDdhV ]...
+.RI [ configuration_file ]
+.LP
+.SH DESCRIPTION
+Campagnol is a distributed IP-based VPN software able to open new connections 
+through NATs or firewalls without any configuration. It uses UDP for the
+transport layer and utilizes tunneling and encryption (with DTLS).
+.LP
+This software is the client part of the VPN, i.e. the software that will
+send/receive the packets on the VPN after authentication and encryption. This
+program is non-interactive and can run as a daemon.
+.LP
+Campagnol starts off with registering with the rendezvous (RDV) server which
+keeps track of every clients of the VPN. It will then regularly exchange some
+small messages with the RDV server in order to keep the connection alive and
+maintain the translation tables of the NATs. Later the RDV server is used to
+initiate the UDP hole punching between two clients.
+.LP
+Campagnol uses the TUN kernel driver to create a virtual network interface for
+the VPN and then associates a route to this interface. When a packet for a
+unknown peer arrives on the TUN device, Campagnol asks the RDV server for a new
+connection. This initiate the UDP hole punching between the two peers. Once the
+connection is established, the two peers open a DTLS session, authenticate each
+other and eventually the link is ready. This is a peer to peer connection: no
+data will flow through the RDV server or any other node. After some time of
+inactivity (or if one of the peer exits) the session will be closed.
+.LP
+.SH OPTIONS
+.TP
+.BR "\-v" ", " "--verbose"
+verbose mode
+.TP
+.BR "\-D" ", " "--daemon"
+start the client in background (daemonize) and create e PID file in
+@localstatedir@/campagnol.pid or in another file defined in the configuration
+.TP
+.BR "\-d" ", " "--debug"
+debug mode
+.TP
+.BR "\-h" ", " "--help"
+print help, then exit
+.TP
+.BR "\-V" ", " "--version"
+show version information and exit
+.SH AUTHENTICATION AND CIPHERING
+The communications between two peers are opened when needed and are fully
+authenticated and encrypted thanks to DTLS.
+.LP
+Campagnol uses an X.509 certificate based security. Each client needs to
+own a valid certificate and its associated key pair. Therefore a typical
+usage is to have a minimum PKI to manage the VPN. You will for instance
+generate:
+.LP
+.RS
+.B -
+a private key (your CA) and an associated trusted root certificate
+distributed to all the clients
+
+.B -
+one private key and one signed certificate per client
+
+.B -
+possibly a certificate revocation list to manage the old client's
+certificates
+.RE
+.LP
+The cipher list used by OpenSSL can be defined in the configuration file. By
+default Campagnol uses OpenSSL's default algorithms. You can use the
+.B ciphers
+command from OpenSSL to see the available algorithms:
+.LP
+.RS
+.nf
+$ openssl ciphers -v -tls1 DEFAULT
+.fi
+.RE
+.SH CONFIGURATION
+The configuration file has an INI-like syntax. Comments start with a `;' or a
+`#' and continue to the end of the line. Values may be quoted between double
+quotation marks ("...") and special characters can be escaped with `\\'
+(\\\\, \\n, \\# ...). The white-spaces around the section names, the parameters 
+and the values are stripped.
+All names are case sensitive.
+.LP
+Values can reference other values from the same section using the syntax
+.RI ${ param }: 
+.LP
+.RS
+.nf
+[SECURITY]
+basedir = "/etc/campagnol_certs"
+certificate = ${basedir}/certificate.pem
+key = ${basedir}/key.pem
+.fi
+.RE
+.LP
+See the sample configuration file for an explanation about the different 
+parameters.
+.LP
+.SH FILES
+.TP
+.I @sysconfdir@/campagnol.conf
+The default configuration file used if none is given on the command line.
+.SH SEE ALSO
+.BR openssl-ciphers "(1), " "RFC 4347 ""Datagram Transport Layer Security"""
