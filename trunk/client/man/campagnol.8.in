@@ -18,7 +18,7 @@ program is non-interactive and can run as a daemon.
 Campagnol starts off with registering with the rendezvous (RDV) server which
 keeps track of every clients of the VPN. It will then regularly exchange some
 small messages with the RDV server in order to keep the connection alive and
-maintain the translation tables of the NATs. Later the RDV server is used to
+maintain the translation tables of the NATs. Later on the RDV server is used to
 initiate the UDP hole punching between two clients.
 .LP
 Campagnol uses the TUN kernel driver to create a virtual network interface for
@@ -36,8 +36,9 @@ inactivity (or if one of the peer exits) the session will be closed.
 verbose mode
 .TP
 .BR "\-D" ", " "--daemon"
-start the client in background (daemonize) and create e PID file in
-@localstatedir@/campagnol.pid or in another file defined in the configuration
+start the client in background (daemonize) and create a PID file in
+.I @localstatedir@/run/campagnol.pid
+or in another file defined in the configuration
 .TP
 .BR "\-d" ", " "--debug"
 debug mode
@@ -57,15 +58,12 @@ usage is to have a minimum PKI to manage the VPN. You will for instance
 generate:
 .LP
 .RS
-.B -
-a private key (your CA) and an associated trusted root certificate
+\[bu] a private key (your CA) and an associated trusted root certificate
 distributed to all the clients
 
-.B -
-one private key and one signed certificate per client
+\[bu] one private key and one signed certificate per client
 
-.B -
-possibly a certificate revocation list to manage the old client's
+\[bu] possibly a certificate revocation list to manage the old client's
 certificates
 .RE
 .LP
