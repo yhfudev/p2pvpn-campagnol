@@ -99,14 +99,15 @@ For the time being the only way to connect A and B is to disable their
 "use_local_addr" option (so that they won't try to use their private addresses)
 and NAT_C must support hairpin translation.
 
-* Corner case 3: RDV behind a NAT + client on the same host
+* Corner case 3: RDV behind a NAT and client behind the same NAT
 
-   ---(     )
-   ---( NET )---|NAT|--- [RDV + peer]
-   ---(     )
+   ---(     )   |   |--- [RDV (+ peer)]
+   ---( NET )---|NAT|
+   ---(     )   |   |--- [peer]
 
-If the RDV server is behind a NAT, you can't run a client on the same host as
-the RDV server won't be able to see its public address.
+If the RDV server is behind a NAT, you can't run a client behind this NAT
+neither on the same host nor on another host. It is likely to fail since the
+RDV server will not be able to see its public address.
 
 
 Compilation
