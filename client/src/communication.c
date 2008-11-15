@@ -151,7 +151,7 @@ int register_rdv(int sockfd) {
         init_smsg(&smsg, HELLO, config.vpnIP.s_addr, config.localIP.s_addr);
         // get the local port
         tmp_addr_len = sizeof(tmp_addr);
-        getsockname(sockfd, &tmp_addr, &tmp_addr_len);
+        getsockname(sockfd, (struct sockaddr *) &tmp_addr, &tmp_addr_len);
         smsg.port = tmp_addr.sin_port;
     }
     else {

@@ -549,7 +549,7 @@ static int expand_token(char *token) {
     const char *src = token;
     char *dst = token;
     int escaped = 0;
-    int quoted;
+    int quoted = 0;
 
     if (*src == '"') {
         quoted = 1;
