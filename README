@@ -24,19 +24,21 @@ Introduction
 ------------
 
 Campagnol is a distributed IP-based VPN software.
-It's able to open new connections through NATs or firewalls using UDP hole
+It is able to open new connections through NATs or firewalls using UDP hole
 punching.
 
 This technique requires a dedicated server: the rendezvous server. This
-server is lightweight. It's only needed to open new connections and does
-not bear the VPN communications. This server is for the time being coded
-in Java.
+server is lightweight. It needs to have a UDP port (default 57888) reachable
+from Internet (either by using a public IP or by enabling port forwarding if
+NATted). This server is only used to open new connections and does
+not bear the VPN communications. For the time being it is coded in Java.
+
 Each participant of the VPN runs the client program.
 
 The communications between two peers are opened when needed and are fully
 authenticated and encrypted thanks to DTLS.
-Actually it's an X.509 certificate based security. Each client needs to
-own a valid certificate and it's associated key pair. Therefore a typical
+Actually it is an X.509 certificate based security. Each client needs to
+own a valid certificate and its associated key pair. Therefore a typical
 usage is to have a minimum PKI to manage the VPN. You will for instance
 generate:
     * a private key (your CA) and an associated trusted root certificate
@@ -76,11 +78,13 @@ punching.
 Here the clients A and B are behind a common NAT. If A sends a packet to B
 using B's public address, it will fail unless the common NAT does hairpin
 translation. Sadly hairpin translation is not a widely spread feature.
+
 If both A and B enabled the option "use_local_addr" in their configuration
 file (which is the default), then the RDV server will tell them to use their
-local IP to reach each other. This workaround the problem and the NAT doesn't
-need to do hairpin translation.
-If A want to talk to C, they will still use their public address.
+local IP to reach each other (the RDV server sees that they both have the
+same public IP thus are behind the same NAT equipment). This workaround
+the problem and the NAT doesn't need to do hairpin translation.
+If A wants to talk to C, they will still use their public address.
 
 * Corner case 2: multiple levels of NATs
 
@@ -88,9 +92,9 @@ If A want to talk to C, they will still use their public address.
                        |NAT_C|---( NET )
  [peer B] ---|NAT_B|---|     |   (     )--- [RDV]
 
-This case involves a common NAT and peers behind this NAT but also at least one
-is behind another level of NAT. Here A and B can't talk to each other by using
-their private address.
+This case involves a common NAT but also at least one peer lying behind another
+level of NAT.
+Here A and B can't talk to each other by using their private address.
 For the time being the only way to connect A and B is to disable their
 "use_local_addr" option (so that they won't try to use their private addresses)
 and NAT_C must support hairpin translation.
@@ -102,7 +106,7 @@ and NAT_C must support hairpin translation.
    ---(     )
 
 If the RDV server is behind a NAT, you can't run a client on the same host as
-the RDV server won't be able to see it's public address.
+the RDV server won't be able to see its public address.
 
 
 Compilation
@@ -144,7 +148,7 @@ used on the VPN. You can use "openssl req" to create the key and the
 certificate. It will ask you a password to protect your private key.
 
 OpenSSL also comes with a small wrapper script around its "ca" command.
-It's usually installed in /usr/lib/ssl/misc or /etc/ssl/misc. But you will
+It is usually installed in /usr/lib/ssl/misc or /etc/ssl/misc. But you will
 still need to edit OpenSSL's default configuration file.
 
 The following example will create a minimal CA.
@@ -195,11 +199,11 @@ emailAddress            = optional
 ################################################
 
 
-Then we create a certs directory to store the clients certificates and
-a private directory to store your private key. We also create the file
-needed by the openssl configuration file. The index.txt file keep a
-trace of every certificates generated with the key and the serial file
-contains the serial number of the next certificate.
+Then we create a "certs" directory to store the clients certificates and
+a "private" directory to store your private key.
+We also create the files needed by the openssl configuration file. The
+"index.txt" file keep a trace of every certificates generated with the key and
+the "serial" file contains the serial number of the next certificate.
 
   mkdir -p certs private
   touch index.txt
@@ -214,7 +218,7 @@ a certificate request and a private key for the client.
   openssl req -new -nodes -keyout "./client1/key.pem" -out \
   "client1_req.pem" -config ./openssl.cnf
 
-Then we can create and sign the new certificate:
+Finally we can create and sign the new certificate:
 
   openssl ca -config openssl.cnf -in "client1_req.pem" -out \
   "client1/certificat.pem"
@@ -223,22 +227,26 @@ Then we can create and sign the new certificate:
 Configuration
 -------------
 
-You have to edit the sample campagnol configuration file for each
-client. A few options are mandatory. Options are described in the sample
-files.
+You need to create a configuration file for each client. The easiest way is to
+start with the sample configuration file which describes every option. A few
+options are mandatory.
+
+By default Campagnol uses /etc/campagnol.conf, an other config file might be
+used by giving it's name as a command line argument.
 
 This file has an INI-like syntax. Comments start with a ';' or a '#' and
 continue to the end of the line. Values may be quoted between double
 quotation marks ("...") and special characters can be escaped with '\'
-(\\, \n, \# ...)
+(\\, \n, \# ...).
 
 Be sure to set the same values for the following options on every clients:
-  server_host
-  server_port
-  network
-  cipher_list
-  tun_mtu
-  timeout
+  "server_host" in the [NETWORK] section
+  server_port" in the [NETWORK] section
+  "network" in the [VPN] section
+  "cipher_list" in the [SECURITY] section (or at least the values must be
+                compatible)
+  "tun_mtu" in the [NETWORK] section
+  "timeout" in the [CLIENT] section
 
 
 Running
@@ -247,7 +255,8 @@ Running
 Run the rendezvous server on a publicly accessible computer (for every
 clients of the VPN). The server uses the default UDP port 57888. Be sure
 that this port is reachable. The main Java class is "CampagnolServer". The
-server doesn't require superuser privileges.
+server doesn't require superuser privileges if you do not ask for a privileged
+port (<1024).
 $  java net.sourceforge.campagnol.CampagnolServer
 To start the server on another port:
 $  java net.sourceforge.campagnol.CampagnolServer --port=34567
