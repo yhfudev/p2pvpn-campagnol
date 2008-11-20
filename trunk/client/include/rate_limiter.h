@@ -30,9 +30,10 @@ struct tb_state {
     double bucket_rate;         // token arrival rate (kByte/s)
     size_t bucket_available;    // number of tokens (byte)
     struct timeval last_arrival_time;
+    size_t packet_overhead;     // add overhead to each counted packets
 };
 
-extern void tb_init(struct tb_state *, size_t, double);
+extern void tb_init(struct tb_state *, size_t, double, size_t);
 extern void tb_count(struct tb_state *, size_t);
 
 

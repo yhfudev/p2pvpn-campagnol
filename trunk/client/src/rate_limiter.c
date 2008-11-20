@@ -40,11 +40,13 @@
  *
  * size: size of the bucket in bytes
  * rate: bucket's refill rate (kBytes/s)
+ * overhead: add overhead to each packet (UDP header...)
  */
-void tb_init(struct tb_state * tb, size_t size, double rate) {
+void tb_init(struct tb_state * tb, size_t size, double rate, size_t overhead) {
     tb->bucket_size = size;
     tb->bucket_available = tb->bucket_size;
     tb->bucket_rate = rate;
+    tb->packet_overhead = overhead;
     gettimeofday(&tb->last_arrival_time, NULL);
 }
 
@@ -59,6 +61,8 @@ void tb_count(struct tb_state *tb, size_t packet_size) {
     struct timespec req_sleep, rem_sleep;
     double elapsed_ms, sleep_ms;
     int r;
+
+    packet_size += tb->packet_overhead;
 
     ASSERT(packet_size <= tb->bucket_size);
 
