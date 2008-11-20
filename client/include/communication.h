@@ -24,6 +24,8 @@
 #ifndef COMMUNICATION_H_
 #define COMMUNICATION_H_
 
+#include "rate_limiter.h"
+
 /*
  * Message types (1 byte)
  * Must be different from the DTLS content type values
@@ -147,5 +149,8 @@ extern void start_vpn(int sockfd, int tunfd);
 
 /* the handler for SIGALRM */
 extern void handler_sigTimerPing(int sig);
+
+/* The rate limiter for the whole client */
+extern struct tb_state global_rate_limiter;
 
 #endif /*COMMUNICATION_H_*/
