@@ -1,3 +1,7 @@
+v 0.4:
+	client:
+	Support rate limiting for the whole client and per connection.
+
 v 0.3:
 	client:
 	Now using the autotools.
