@@ -129,6 +129,10 @@ extern int parser_getint(const char *section, const char *option, int *value,
  * return 1: success  0: error */
 extern int parser_getuint(const char *section, const char *option,
         unsigned int *value, char **raw, int *nline, parser_context_t *parser);
+/* return the value of [section] option as a float into "value".
+ * return 1: success  0: error */
+extern int parser_getfloat(const char *section, const char *option, float *value,
+        char **raw, int *nline, parser_context_t *parser);
 /* return the value of [section] option as boolean into "value".
  * return 1: success  0: error
  * valid values are "yes", "on", "1", "true", "no", "off", "0", "false"
