@@ -391,6 +391,25 @@ int parser_getuint(const char *section, const char *option,
     return sscanf(v, "%u", value);
 }
 
+/* Parse [section] option into value as a float
+ * if nline is not NULL, copy the line number into nline
+ * if raw is not NULL, copy the string value pointer into *raw
+ * Return 1 in case of success, 0 if the option is not a float, -1 if the option is not defined
+ */
+int parser_getfloat(const char *section, const char *option, float *value,
+        char **raw, int *nline, parser_context_t *parser) {
+    char *v = parser_get(section, option, nline, parser);
+    if (v == NULL) {
+        return -1;
+    }
+
+    if (raw != NULL) {
+        *raw = v;
+    }
+
+    return sscanf(v, "%f", value);
+}
+
 /* Parse [section] option into value as a boolean
  * if nline is not NULL, copy the line number into nline
  * if raw is not NULL, copy the string value pointer into *raw
