@@ -34,7 +34,7 @@ struct configuration {
     struct sockaddr_in serverAddr;              // rendezvous server inet address
     struct in_addr vpnIP;                       // VPN IP address
     char *network;                              // VPN subnetwork
-    int send_local_addr;                       // Send the local IP/port to the RDV server
+    int send_local_addr;                        // Send the local IP/port to the RDV server
     int tun_mtu;                                // MTU of the tun device
     struct in_addr vpnBroadcastIP;              // "broadcast" IP, computed from vpnIP and network
     char *iface;                                // bind to a specific network interface
@@ -45,6 +45,10 @@ struct configuration {
                                                 // see openssl ciphers man page
     X509_CRL *crl;                              // The parsed CRL or NULL
     int FIFO_size;                              // Size of the FIFO list for the incoming packets
+    float tb_client_rate;                       // Maximum outgoing rate for the client
+    float tb_connection_rate;                   // Maximum outgoing rate for each connection
+    size_t tb_client_size;                      // Bucket size for the client
+    size_t tb_connection_size;                  // Bucket size for a connection
     int timeout;                                // wait timeout secs before closing a session for inactivity
     int max_clients;                            // maximum number of clients
     char *pidfile;                              // PID file in daemon mode
@@ -79,6 +83,8 @@ extern void freeConfig(void);
 #define OPT_CIPHERS         "cipher_list"
 
 #define OPT_FIFO            "fifo_size"
+#define OPT_CLIENT_RATE     "client_max_rate"
+#define OPT_CONNECTION_RATE "connection_max_rate"
 #define OPT_TIMEOUT         "timeout"
 #define OPT_MAX_CLIENTS     "max_clients"
 #define OPT_PID_FILE        "pidfile"

@@ -211,6 +211,10 @@ void parseConfFile(char *confFile) {
     config.tun_mtu = TUN_MTU_DEFAULT;
     config.crl = NULL;
     config.FIFO_size = 50;
+    config.tb_client_rate = 0.f;
+    config.tb_connection_rate = 0.f;
+    config.tb_client_size = 0;
+    config.tb_connection_size = 0;
     config.timeout = 120;
     config.max_clients = 100;
     config.network = NULL;
@@ -407,6 +411,30 @@ void parseConfFile(char *confFile) {
         exit(EXIT_FAILURE);
     }
 
+    res = parser_getfloat(SECTION_CLIENT, OPT_CLIENT_RATE, &config.tb_client_rate, &value, &nline, &parser);
+    if (res == 1) {
+        if (config.tb_client_rate < 0) {
+            log_message("[%s:"OPT_CLIENT_RATE":%d] Rate limite %f must be > 0", confFile, nline, config.tb_client_rate);
+            exit(EXIT_FAILURE);
+        }
+    }
+    else if (res == 0 && strlen(value) > 0) {
+        log_message("[%s:"OPT_CLIENT_RATE":%d] Rate limite is not valid: \"%s\"", confFile, nline, value);
+        exit(EXIT_FAILURE);
+    }
+
+    res = parser_getfloat(SECTION_CLIENT, OPT_CONNECTION_RATE, &config.tb_connection_rate, &value, &nline, &parser);
+    if (res == 1) {
+        if (config.tb_connection_rate < 0) {
+            log_message("[%s:"OPT_CONNECTION_RATE":%d] Rate limite %f must be > 0", confFile, nline, config.tb_connection_rate);
+            exit(EXIT_FAILURE);
+        }
+    }
+    else if (res == 0 && strlen(value) > 0) {
+        log_message("[%s:"OPT_CONNECTION_RATE":%d] Rate limite is not valid: \"%s\"", confFile, nline, value);
+        exit(EXIT_FAILURE);
+    }
+
     res = parser_getint(SECTION_CLIENT, OPT_TIMEOUT, &config.timeout, &value, &nline, &parser);
     if (res == 1) {
         if (config.timeout < 5) {
@@ -458,6 +486,19 @@ void parseConfFile(char *confFile) {
         exit(EXIT_FAILURE);
     }
 
+    /* Define the bucket size for the rate limiters:
+     * Max(3*MESSAGE_MAX_LENGTH, 0.5s*rate)
+     */
+    if (config.tb_client_rate > 0) {
+        config.tb_client_size = (size_t) (500 * config.tb_client_rate);
+        if (config.tb_client_size < (3 * MESSAGE_MAX_LENGTH))
+            config.tb_client_size = (size_t) 3*MESSAGE_MAX_LENGTH;
+    }
+    if (config.tb_connection_rate > 0) {
+        config.tb_connection_size = (size_t) (500 * config.tb_connection_rate);
+        if (config.tb_connection_size < (3 * MESSAGE_MAX_LENGTH))
+            config.tb_connection_size = (size_t) 3*MESSAGE_MAX_LENGTH;
+    }
 
     parser_free(&parser);
 

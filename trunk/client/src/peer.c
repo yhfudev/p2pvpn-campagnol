@@ -28,6 +28,7 @@
 #include "peer.h"
 #include "pthread_wrap.h"
 #include "bss_fifo.h"
+#include "bf_rate_limiter.h"
 #include "log.h"
 #include "communication.h"
 
@@ -119,6 +120,11 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct
     peer->sockfd = sockfd;
     conditionInit(&peer->cond_connected, NULL);
     peer->send_shutdown = 0;
+
+    /* initialize rate limiter */
+    if (config.tb_connection_size != 0) {
+        tb_init(&peer->rate_limiter, config.tb_connection_size, (double) config.tb_connection_rate, 8);
+    }
 
     peer->is_dtls_client = is_dtls_client;
     peer->thread_ssl_running = 0;
@@ -266,6 +272,7 @@ void ctx_info_callback(const SSL *ssl, int where, int ret) {
  */
 int createClientSSL(struct client *peer, int recreate) {
     struct timespec recv_timeout;
+    BIO *wbio_tmp;
 
     if (recreate) {
         SSL_CTX_free(peer->ctx);
@@ -308,19 +315,38 @@ int createClientSSL(struct client *peer, int recreate) {
         SSL_CTX_free(peer->ctx);
         return -1;
     }
-    peer->wbio = BIO_new_dgram(peer->sockfd, BIO_NOCLOSE);
-    if (peer->wbio == NULL) {
+    wbio_tmp = BIO_new_dgram(peer->sockfd, BIO_NOCLOSE);
+    if (wbio_tmp == NULL) {
         ERR_print_errors_fp(stderr);
         log_error("BIO_new_dgram");
         SSL_free(peer->ssl);
         SSL_CTX_free(peer->ctx);
         return -1;
     }
+    /* create a BIO for the rate limiter if required */
+    if (config.tb_client_size != 0 || config.tb_connection_size != 0) {
+        struct tb_state *global = (config.tb_client_size != 0) ? &global_rate_limiter : NULL;
+        struct tb_state *local = (config.tb_connection_size != 0) ? &peer->rate_limiter : NULL;
+        peer->wbio = BIO_f_new_rate_limiter(global, local);
+        if (peer->wbio == NULL) {
+            ERR_print_errors_fp(stderr);
+            log_error("BIO_f_new_rate_limiter");
+            BIO_free(wbio_tmp);
+            SSL_free(peer->ssl);
+            SSL_CTX_free(peer->ctx);
+            return -1;
+        }
+        BIO_push(peer->wbio, wbio_tmp);
+    }
+    else {
+        peer->wbio = wbio_tmp;
+    }
+
     peer->rbio = BIO_new_fifo(config.FIFO_size, MESSAGE_MAX_LENGTH);
     if (peer->rbio == NULL) {
         ERR_print_errors_fp(stderr);
         log_error("BIO_new(BIO_s_fifo())");
-        BIO_free(peer->wbio);
+        BIO_free_all(peer->wbio);
         SSL_free(peer->ssl);
         SSL_CTX_free(peer->ctx);
         return -1;

@@ -36,6 +36,7 @@
 #include "peer.h"
 #include "log.h"
 
+struct tb_state global_rate_limiter;
 
 /*
  * Print a message with its content
@@ -785,6 +786,11 @@ void start_vpn(int sockfd, int tunfd) {
     struct comm_args *args = (struct comm_args*) CHECK_ALLOC_FATAL(malloc(sizeof(struct comm_args)));
     args->sockfd = sockfd;
     args->tunfd = tunfd;
+
+    /* initialize the global rate limiter */
+    if (config.tb_client_size != 0) {
+        tb_init(&global_rate_limiter, config.tb_client_size, (double) config.tb_client_rate, 8);
+    }
 
     mutex_clients_init();
 

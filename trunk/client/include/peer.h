@@ -23,6 +23,8 @@
 #ifndef PEER_H_
 #define PEER_H_
 
+#include "rate_limiter.h"
+
 /* clients states */
 enum client_type {PUNCHING, WAITING, ESTABLISHED, TIMEOUT, CLOSED};
 
@@ -48,6 +50,7 @@ struct client {
     int is_dtls_client;             // DTLS client or server ?
     int thread_ssl_running;         // the thread from SSL_reading is running
     int send_shutdown;              // Send a shutdown message after SSL_read returns 0
+    struct tb_state rate_limiter;   // Rate limiter for this client
 
     pthread_mutex_t mutex_ref;      // mutex used to change the reference counter
     unsigned int ref_count;         // reference counter

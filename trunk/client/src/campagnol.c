@@ -236,6 +236,8 @@ int main (int argc, char **argv) {
         if (config.cipher_list) printf("  DTLS cipher list: %s\n", config.cipher_list);
         if (config.crl) printf("  Using a certificate revocation list (%d entries)\n", sk_num(X509_CRL_get_REVOKED(config.crl)));
         printf("  FIFO size: %d\n", config.FIFO_size);
+        if (config.tb_client_rate > 0) printf("  Outgoing traffic: %.3f kb/s\n", config.tb_client_rate);
+        if (config.tb_connection_rate > 0) printf("  Outgoing traffic per connection: %.3f kb/s\n", config.tb_connection_rate);
         printf("  Timeout: %d sec.\n", config.timeout);
         printf("  Maximum number of connections: %d\n\n", config.max_clients);
     }
