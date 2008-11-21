@@ -223,7 +223,6 @@ void parseConfFile(char *confFile) {
     config.key_pem = NULL;
     config.verif_pem = NULL;
     config.cipher_list = NULL;
-    config.pidfile = NULL;
 
     // init config parser. no DEFAULT section, no empty value
     parser_init(&parser, 0, 0, 1);
@@ -457,11 +456,6 @@ void parseConfFile(char *confFile) {
     else if (res == 0) {
         log_message("[%s:"OPT_MAX_CLIENTS":%d] Max number of clients is not valid: \"%s\"", confFile, nline, value);
         exit(EXIT_FAILURE);
-    }
-
-    value = parser_get(SECTION_CLIENT, OPT_PID_FILE, &nline, &parser);
-    if (value != NULL) {
-        config.pidfile = CHECK_ALLOC_FATAL(strdup(value));
     }
 
 

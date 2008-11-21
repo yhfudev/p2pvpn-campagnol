@@ -50,11 +50,12 @@ static char* pidfile = NULL;
 void usage(void) {
     fprintf(stderr, "Usage: campagnol [OPTION]... [configuration_file]\n\n");
     fprintf(stderr, "Options\n");
-    fprintf(stderr, " -v, --verbose\t\t\tverbose mode\n");
-    fprintf(stderr, " -D, --daemon\t\t\tfork in background\n");
-    fprintf(stderr, " -d, --debug\t\t\tdebug mode\n");
-    fprintf(stderr, " -h, --help\t\t\tthis help message\n");
-    fprintf(stderr, " -V, --version\t\t\tshow version information and exit\n\n");
+    fprintf(stderr, " -d, --debug             debug mode\n");
+    fprintf(stderr, " -D, --daemon            fork in background\n");
+    fprintf(stderr, " -h, --help              this help message\n");
+    fprintf(stderr, " -p, --pidfile=FILE      write the pid into this file when running in background\n");
+    fprintf(stderr, " -v, --verbose           verbose mode\n");
+    fprintf(stderr, " -V, --version           show version information and exit\n\n");
     fprintf(stderr, "If no configuration file is given, the default is " DEFAULT_CONF_FILE "\n");
     exit(EXIT_FAILURE);
 }
@@ -78,9 +79,10 @@ int parse_args(int argc, char **argv, char **configFile) {
         {"debug", 0, NULL, 'd'},
         {"version", 0, NULL, 'V'},
         {"help", 0, NULL, 'h'},
+        {"pidfile", 1, NULL, 'p'},
         {0, 0, 0, 0}
     };
-    while ((opt = getopt_long(argc, argv, "vVdDh", long_options, NULL)) >= 0) {
+    while ((opt = getopt_long(argc, argv, "vVdDhp:", long_options, NULL)) >= 0) {
         switch(opt) {
             case 'v':
                 config.verbose = 1;
@@ -91,6 +93,9 @@ int parse_args(int argc, char **argv, char **configFile) {
             case 'd' :
                 config.debug = 1;
                 config.verbose = 1;
+                break;
+            case 'p' :
+                config.pidfile = CHECK_ALLOC_FATAL(strdup(optarg));
                 break;
             case 'V' :
                 return 2;
@@ -192,6 +197,7 @@ int main (int argc, char **argv) {
     int pa;
     int exit_status = EXIT_SUCCESS;
 
+    config.pidfile = NULL;
     pa = parse_args(argc, argv, &configFile);
     if (pa == 1) {
         usage();
