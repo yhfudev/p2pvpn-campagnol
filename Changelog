@@ -1,6 +1,7 @@
 v 0.4:
 	client:
 	Support rate limiting for the whole client and per connection.
+	Give the PID file in argument instead of in the config file.
 
 v 0.3:
 	client:

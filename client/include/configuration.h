@@ -87,6 +87,5 @@ extern void freeConfig(void);
 #define OPT_CONNECTION_RATE "connection_max_rate"
 #define OPT_TIMEOUT         "timeout"
 #define OPT_MAX_CLIENTS     "max_clients"
-#define OPT_PID_FILE        "pidfile"
 
 #endif /*CONFIGURATION_H_*/
