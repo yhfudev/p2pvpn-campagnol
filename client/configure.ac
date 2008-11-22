@@ -18,12 +18,17 @@ case $host_os in
 		AC_DEFINE([HAVE_FREEBSD], [1], [FreeBSD])
 		host_os_name=freebsd
 		;;
+	*openbsd*)
+		AC_DEFINE([HAVE_OPENBSD], [1], [OpenBSD])
+		host_os_name=openbsd
+		;;
 	*)
 		AC_MSG_ERROR([OS $host_os not supported.])
 		;;
 esac
 AM_CONDITIONAL([HAVE_LINUX], [test "$host_os_name" = "linux"])
 AM_CONDITIONAL([HAVE_FREEBSD], [test "$host_os_name" = "freebsd"])
+AM_CONDITIONAL([HAVE_OPENBSD], [test "$host_os_name" = "openbsd"])
 AC_CACHE_SAVE
 
 # Checks for programs.
@@ -50,7 +55,9 @@ AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
 
 # Checks for library functions.
-AC_CHECK_FUNCS([getline tdestroy])
+# getline and tdestroy are missing on FreeBSD and OpenBSD
+# sem_timedwait is missing on OpenBSD
+AC_CHECK_FUNCS([getline tdestroy sem_timedwait])
 
 AC_CONFIG_FILES([Makefile src/Makefile man/Makefile samples/Makefile])
 AC_OUTPUT
