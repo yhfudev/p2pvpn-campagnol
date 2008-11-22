@@ -34,6 +34,7 @@
 #include "pthread_wrap.h"
 #include "net_socket.h"
 #include "peer.h"
+#include "tun_device.h"
 #include "log.h"
 
 struct tb_state global_rate_limiter;
@@ -362,7 +363,7 @@ void * SSL_reading(void * args) {
                 u.ip.ip_sum = compute_csum((uint16_t*) &u.ip, sizeof(u.ip));
             }
             // send it to the TUN device
-            write(tunfd, (unsigned char *)&u, r);
+            write_tun(tunfd, (unsigned char *)&u, r);
         }
     }
 }
@@ -631,7 +632,7 @@ void * comm_tun(void * argument) {
 
         /* MESSAGE READ FROM TUN DEVICE */
         if (r_select > 0) {
-            r = read(tunfd, &u, sizeof(u));
+            r = read_tun(tunfd, &u, sizeof(u));
             if (config.debug) printf(">> Sending a VPN message: size %d from SRC = %u.%u.%u.%u to DST = %u.%u.%u.%u\n",
                                 r,
                                 (ntohl(u.ip.ip_src.s_addr) >> 24) & 0xFF,
@@ -663,7 +664,7 @@ void * comm_tun(void * argument) {
              * Local packet...
              */
             else if (dest.s_addr == config.vpnIP.s_addr) {
-                write(tunfd, (unsigned char *)&u, r);
+                write_tun(tunfd, (unsigned char *)&u, r);
             }
             else {
                 MUTEXLOCK;

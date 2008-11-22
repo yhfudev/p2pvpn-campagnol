@@ -1,9 +1,9 @@
 /*
  * Create and configure a tun device
- * 
+ *
  * Copyright (C) 2007 Antoine Vianey
  *               2008 Florent Bondoux
- * 
+ *
  * This file is part of Campagnol.
  *
  * Campagnol is free software: you can redistribute it and/or modify
@@ -26,5 +26,13 @@
 
 extern int init_tun(int istun);
 extern int close_tun(int fd);
+
+#if defined (HAVE_FREEBSD) || defined (HAVE_LINUX)
+#   define read_tun(fd,buf,count) read(fd,buf,count)
+#   define write_tun(fd,buf,count) write(fd,buf,count)
+#else
+extern ssize_t read_tun(int fd, void *buf, size_t count);
+extern ssize_t write_tun(int fd, void *buf, size_t count);
+#endif
 
 #endif /*TUN_DEVICE_H_*/
