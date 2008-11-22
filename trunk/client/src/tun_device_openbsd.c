@@ -30,8 +30,10 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <net/if.h>
+#include <net/if_types.h>
 #include <net/if_tun.h>
-#include <sys/stat.h>
+#include <sys/uio.h>
+#include <unistd.h>
 
 #include "configuration.h"
 #include "communication.h"
@@ -45,26 +47,29 @@
  */
 int init_tun(int istun) {
     int tunfd;
-    struct stat buf;
-    int r;
     char systemcall[100] = "";          // used to configure the new interface with system shell commands
+    int r, i;
+    char devicename[20];
+    struct tuninfo infos;
 
     /* Open TUN interface */
     if (config.verbose) printf("TUN interface initialization\n");
-    if( (tunfd = open("/dev/tun", O_RDWR)) < 0 ) {
-         log_error("Could not open /dev/net/tun");
-         return -1;
+    for (i=0; i<255; i++) {
+        // search for the first tun device
+        sprintf(devicename, "/dev/tun%d", i);
+        if ((tunfd = open(devicename, O_RDWR)) > 0)
+            break;
     }
 
-    int i=0;
-    ioctl(tunfd, TUNSLMODE, &i);
-    ioctl(tunfd, TUNSIFHEAD, &i);
-    fstat(tunfd, &buf);
+    infos.mtu = config.tun_mtu;
+    infos.type = IFT_TUNNEL;
+    infos.flags = IFF_POINTOPOINT;
+    ioctl(tunfd, TUNSIFINFO, &infos);
 
     /* Inteface configuration */
-    if (config.verbose) printf("TUN interface configuration (%s MTU %d)\n", devname(buf.st_rdev, S_IFCHR), config.tun_mtu);
+    if (config.verbose) printf("TUN interface configuration (tun%d MTU %d)\n", i, config.tun_mtu);
     if (config.debug) printf("ifconfig...\n");
-    snprintf(systemcall, 100, "ifconfig %s inet %s %s mtu %d up", devname(buf.st_rdev, S_IFCHR), inet_ntoa (config.vpnIP), inet_ntoa(config.vpnIP), config.tun_mtu);
+    snprintf(systemcall, 100, "ifconfig tun%d inet %s %s up", i, inet_ntoa (config.vpnIP), inet_ntoa(config.vpnIP));
     if (config.debug) puts(systemcall);
     system(systemcall);
     if (config.debug) puts("route add...");
@@ -80,14 +85,36 @@ int init_tun(int istun) {
 }
 
 int close_tun(int fd) {
-    struct stat buf;
-    char systemcall[100] = "";
-
-    fstat(fd, &buf);
-    close(fd);
-    snprintf(systemcall, 100, "ifconfig %s destroy", devname(buf.st_rdev, S_IFCHR));
-    if (config.debug) puts(systemcall);
-    system(systemcall);
-    return 0;
+    return close(fd);
 }
 
+/* Each frame starts with a 4 bytes header with the address family */
+ssize_t read_tun(int fd, void *buf, size_t count) {
+    struct iovec iov[2];
+    uint32_t family;
+    size_t r;
+
+    iov[0].iov_base = &family;
+    iov[0].iov_len = sizeof(family);
+
+    iov[1].iov_base = buf;
+    iov[1].iov_len = count;
+
+    r = readv(fd, iov, 2);
+    if (r > 0)
+        return r - sizeof(family);
+    return r;
+}
+
+ssize_t write_tun(int fd, void *buf, size_t count) {
+    struct iovec iov[2];
+    uint32_t family = htonl(AF_INET);
+
+    iov[0].iov_base = &family;
+    iov[0].iov_len = sizeof(family);
+
+    iov[1].iov_base = buf;
+    iov[1].iov_len = count;
+
+    return writev(fd, iov, 2);
+}
