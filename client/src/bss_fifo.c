@@ -184,6 +184,17 @@ static int fifo_free(BIO *bi) {
     return 1;
 }
 
+/* define tspec for use with sem_timedwait or pthread_cond_timedwait */
+static inline void set_timeout(struct timespec *tspec, long sec, time_t nsec) {
+    clock_gettime(CLOCK_REALTIME, tspec);
+    tspec->tv_nsec += nsec;
+    tspec->tv_sec += sec;
+    if (tspec->tv_nsec >= 1000000000L) { // overflow
+        tspec->tv_nsec -= 1000000000L;
+        tspec->tv_sec ++;
+    }
+}
+
 /*
  * Blocking read from the FIFO
  */
@@ -195,40 +206,32 @@ static int fifo_read(BIO *b, char *out, int outl) {
 
     d = (struct fifo_data *) b->ptr;
 
-#ifdef USE_PTHREADS
-    mutexLock(&d->mutex);
-#endif
-
-    if (d->rcv_timeout_sec || d->rcv_timeout_nsec) {
-        clock_gettime(CLOCK_REALTIME, &timeout);
-        timeout.tv_nsec += d->rcv_timeout_nsec;
-        timeout.tv_sec += d->rcv_timeout_sec;
-        if (timeout.tv_nsec >= 1000000000L) { // overflow
-            timeout.tv_nsec -= 1000000000L;
-            timeout.tv_sec ++;
-        }
 #ifdef USE_SEMAPHORES
+    if (d->rcv_timeout_sec || d->rcv_timeout_nsec) {
+        set_timeout(&timeout, d->rcv_timeout_sec, d->rcv_timeout_nsec);
         r = semTimedwait(&d->sem_read, &timeout);
-#else
-        if (d->nelem == 0) {
-            d->waiting = 1;
-            r = conditionTimedwait(&d->cond, &d->mutex, &timeout);
-        }
-#endif
     }
     else {
-#ifdef USE_SEMAPHORES
         semWait(&d->sem_read);
+    }
 #else
-        if (d->nelem == 0) {
-            d->waiting = 1;
+    mutexLock(&d->mutex);
+    if (d->nelem == 0) {
+        d->waiting = 1;
+        if (d->rcv_timeout_sec || d->rcv_timeout_nsec) {
+            set_timeout(&timeout, d->rcv_timeout_sec, d->rcv_timeout_nsec);
+            r = conditionTimedwait(&d->cond, &d->mutex, &timeout);
+        }
+        else {
             conditionWait(&d->cond, &d->mutex);
         }
-#endif
     }
+#endif
+
+
     BIO_clear_retry_flags(b);
 
-    if (r != 0) {
+    if (r != 0) { // timeout
         BIO_set_retry_read(b);
         d->rcv_timer_exp = 1;
 #ifdef USE_PTHREADS

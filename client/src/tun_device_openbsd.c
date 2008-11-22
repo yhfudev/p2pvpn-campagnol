@@ -56,7 +56,7 @@ int init_tun(int istun) {
     if (config.verbose) printf("TUN interface initialization\n");
     for (i=0; i<255; i++) {
         // search for the first tun device
-        sprintf(devicename, "/dev/tun%d", i);
+        snprintf(devicename, sizeof(devicename), "/dev/tun%d", i);
         if ((tunfd = open(devicename, O_RDWR)) > 0)
             break;
     }
