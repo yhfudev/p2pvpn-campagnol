@@ -34,7 +34,11 @@
 
 #include "log.h"
 #include "bss_fifo.h"
+#ifdef USE_SEMAPHORES
 #include "sem_wrap.h"
+#else
+#include "pthread_wrap.h"
+#endif
 
 /*
  * Internal functions
@@ -124,8 +128,15 @@ int fifo_allocate(BIO *bi, int len, int data_size) {
         return 0;
     }
 
+#ifdef USE_SEMAPHORES
     semInit(&d->sem_read, 0, 0);
     semInit(&d->sem_write, 0, d->size);
+#else
+    conditionInit(&d->cond, NULL);
+    mutexInit(&d->mutex, NULL);
+    d->nelem = 0;
+    d->waiting = 0;
+#endif
 
     bi->init = 1;
 
@@ -159,8 +170,13 @@ static int fifo_free(BIO *bi) {
                 free(d->fifo[i].data);
             }
             free(d->fifo);
+#ifdef USE_SEMAPHORES
             semDestroy(&d->sem_read);
             semDestroy(&d->sem_write);
+#else
+            mutexDestroy(&d->mutex);
+            conditionDestroy(&d->cond);
+#endif
             free(d);
             bi->ptr = NULL;
         }
@@ -179,6 +195,10 @@ static int fifo_read(BIO *b, char *out, int outl) {
 
     d = (struct fifo_data *) b->ptr;
 
+#ifdef USE_PTHREADS
+    mutexLock(&d->mutex);
+#endif
+
     if (d->rcv_timeout_sec || d->rcv_timeout_nsec) {
         clock_gettime(CLOCK_REALTIME, &timeout);
         timeout.tv_nsec += d->rcv_timeout_nsec;
@@ -187,16 +207,33 @@ static int fifo_read(BIO *b, char *out, int outl) {
             timeout.tv_nsec -= 1000000000L;
             timeout.tv_sec ++;
         }
+#ifdef USE_SEMAPHORES
         r = semTimedwait(&d->sem_read, &timeout);
+#else
+        if (d->nelem == 0) {
+            d->waiting = 1;
+            r = conditionTimedwait(&d->cond, &d->mutex, &timeout);
+        }
+#endif
     }
     else {
+#ifdef USE_SEMAPHORES
         semWait(&d->sem_read);
+#else
+        if (d->nelem == 0) {
+            d->waiting = 1;
+            conditionWait(&d->cond, &d->mutex);
+        }
+#endif
     }
     BIO_clear_retry_flags(b);
 
-    if (r == -1) {
+    if (r != 0) {
         BIO_set_retry_read(b);
         d->rcv_timer_exp = 1;
+#ifdef USE_PTHREADS
+        d->waiting = 0;
+#endif
     }
     else {
         item = &d->fifo[d->index_read];
@@ -206,8 +243,19 @@ static int fifo_read(BIO *b, char *out, int outl) {
             memcpy(out, item->data, ret); // copy the data into "out" and update the queue
         }
         (d->index_read == d->size - 1) ? d->index_read = 0 : d->index_read++;
+#ifdef USE_SEMAPHORES
         semPost(&d->sem_write);
+#else
+        d->nelem--;
+        if (d->waiting) {
+            d->waiting = 0;
+            conditionSignal(&d->cond);
+        }
+#endif
     }
+#ifdef USE_PTHREADS
+    mutexUnlock(&d->mutex);
+#endif
     return ret;
 }
 
@@ -225,14 +273,31 @@ static int fifo_write(BIO *b, const char *in, int inl) {
     }
 
     d = (struct fifo_data *) b->ptr;
+#ifdef USE_SEMAPHORES
     semWait(&d->sem_write);
+#else
+    mutexLock(&d->mutex);
+    if (d->nelem == d->size) {
+        d->waiting = 1;
+        conditionWait(&d->cond, &d->mutex);
+    }
+#endif
     BIO_clear_retry_flags(b);
     item = &d->fifo[d->index_write];
     item->size = inl;
     memcpy(item->data, in, inl);
     (d->index_write == d->size - 1) ? d->index_write = 0 : d->index_write++;
     ret = inl;
+#ifdef USE_SEMAPHORES
     semPost(&d->sem_read);
+#else
+    d->nelem++;
+    if (d->waiting) {
+        d->waiting = 0;
+        conditionSignal(&d->cond);
+    }
+    mutexUnlock(&d->mutex);
+#endif
     return ret;
 }
 
@@ -250,14 +315,22 @@ static long fifo_ctrl(BIO *b, int cmd, long num, void *ptr) {
         case BIO_CTRL_RESET:
             d->index_read = 0;
             d->index_write = 0;
+#ifdef USE_SEMAPHORES
             semDestroy(&d->sem_read);
             semDestroy(&d->sem_write);
             semInit(&d->sem_read, 0, 0);
             semInit(&d->sem_write, 0, d->size);
+#else
+            d->nelem = 0;
+#endif
             break;
         case BIO_CTRL_EOF:
+#ifdef USE_SEMAPHORES
             semGetValue(&d->sem_read, &v);
             ret = (long) (v == 0);
+#else
+            ret = (long) (d->nelem == 0);
+#endif
             break;
         case BIO_CTRL_GET_CLOSE:
             ret = (long) b->shutdown;
@@ -271,7 +344,11 @@ static long fifo_ctrl(BIO *b, int cmd, long num, void *ptr) {
             break;
         case BIO_CTRL_PENDING:
             ret = 0;
+#ifdef USE_SEMAPHORES
             semGetValue(&d->sem_read, &v);
+#else
+            v = d->nelem;
+#endif
             for (i = d->index_read; i < d->index_read + v; i++) {
                 item = &d->fifo[((i < d->size) ? i : i - d->size)];
                 ret += item->size;
