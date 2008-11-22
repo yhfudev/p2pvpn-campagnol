@@ -23,6 +23,7 @@
 #ifndef PEER_H_
 #define PEER_H_
 
+#include "pthread.h"
 #include "rate_limiter.h"
 
 /* clients states */
