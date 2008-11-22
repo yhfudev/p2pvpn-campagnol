@@ -131,6 +131,9 @@ static void create_pidfile(void) {
     int fd;
     FILE *file;
 
+    if (strlen(pidfile) == 0)
+        return;
+
     if (unlink(pidfile) != 0 && errno != ENOENT) {
         return;
     }
@@ -168,6 +171,7 @@ void daemonize(void) {
 void * sig_handler(void * arg) {
     sigset_t mask;
     int sig;
+    struct itimerval timer_ping;
 
     while (1) {
         sigfillset(&mask);
@@ -178,6 +182,12 @@ void * sig_handler(void * arg) {
             case SIGINT:
             case SIGQUIT:
                 end_campagnol = 1;
+                // terminate timer
+                timer_ping.it_interval.tv_sec = 0;
+                timer_ping.it_interval.tv_usec = 0;
+                timer_ping.it_value.tv_sec = 0;
+                timer_ping.it_value.tv_usec = 0;
+                setitimer(ITIMER_REAL, &timer_ping, NULL);
                 log_message("received signal %d, exiting...", sig);
                 return NULL;
             case SIGALRM:
