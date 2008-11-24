@@ -57,20 +57,20 @@ public class MsgServStruct {
     /** content of the message */
     public byte type;                                                           // place for the message type
     public short port;                                                            // port number
-    public byte[] ip1 = new byte[4];                                            // IPv4 address
-    public byte[] ip2 = new byte[4];                                            // IPv4 address
+    public byte[] ip1 = null;                                            // IPv4 address
+    public byte[] ip2 = null;                                            // IPv4 address
 
     public MsgServStruct(byte type, short port, byte[] ip1, byte[] ip2) {
         this.type = type;
         this.port = port;
         if (ip1 != null)
-            this.ip1 = ip1;
+            this.ip1 = java.util.Arrays.copyOf(ip1, ip1.length);
         else
-            this.ip1 = EMPTY_IP;
+            this.ip1 = java.util.Arrays.copyOf(EMPTY_IP, EMPTY_IP.length);
         if (ip2 != null)
-            this.ip2 = ip2;
+            this.ip2 = java.util.Arrays.copyOf(ip2, ip2.length);
         else
-            this.ip2 = EMPTY_IP;
+            this.ip2 = java.util.Arrays.copyOf(EMPTY_IP, EMPTY_IP.length);
     }
     
     /**  constructor from a packet's byte array */
@@ -78,18 +78,22 @@ public class MsgServStruct {
         java.nio.ByteBuffer bb = java.nio.ByteBuffer.wrap(data);
         this.type = bb.get();
         this.port = bb.getShort();
+        this.ip1 = new byte[4];
         bb.get(this.ip1);
+        this.ip2 = new byte[4];
         bb.get(this.ip2);
     }
     
-    /**  try to create a MsgServStruct from a packet's byte array
-     * or return null if the data array is too short
-     */
-    public static MsgServStruct fromBytes(byte[] data) {
-        if (data.length<MSG_LENGTH) return null;
-        MsgServStruct message = new MsgServStruct(data);
+    /** set an existing MsgServStruct with the given data */
+    public static boolean setWithData(MsgServStruct message, byte[] data, int len) {
+        if (len<MSG_LENGTH) return false;
+        java.nio.ByteBuffer bb = java.nio.ByteBuffer.wrap(data);
+        message.type = bb.get();
+        message.port = bb.getShort();
+        bb.get(message.ip1);
+        bb.get(message.ip2);
         if (CampagnolServer.dump) System.out.println(message);
-        return message;
+        return true;
     }
     
     /** return the byte array corresponding to the MsgServStruct */

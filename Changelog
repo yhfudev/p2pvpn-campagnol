@@ -1,8 +1,12 @@
-v 0.4:
+v -:
 	client:
 	Support rate limiting for the whole client and per connection.
 	Give the PID file in argument instead of in the config file.
 	OpenBSD port.
+
+	rdv server:
+	Add an option to set the maximum number of registered clients.
+	Regularly clean dead clients and try to reduce memory consumption.
 
 v 0.3:
 	client:
