@@ -23,7 +23,11 @@
 
 package net.sourceforge.campagnol;
 
+import java.net.DatagramPacket;
+import java.net.SocketAddress;
+import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
 
 public class MsgServStruct {
     
@@ -54,58 +58,77 @@ public class MsgServStruct {
     /** constants */
     public static final int MSG_LENGTH = 11;
     
+    /** UDP datagram wrapped by this message */
+    private DatagramPacket packet;
+
     /** content of the message */
     public byte type;                                                           // place for the message type
     public short port;                                                            // port number
-    public byte[] ip1 = null;                                            // IPv4 address
-    public byte[] ip2 = null;                                            // IPv4 address
-
-    public MsgServStruct(byte type, short port, byte[] ip1, byte[] ip2) {
-        this.type = type;
-        this.port = port;
-        if (ip1 != null)
-            this.ip1 = java.util.Arrays.copyOf(ip1, ip1.length);
-        else
-            this.ip1 = java.util.Arrays.copyOf(EMPTY_IP, EMPTY_IP.length);
-        if (ip2 != null)
-            this.ip2 = java.util.Arrays.copyOf(ip2, ip2.length);
-        else
-            this.ip2 = java.util.Arrays.copyOf(EMPTY_IP, EMPTY_IP.length);
+    public byte[] ip1 = new byte[4];                                            // IPv4 address
+    public byte[] ip2 = new byte[4];                                            // IPv4 address
+    
+    /** ByteBuffer wrapping the packet buffer */
+    private ByteBuffer bb;
+    
+    
+    /** Create a new UDP datagram and wrap it */
+    public MsgServStruct() {
+        this.packet = new DatagramPacket(new byte[MSG_LENGTH], MSG_LENGTH);
+        this.bb = ByteBuffer.wrap(packet.getData());
     }
     
-    /**  constructor from a packet's byte array */
-    public MsgServStruct(byte[] data) {
-        java.nio.ByteBuffer bb = java.nio.ByteBuffer.wrap(data);
+    /** Create a new UDP datagram and wrap it
+     * set its content and destination address */
+    public MsgServStruct(byte type, short port, byte[] ip1, byte[] ip2, SocketAddress address) throws SocketException {
+        this();
+        this.setPacket(type, port, ip1, ip2, address);
+    }
+    
+    /** get the UDP datagram */
+    public DatagramPacket getPacket() {
+        return packet;
+    }
+
+    /** Update the public fields with the content of the packet buffer */
+    public boolean readPacket() {
+        if (this.packet.getLength()<MSG_LENGTH) return false;
+        bb.clear();
         this.type = bb.get();
         this.port = bb.getShort();
-        this.ip1 = new byte[4];
         bb.get(this.ip1);
-        this.ip2 = new byte[4];
         bb.get(this.ip2);
-    }
-    
-    /** set an existing MsgServStruct with the given data */
-    public static boolean setWithData(MsgServStruct message, byte[] data, int len) {
-        if (len<MSG_LENGTH) return false;
-        java.nio.ByteBuffer bb = java.nio.ByteBuffer.wrap(data);
-        message.type = bb.get();
-        message.port = bb.getShort();
-        bb.get(message.ip1);
-        bb.get(message.ip2);
-        if (CampagnolServer.dump) System.out.println(message);
+        if (CampagnolServer.dump) System.out.println(this);
         return true;
     }
     
-    /** return the byte array corresponding to the MsgServStruct */
-    public byte[] toBytes() {
-        byte[] array = new byte[MSG_LENGTH];
-        java.nio.ByteBuffer bb = java.nio.ByteBuffer.wrap(array);
+    /** set the content of the packet and its destination address */
+    public void setPacket(byte[] data, SocketAddress address) throws Exception {
+        if (data.length != MSG_LENGTH)
+            throw new Exception("Wrong data");
+        System.arraycopy(data, 0, this.packet.getData(), 0, MSG_LENGTH);
+        this.packet.setSocketAddress(address);
+        this.readPacket();
+    }
+    
+    /** set the content of the packet and its destination address */
+    public void setPacket(byte type, short port, byte[] ip1, byte[] ip2, SocketAddress address) {
+        this.type = type;
+        this.port = port;
+        if (ip1 != null)
+            System.arraycopy(ip1, 0, this.ip1, 0, ip1.length);
+        else
+            System.arraycopy(EMPTY_IP, 0, this.ip1, 0, EMPTY_IP.length);
+        if (ip2 != null)
+            System.arraycopy(ip2, 0, this.ip2, 0, ip2.length);
+        else
+            System.arraycopy(EMPTY_IP, 0, this.ip2, 0, EMPTY_IP.length);
+        bb.clear();
         bb.put(this.type);
         bb.putShort(this.port);
         bb.put(this.ip1);
         bb.put(this.ip2);
+        this.packet.setSocketAddress(address);
         if (CampagnolServer.dump) System.out.println(this);
-        return array;
     }
     
     /** return a String representation of a byte array IP */
