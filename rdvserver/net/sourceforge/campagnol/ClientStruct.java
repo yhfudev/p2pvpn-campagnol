@@ -47,7 +47,8 @@ public class ClientStruct {
         this.sAddr = (InetSocketAddress)sAddr;
         this.port = (short) this.sAddr.getPort();
         this.realIP = this.sAddr.getAddress().getAddress();
-        this.vpnIP = java.util.Arrays.copyOf(IP, IP.length);
+        this.vpnIP = new byte[4];
+        System.arraycopy(IP, 0, this.vpnIP, 0, IP.length);
         this.vpnIPString = MsgServStruct.convertIPtoString(IP);
         try {
             this.vpnInet = InetAddress.getByAddress(IP);
@@ -56,13 +57,13 @@ public class ClientStruct {
         }
         this.timeoutMillis = System.currentTimeMillis();
         this.createTime = this.timeoutMillis;
-        this.localIP = null;
+        this.localIP = new byte[4];
         this.localPort = 0;
     }
     
     public ClientStruct(SocketAddress sAddr, byte[] IP, byte[] localIP, short localPort) {
         this(sAddr, IP);
-        this.localIP = java.util.Arrays.copyOf(localIP, localIP.length);
+        System.arraycopy(localIP, 0, this.localIP, 0, localIP.length);
         this.localPort = localPort;
     }
     

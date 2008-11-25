@@ -61,9 +61,6 @@ public class CampagnolServer {
     public static boolean debug = false;
     public static boolean dump = false;
     
-    /** constants */
-    final int BUFFSIZE = MsgServStruct.MSG_LENGTH;
-    
     /** local variables */
     private int portNumber = 57888;
     private DatagramSocket socket;
@@ -74,6 +71,10 @@ public class CampagnolServer {
      * and connections' structures
      */
     private HashMap clientsHashAddr, clientsHashVPN, connectionsHash;
+    
+    /** outgoing message */
+    private MsgServStruct outMessage = new MsgServStruct();
+    
     
     /** insert a client structure into the maps */
     private void addClient(ClientStruct cl) {
@@ -189,19 +190,18 @@ public class CampagnolServer {
         long last_update_views = 0;
         long last_cleaning = 0;
         long time;
-        DatagramPacket packet;
-        MsgServStruct message = new MsgServStruct((byte) 0, (short) 0, null, null);
-        packet = new DatagramPacket(new byte[BUFFSIZE], BUFFSIZE);
+        
+        MsgServStruct message = new MsgServStruct();
         
         System.out.println("Server listening on port "+portNumber);
 
         /** listening for incomming messages */
         while (true) {
             try {
-                socket.receive(packet);
+                socket.receive(message.getPacket());
                 time = System.currentTimeMillis();
-                if (MsgServStruct.setWithData(message, packet.getData(), packet.getLength())) {
-                    analyse(packet, message);
+                if (message.readPacket()) {
+                    analyse(message);
                 }
                 else {
                     if (CampagnolServer.debug) System.out.println("Message err: received message too short");
@@ -227,7 +227,8 @@ public class CampagnolServer {
         }
     }
     
-    public void analyse(DatagramPacket packet, MsgServStruct message) {
+    public void analyse(MsgServStruct message) {
+        DatagramPacket packet = message.getPacket();
         ClientStruct client = getClientFromIp(packet.getSocketAddress());
         ClientStruct requestedClient;
         if (client == null && message.type != MsgServStruct.HELLO) {
@@ -384,7 +385,8 @@ public class CampagnolServer {
     
     public void sendOK(SocketAddress address) {
         try {
-            this.socket.send(new DatagramPacket(MsgServStruct.MSG_OK,MsgServStruct.MSG_LENGTH,address));
+            outMessage.setPacket(MsgServStruct.MSG_OK, address);
+            this.socket.send(outMessage.getPacket());
             if (CampagnolServer.debug) System.out.println(">> OK sent to client "+address.toString());
         } catch (Exception ex) {
             System.err.println("Error in sendOK:");
@@ -394,7 +396,8 @@ public class CampagnolServer {
     
     public void sendNOK(SocketAddress address) {
         try {
-            this.socket.send(new DatagramPacket(MsgServStruct.MSG_NOK,MsgServStruct.MSG_LENGTH,address));
+            outMessage.setPacket(MsgServStruct.MSG_NOK, address);
+            this.socket.send(outMessage.getPacket());
             if (CampagnolServer.debug) System.out.println(">> NOK sent to client "+address.toString());
         } catch (Exception ex) {
             System.err.println("Error in sendNOK:");
@@ -405,8 +408,8 @@ public class CampagnolServer {
     /** nok message specifying the unexisting peer for which an ASK_CONNECTION as been made */
     public void sendREJECT(SocketAddress address, byte[] IP) {
         try {
-            MsgServStruct message = new MsgServStruct(MsgServStruct.REJ_CONNECTION, (short) 0, IP, null);
-            this.socket.send(new DatagramPacket(message.toBytes(), MsgServStruct.MSG_LENGTH, address));
+            outMessage.setPacket(MsgServStruct.REJ_CONNECTION, (short) 0, IP, null, address);
+            this.socket.send(outMessage.getPacket());
             if (CampagnolServer.debug) System.out.println(">> REJECT send to client "+address.toString());
         } catch (Exception ex) {
             System.err.println("Error in sendREJECT:");
@@ -416,7 +419,8 @@ public class CampagnolServer {
     
     public void sendPING(SocketAddress address) {
         try {
-            this.socket.send(new DatagramPacket(MsgServStruct.MSG_PING,MsgServStruct.MSG_LENGTH,address));
+            outMessage.setPacket(MsgServStruct.MSG_PING, address);
+            this.socket.send(outMessage.getPacket());
             if (CampagnolServer.debug) System.out.println(">> PING sent to client "+address.toString());
         } catch (Exception ex) {
             System.err.println("Error in sendPING:");
@@ -426,7 +430,8 @@ public class CampagnolServer {
     
     public void sendPONG(SocketAddress address) {
         try {
-            this.socket.send(new DatagramPacket(MsgServStruct.MSG_PONG,MsgServStruct.MSG_LENGTH,address));
+            outMessage.setPacket(MsgServStruct.MSG_PONG, address);
+            this.socket.send(outMessage.getPacket());
             if (CampagnolServer.debug) System.out.println(">> PONG sent to client "+address.toString());
         } catch (Exception ex) {
             System.err.println("Error in sendPONG:");
@@ -436,14 +441,13 @@ public class CampagnolServer {
     
     public void sendANS(ClientStruct client, ClientStruct requestedClient, boolean send_local) {
         try {
-            MsgServStruct message = null;
             if (send_local) {
-                message = new MsgServStruct(MsgServStruct.ANS_CONNECTION, requestedClient.localPort, requestedClient.localIP, requestedClient.vpnIP);
+                outMessage.setPacket(MsgServStruct.ANS_CONNECTION, requestedClient.localPort, requestedClient.localIP, requestedClient.vpnIP, client.sAddr);
             }
             else {
-                message = new MsgServStruct(MsgServStruct.ANS_CONNECTION, requestedClient.port, requestedClient.realIP, requestedClient.vpnIP);
+                outMessage.setPacket(MsgServStruct.ANS_CONNECTION, requestedClient.port, requestedClient.realIP, requestedClient.vpnIP, client.sAddr);
             }
-            this.socket.send(new DatagramPacket(message.toBytes(), MsgServStruct.MSG_LENGTH, client.sAddr));
+            this.socket.send(outMessage.getPacket());
             if (CampagnolServer.debug) System.out.println(">> ANS_CONNECTION sent to client "+client.sAddr.toString());
         } catch (Exception ex) {
             System.err.println("Error in sendANS:");
@@ -453,14 +457,13 @@ public class CampagnolServer {
     
     public void sendFWD(ClientStruct client, ClientStruct requestedClient, boolean send_local) {
         try {
-            MsgServStruct message = null;
             if (send_local) {
-                message = new MsgServStruct(MsgServStruct.FWD_CONNECTION, requestedClient.localPort, requestedClient.localIP, requestedClient.vpnIP);
+                outMessage.setPacket(MsgServStruct.FWD_CONNECTION, requestedClient.localPort, requestedClient.localIP, requestedClient.vpnIP, client.sAddr);
             }
             else {
-                message = new MsgServStruct(MsgServStruct.FWD_CONNECTION, requestedClient.port, requestedClient.realIP, requestedClient.vpnIP);
+                outMessage.setPacket(MsgServStruct.FWD_CONNECTION, requestedClient.port, requestedClient.realIP, requestedClient.vpnIP, client.sAddr);
             }
-            this.socket.send(new DatagramPacket(message.toBytes(), MsgServStruct.MSG_LENGTH, client.sAddr));
+            this.socket.send(outMessage.getPacket());
             if (CampagnolServer.debug) System.out.println(">> FWD_CONNECTION sent to client "+client.sAddr.toString());
         } catch (Exception ex) {
             System.err.println("Error in sendFWD:");
@@ -470,7 +473,8 @@ public class CampagnolServer {
     
     public void sendRECONNECT(SocketAddress address) {
         try {
-            this.socket.send(new DatagramPacket(MsgServStruct.MSG_RECONNECT,MsgServStruct.MSG_LENGTH,address));
+            outMessage.setPacket(MsgServStruct.MSG_RECONNECT, address);
+            this.socket.send(outMessage.getPacket());
             if (CampagnolServer.debug) System.out.println(">> RECONNECT sent to client "+address.toString());
         } catch (Exception ex) {
             System.err.println("Error in sendRECONNECT:");
