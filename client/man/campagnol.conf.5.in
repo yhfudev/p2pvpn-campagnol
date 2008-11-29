@@ -1,0 +1,275 @@
+.\" Set a register if the output device is ps. This is used to set fonts when needed
+.if "\*[.T]"ps" .nr useps 1
+.\" Begin/end an indented schematic
+.de BDRAWING
+.  if \n[useps] .fam C
+.  in +7n
+.  nf
+..
+.de EDRAWING
+.  fi
+.  in -7n
+.  if \n[useps] .fam
+..
+.\" campagnol.conf path
+.ds filename @sysconfdir@/campagnol.conf
+.TH CAMPAGNOL.CONF 5 "November 29, 2008"
+.SH NAME
+campagnol.conf - Campagnol VPN client configuration file
+.SH SYNOPSIS
+.I \*[filename]
+.SH DESCRIPTION
+.BR campagnol (8)
+reads its configuration datas from
+.I \*[filename]
+(or another file specified in the command line).
+.PP
+This file has an INI-like syntax. Section names are written between square
+brackets []. Comments start with a \[oq];\[cq] or a \[oq]#\[cq]
+and continue to the end of the line.
+Values may be quoted between double quotation marks and special characters can
+be escaped with 
+\[oq]\\\[cq]
+(\\\\, \\n, \\# ...). The white-spaces around the section names,
+the parameters and their values are stripped. All names are case sensitive.
+.PP
+.if \n[useps] .fam C
+.nf
+[SOME_SECTION]
+  param        = value        # comment
+  other_param  = a few words
+  quoted_value = "some chars \\t\\"\\#  "
+.fi
+.if \n[useps] .fam
+.PP
+Inside a section, the syntax
+.I ${param}
+can be used to reference another value (param) from the same section. For example:
+.PP
+.if \n[useps] .fam C
+.nf
+[SECURITY]
+basedir = "/etc/campagnol_certs"
+certificate = ${basedir}/cert.pem  # expands to
+                                   # "/etc/campagnol_certs/cert.pem"
+key = ${basedir}/key.pem           # expands to
+                                   # "/etc/campagnol_certs/key.pem"
+.fi
+.if \n[useps] .fam
+.PP
+The configuration file defines the following sections:
+.PP
+.RS
+.TP 13n
+.B [NETWORK]
+The public network-related options like the rendezvous server address or the
+MTU.
+.TP
+.B [VPN]
+This section defines the IP address and netmask used on the VPN.
+.TP
+.B [SECURITY]
+All the DTLS-related parameters.
+.TP
+.B [CLIENT]
+This section is used to adjust the client's behavior.
+.RE
+.SH PARAMETERS
+This is a list of all the available parameters, with their default value if they are optional and their expected format.
+.\" *** NETWORK ***
+.SS [NETWORK] section
+.TP 15n
+.B local_host
+.IR optional ", " "value: IP address or hostname" ", " "default: search for a non local IP"
+.IP
+This parameter set the local IP address used by campagnol.
+If it is left undefined, the local IP address will firstly be searched with the 
+.B interface
+parameter. If
+.B interface
+is not set, the IP address will be the first non local IP found. Setting this
+parameter to \[lq]0.0.0.0\[rq]
+will work but it is not compatible with the
+.B use_local_addr
+option.
+.TP
+.B local_port
+.IR optional ", " "value: integer" ", " "default: no port binding"
+.IP
+Bind the local UDP socket to this port number.
+.TP
+.B server_host
+.IR mandatory ", " "value: IP address or hostname"
+.IP
+The rendezvous server hostname or IP address.
+.TP
+.B server_port
+.IR mandatory ", " "value: integer"
+.IP
+The rendezvous server port.
+.TP
+.B tun_mtu
+.IR optional ", " "value: integer" ", " "default: 1419"
+.IP
+This parameter set the MTU of the TUN device. This value must be the same on
+each clients.
+.IP
+It may be interesting to change the MTU of the tun device if you are running
+campagnol on a network with a unusual MTU. The default value is the highest
+value which should yield packets smaller than 1500 bytes (the usual MTU for
+ethernet) whichever cipher algorithm is used. The optimal value depends on the
+total overhead of campagnol. This is described in the source file
+.IR "include/communication.h" .
+.TP
+.B interface
+.IR optional ", " "value: a network interface name" ", " "default: no interface binding"
+.IP
+If this parameter is defined, the UDP socket is bound to this interface
+(Linux only). This parameter is also used to find the local IP address to use
+if the 
+.B local_host
+parameter is not used.
+.TP
+.B use_local_addr
+.IR optional ", " "values: yes/no" ", " "default: yes"
+.IP
+This parameter allows the client to publish it's local IP and UDP port. It's
+useful if this client and others clients of the VPN are behind a common NAT:
+.IP
+.BDRAWING
+[peer A] ---|   |
+            |NAT|---(net)-- [RDV]
+[peer B] ---|   |
+.EDRAWING
+.IP
+In this configuration and if this parameter is enabled, the two peers will use
+their local IP and port to reach each other. Otherwhise they will use their
+public address (as with the other clients of the VPN).
+.IP
+If peer A send a packet to peer B using its public address and port, the common
+NAT needs to do UDP hairpin translation which is not a widely implemented
+feature. By using the local address, the NAT doesn't need to do hairpin
+translation so leaving this option to the default value is probably what most
+users want.
+.IP
+If the VPN configuration involes peers behind multiple level of NAT, see the
+next parameter
+.BR force_local_addr .
+Disable this option only if you know what you
+are doing!
+.TP
+.B force_local_addr
+.IR optional ", " "value: \[lq]IP port\[rq]" ", " "default: not enabled"
+.IP
+This option is used to define the local IP that will be published to the
+rendezvous server (if 
+.B use_local_addr
+is enabled). The format of the value is the IP address (or a hostname) and the
+port number, separated by spaces.
+.IP
+This option is useful when peers are behind multiple level of NATs:
+.IP
+.BDRAWING
+[peer A] ---|NAT_A|---|   |
+                      |NAT|---(net)-- [RDV]
+        [peer B] -----|   |
+.EDRAWING
+.IP
+In this case, the two peers are behind a common NAT but A is also behind another
+NAT. If A and B use their local IP to open a connection
+.RB ( use_local_addr
+enable), it will fail. If they use their public IP
+.RB ( use_local_addr
+disabled)
+it will work only if the common NAT does UDP hairpin translation.
+.IP
+With this parameter, you can send a fake local address to the rendezvous server
+instead of the real one. So another way to connect the two peers is to define a
+static port forwarding for A on NAT_A and to use
+.B force_local_addr
+to publish
+its intermediate IP address and port on NAT_A. When B tries to open a new
+connection with A, it will now use its address on NAT_A.
+.\" *** VPN ***
+.SS [VPN] section
+.TP 15n
+.B vpn_ip
+.IR mandatory ", " "value: IP address"
+.IP
+The IP address for the VPN.
+.TP
+.B network
+.IR mandatory ", " "value: netmask in CIDR notation"
+.IP
+The subnetwork for the VPN. This value must be the same for all peers. It's
+given using the CIDR notation, for example \[lq]10.0.0.0/24\[rq].
+.\" *** SECURITY ***
+.SS [SECURITY] section
+.TP 15n
+.B certificate
+.IR mandatory ", " "value: file path"
+.IP
+The PEM file containing the client's X.509 certificate.
+.TP
+.B key
+.IR mandatory ", " "value: file path"
+.IP
+The PEM file containing the client's private key.
+.TP
+.B ca_certificates
+.IR mandatory ", " "value: file path"
+.IP
+The PEM file containing the root certificate chain.
+.TP
+.B crl_file
+.IR optional ", " "value: file path" ", " "default: -"
+.IP
+A PEM file containing a certificate revocation list (CRL). When a new connection
+is opened, the remote peer's certificate is checked against this CRL.
+.TP
+.B cipher_list
+.IR optional ", " "value: OpenSSL's cipher list" ", " "default: OpenSSL's default"
+.IP
+The OpenSSL ciphers lists to use. If this value is defined, then it must be the
+same for every clients of the VPN, or at least the values must be compatible.
+.BR openssl-ciphers (1)
+explains the syntax for this parameter and how to determine a cipherlist.
+.\" *** CLIENT ***
+.SS [CLIENT] section
+.TP 15n
+.B fifo_size
+.IR optional ", " "value: integer" ", " "default: 50"
+.IP
+The client uses one FIFO per connected peer. Each FIFO requires roughly N*2000
+bytes in memory.
+.TP
+.B client_max_rate
+.IR optional ", " "value: float" ", " "default: not enabled"
+.IP
+This option allows to limit the outgoing traffic for the whole client. The value
+is in kilobytes/seconds. If this parameter is commented out or set to 0, it
+is disabled.
+.TP
+.B connection_max_rate
+.IR optional ", " "value: float" ", " "default: not enabled"
+.IP
+This option allows to limit the outgoing traffic for each connection to other
+peers. The value is in kilobytes/seconds. If this parameter is commented out or
+set to 0, it is disabled.
+.TP
+.B timeout
+.IR optional ", " "value: integer" ", " "default: 120 seconds"
+.IP
+This set the inactivity timeout before closing a session. The value is given in
+seconds. It's better to ensure that all the clients share the same value for
+this option.
+.TP
+.B max_clients
+.IR optional ", " "value: integer" ", " "default: 100"
+.IP
+The maximum number of simultaneously opened connections with other clients.
+.SH SEE ALSO
+.BR campagnol (8), 
+.BR openssl-ciphers (1)
+.SH AUTHORS
+Florent Bondoux <fbondoux@users.sourceforge.net>
