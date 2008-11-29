@@ -1,9 +1,12 @@
-.TH "Campagnol client" 8 "October 21, 2008" "0.3"
+.ds configname @sysconfdir@/campagnol.conf
+.ds pidfilename @localstatedir@/run/campagnol.pid
+.TH "CAMPAGNOL CLIENT" 8 "October 21, 2008" "0.3"
 .SH NAME
 campagnol - Decentralized VPN over UDP tunneling
 .SH SYNOPSIS
 .B campagnol
-.RB [ \-vDdhV ]...
+.RB [ \-dDhvV ]
+.RB [ "-p \fIpidfile\fR" ]
 .RI [ configuration_file ]
 .LP
 .SH DESCRIPTION
@@ -37,16 +40,16 @@ debug mode
 .TP
 .BR "\-D" ", " "--daemon"
 start the client in background (daemonize) and create a PID file in
-.I @localstatedir@/run/campagnol.pid
+.I \*[pidfilename]
 or in another file defined with
 .I --pidfile
 .TP
 .BR "\-h" ", " "--help"
 print help, then exit
 .TP
-.BR "\-p" ", " "--pidfile=FILE"
+.BR "\-p" ", " "--pidfile" "=\fIpidfile\fR"
 write the pid into
-.I FILE
+.I pidfile
 when running in background
 .TP
 .BR "\-v" ", " "--verbose"
@@ -84,31 +87,21 @@ $ openssl ciphers -v -tls1 DEFAULT
 .fi
 .RE
 .SH CONFIGURATION
-The configuration file has an INI-like syntax. Comments start with a `;' or a
-`#' and continue to the end of the line. Values may be quoted between double
-quotation marks ("...") and special characters can be escaped with `\\'
-(\\\\, \\n, \\# ...). The white-spaces around the section names, the parameters 
-and the values are stripped.
-All names are case sensitive.
-.LP
-Values can reference other values from the same section using the syntax
-.RI ${ param }: 
-.LP
-.RS
-.nf
-[SECURITY]
-basedir = "/etc/campagnol_certs"
-certificate = ${basedir}/certificate.pem
-key = ${basedir}/key.pem
-.fi
-.RE
-.LP
-See the sample configuration file for an explanation about the different 
-parameters.
-.LP
+Campagnol needs a configuration file. It will use by default
+.I \*[configname]
+but you can specify another file as a command line argument.
+.PP
+The syntax of this file and all the available options are described in 
+.BR campagnol-conf (5).
+.PP
+You can use the sample configuration file as a basis for writting your own.
 .SH FILES
 .TP
-.I @sysconfdir@/campagnol.conf
+.I \*[configname]
 The default configuration file used if none is given on the command line.
 .SH SEE ALSO
-.BR openssl-ciphers "(1), " "RFC 4347 ""Datagram Transport Layer Security"""
+.BR campagnol.conf (5),
+.BR openssl-ciphers (1),
+.BR "RFC 4347 ""Datagram Transport Layer Security"""
+.SH AUTHORS
+Florent Bondoux <fbondoux@users.sourceforge.net>
