@@ -34,7 +34,10 @@ struct configuration {
     struct sockaddr_in serverAddr;              // rendezvous server inet address
     struct in_addr vpnIP;                       // VPN IP address
     char *network;                              // VPN subnetwork
-    int send_local_addr;                        // Send the local IP/port to the RDV server
+    int send_local_addr;                        // 1: Send the local IP/port to the RDV server
+                                                // 2: Send force_local_addr instead of the real local address
+                                                // 0: Do not publish a local address
+    struct sockaddr_in force_local_addr;
     int tun_mtu;                                // MTU of the tun device
     struct in_addr vpnBroadcastIP;              // "broadcast" IP, computed from vpnIP and network
     char *iface;                                // bind to a specific network interface
@@ -72,6 +75,7 @@ extern void freeConfig(void);
 #define OPT_TUN_MTU         "tun_mtu"
 #define OPT_INTERFACE       "interface"
 #define OPT_SEND_LOCAL      "use_local_addr"
+#define OPT_OVRRIDE_LOCAL   "override_local_addr"
 
 #define OPT_VPN_IP          "vpn_ip"
 #define OPT_VPN_NETWORK     "network"

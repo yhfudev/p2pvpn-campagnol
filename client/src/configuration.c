@@ -301,6 +301,39 @@ void parseConfFile(char *confFile) {
         exit(EXIT_FAILURE);
     }
 
+    if (config.send_local_addr == 1) {
+        value = parser_get(SECTION_NETWORK, OPT_OVRRIDE_LOCAL, &nline, &parser);
+        if (value != NULL) {
+            char *address = value, *port, back;
+            port = strchr(value, ' ');
+            if (port != NULL) {
+                back = *port;
+                *port = '\0';
+                res = inet_aton(address, &config.force_local_addr.sin_addr);
+                if (res == 0) {
+                    struct hostent *host = gethostbyname(address);
+                    if (host==NULL) {
+                        log_message("[%s:"OPT_OVRRIDE_LOCAL":%d] IP address or hostname is not valid: \"%s\"", confFile, nline, address);
+                        exit(EXIT_FAILURE);
+                    }
+                    memcpy(&(config.force_local_addr.sin_addr.s_addr), host->h_addr_list[0], sizeof(struct in_addr));
+                }
+                *port = back;
+                res = sscanf(port, "%hu", &config.force_local_addr.sin_port);
+                if (res != 1) {
+                    log_message("[%s:"OPT_OVRRIDE_LOCAL":%d] Port number is not valid: \"%s\"", confFile, nline, port);
+                    exit(EXIT_FAILURE);
+                }
+                config.force_local_addr.sin_port = htons(config.force_local_addr.sin_port);
+                config.send_local_addr = 2;
+            }
+            else {
+                log_message("[%s:"OPT_OVRRIDE_LOCAL":%d] Syntax error: \"%s\"", confFile, nline, value);
+                exit(EXIT_FAILURE);
+            }
+        }
+    }
+
 
 
     value = parser_get(SECTION_VPN, OPT_VPN_IP, &nline, &parser);
@@ -475,7 +508,7 @@ void parseConfFile(char *confFile) {
     }
 
     /* Need a non-"any" local IP if config.send_local_addr is true */
-    if (config.send_local_addr && config.localIP.s_addr == INADDR_ANY) {
+    if (config.send_local_addr == 1 && config.localIP.s_addr == INADDR_ANY) {
         log_message("["SECTION_NETWORK"]" OPT_SEND_LOCAL" requires a valid local IP (option \""OPT_LOCAL_HOST"\")");
         exit(EXIT_FAILURE);
     }

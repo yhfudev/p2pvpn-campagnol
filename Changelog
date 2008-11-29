@@ -3,6 +3,8 @@ v -:
 	Support rate limiting for the whole client and per connection.
 	Give the PID file in argument instead of in the config file.
 	OpenBSD port.
+	Add an option to force the local address sent to the RDV (it may be
+	usefull with multiple layers of NAT).
 
 	rdv server:
 	Add an option to set the maximum number of registered clients.
