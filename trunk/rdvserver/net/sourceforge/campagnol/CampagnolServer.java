@@ -1,5 +1,5 @@
 /**
- * Rendez-vous server, main class
+ * Rendez-vous server
  * 
  * Copyright (C) 2007 Antoine Vianey
  *               2008 Florent Bondoux
@@ -53,8 +53,6 @@ class ConnectionKey {
 /**    class in charge of starting up the server
  * and of all operation on the client objects */
 public class CampagnolServer {
-    
-    public static String VERSION = "0.3";
     
     /** flags */
     public static boolean verbose = false;
@@ -165,7 +163,7 @@ public class CampagnolServer {
         }
     }
     
-    private CampagnolServer(int portNumber, int maxclients, boolean withGui) {
+    public CampagnolServer(int portNumber, int maxclients, boolean withGui) {
         /**    instantiating the datagram socket */
         try {
             this.socket = new DatagramSocket(portNumber);
@@ -227,7 +225,7 @@ public class CampagnolServer {
         }
     }
     
-    public void analyse(MsgServStruct message) {
+    private void analyse(MsgServStruct message) {
         DatagramPacket packet = message.getPacket();
         ClientStruct client = getClientFromIp(packet.getSocketAddress());
         ClientStruct requestedClient;
@@ -383,7 +381,7 @@ public class CampagnolServer {
         }
     }
     
-    public void sendOK(SocketAddress address) {
+    private void sendOK(SocketAddress address) {
         try {
             outMessage.setPacket(MsgServStruct.MSG_OK, address);
             this.socket.send(outMessage.getPacket());
@@ -394,7 +392,7 @@ public class CampagnolServer {
         }
     }
     
-    public void sendNOK(SocketAddress address) {
+    private void sendNOK(SocketAddress address) {
         try {
             outMessage.setPacket(MsgServStruct.MSG_NOK, address);
             this.socket.send(outMessage.getPacket());
@@ -406,7 +404,7 @@ public class CampagnolServer {
     }
     
     /** nok message specifying the unexisting peer for which an ASK_CONNECTION as been made */
-    public void sendREJECT(SocketAddress address, byte[] IP) {
+    private void sendREJECT(SocketAddress address, byte[] IP) {
         try {
             outMessage.setPacket(MsgServStruct.REJ_CONNECTION, (short) 0, IP, null, address);
             this.socket.send(outMessage.getPacket());
@@ -417,18 +415,7 @@ public class CampagnolServer {
         }
     }
     
-    public void sendPING(SocketAddress address) {
-        try {
-            outMessage.setPacket(MsgServStruct.MSG_PING, address);
-            this.socket.send(outMessage.getPacket());
-            if (CampagnolServer.debug) System.out.println(">> PING sent to client "+address.toString());
-        } catch (Exception ex) {
-            System.err.println("Error in sendPING:");
-            ex.printStackTrace();
-        }
-    }
-    
-    public void sendPONG(SocketAddress address) {
+    private void sendPONG(SocketAddress address) {
         try {
             outMessage.setPacket(MsgServStruct.MSG_PONG, address);
             this.socket.send(outMessage.getPacket());
@@ -439,7 +426,7 @@ public class CampagnolServer {
         }
     }
     
-    public void sendANS(ClientStruct client, ClientStruct requestedClient, boolean send_local) {
+    private void sendANS(ClientStruct client, ClientStruct requestedClient, boolean send_local) {
         try {
             if (send_local) {
                 outMessage.setPacket(MsgServStruct.ANS_CONNECTION, requestedClient.localPort, requestedClient.localIP, requestedClient.vpnIP, client.sAddr);
@@ -455,7 +442,7 @@ public class CampagnolServer {
         }
     }
     
-    public void sendFWD(ClientStruct client, ClientStruct requestedClient, boolean send_local) {
+    private void sendFWD(ClientStruct client, ClientStruct requestedClient, boolean send_local) {
         try {
             if (send_local) {
                 outMessage.setPacket(MsgServStruct.FWD_CONNECTION, requestedClient.localPort, requestedClient.localIP, requestedClient.vpnIP, client.sAddr);
@@ -471,7 +458,7 @@ public class CampagnolServer {
         }
     }
     
-    public void sendRECONNECT(SocketAddress address) {
+    private void sendRECONNECT(SocketAddress address) {
         try {
             outMessage.setPacket(MsgServStruct.MSG_RECONNECT, address);
             this.socket.send(outMessage.getPacket());
@@ -481,85 +468,6 @@ public class CampagnolServer {
             ex.printStackTrace();
         }
     }
-    
-    
-    public static void usage() {
-        System.err.println("Usage: java CampagnolServer [OPTION]...\n");
-        System.err.println("Options");
-        System.err.println(" -v, --verbose                  verbose mode");
-        System.err.println(" -d, --debug                    debug mode. Can be use twice to dump the packets");
-        System.err.println(" -p, --port=PORT                listening port");
-        System.err.println(" -m, --max-clients=N            set the maximum number of connected clients");
-        System.err.println(" -g, --gui                      start the GUI with the server");
-        System.err.println(" -h, --help                     this help message");
-        System.err.println(" -V, --version                  show version information and exit\n");
-    }
-    
-    public static void version() {
-        System.err.println("Campagnol VPN | Server | Version "+VERSION);
-        System.err.println("Copyright (c) 2007 Antoine Vianey");
-        System.err.println("              2008 Florent Bondoux");
-    }
-    
-    public static void main(String args[]) {
-        CampagnolServer server = null;
-        boolean withGui = false;
-        int portNumber = 57888;
-        int maxclients = 0;
-        
-        ArrayList options = null;
-        ArrayList arguments = null;
-        try {
-            ArrayList[] opt_args = OptionParser.getopt(args, "gvVdhp:m:", new String[] {"gui", "verbose", "version", "debug", "help", "port:", "max-clients:"});
-            options = opt_args[0];
-            arguments = opt_args[1];
-        } catch (OptionParser.GetoptException e) {
-            System.err.println(e.getMessage());
-            CampagnolServer.usage();
-            System.exit(1);
-        }
-        
-        for (int i = 0; i < options.size(); i++) {
-            String[] opt = (String[]) options.get(i);
-            if (opt[0].equals("-g") || opt[0].equals("--gui")) {
-                withGui = true;
-            }
-            else if (opt[0].equals("-v") || opt[0].equals("--verbose")) {
-                CampagnolServer.verbose = true;
-            }
-            else if (opt[0].equals("-d") || opt[0].equals("--debug")) {
-                if (CampagnolServer.debug) {
-                    CampagnolServer.dump = true;
-                }
-                else {
-                    CampagnolServer.verbose = true;
-                    CampagnolServer.debug = true;
-                }
-            }
-            else if (opt[0].equals("-h") || opt[0].equals("--help")) {
-                CampagnolServer.usage();
-                System.exit(1);
-            }
-            else if (opt[0].equals("-p") || opt[0].equals("--port")) {
-                portNumber = Integer.parseInt(opt[1]);
-            }
-            else if (opt[0].equals("-m") || opt[0].equals("--max-clients")) {
-                maxclients = Integer.parseInt(opt[1]);
-            }
-            else if (opt[0].equals("-V") || opt[0].equals("--version")) {
-                CampagnolServer.version();
-                System.exit(0);
-            }
-        }
 
-        if (arguments.size() != 0) {
-            CampagnolServer.usage();
-            System.exit(1);
-        }
-        
-        server = new CampagnolServer(portNumber, maxclients, withGui);
-        server.run();
-    }
-    
 }
 
