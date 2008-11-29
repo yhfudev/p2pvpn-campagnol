@@ -149,12 +149,16 @@ int register_rdv(int sockfd) {
 
     /* Create a HELLO message */
     log_message_verb("Registering with the RDV server...");
-    if (config.send_local_addr) {
+    if (config.send_local_addr == 1) {
         init_smsg(&smsg, HELLO, config.vpnIP.s_addr, config.localIP.s_addr);
         // get the local port
         tmp_addr_len = sizeof(tmp_addr);
         getsockname(sockfd, (struct sockaddr *) &tmp_addr, &tmp_addr_len);
         smsg.port = tmp_addr.sin_port;
+    }
+    else if (config.send_local_addr == 2) {
+        init_smsg(&smsg, HELLO, config.vpnIP.s_addr, config.force_local_addr.sin_addr.s_addr);
+        smsg.port = config.force_local_addr.sin_port;
     }
     else {
         init_smsg(&smsg, HELLO, config.vpnIP.s_addr, 0);
