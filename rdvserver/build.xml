@@ -2,14 +2,15 @@
 	<property name="targetVM" value="1.4" />
 	<property name="build" value="classes" />
 	<property name="src" value="${basedir}" />
-	<property name="mainClass" value="net.sourceforge.campagnol.CampagnolServer" />
+	<property name="mainClass" value="net.sourceforge.campagnol.CampagnolRDV" />
+	<property name="jarFile" value="campagnol_rdv.jar" />
 
 	<target name="compile" description="Compiles files">
 		<javac srcdir="${src}" destdir="${build}" source="${targetVM}" target="${targetVM}"/>
 	</target>
 
 	<target name="jar" description="Build jar archive" depends="compile">
-		<jar destfile="CampagnolServer.jar" basedir="${build}" includes="**/*.class">
+		<jar destfile="${jarFile}" basedir="${build}" includes="**/*.class">
 			<manifest>
 				<attribute name="Main-Class" value="${mainClass}" />
 			</manifest>
@@ -17,9 +18,9 @@
 	</target>
 	
 	<target name="clean" description="Clean classes and jar file">
-		<delete>
+		<delete verbose="true">
 			<fileset dir="${build}" includes="**/*.class"/>
-			<fileset dir="." file="CampagnolServer.jar"/>
+			<fileset dir="." file="${jarFile}"/>
 		</delete>
 	</target>
 	
