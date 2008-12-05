@@ -36,6 +36,7 @@ enum client_type {PUNCHING, WAITING, ESTABLISHED, TIMEOUT, CLOSED};
 /* client storage structure */
 struct client {
     time_t time;                    // last message received (time(NULL))
+    time_t last_keepalive;          // last time we send a keepalive or a DTLS msg
     struct sockaddr_in clientaddr;  // real IP address and port
     struct in_addr vpnIP;           // VPN IP address
     int state;                      // client's state
@@ -96,6 +97,14 @@ extern void decr_ref(struct client *peer);
         && cache_client_real->clientaddr.sin_addr.s_addr == (address)->sin_addr.s_addr    \
         && cache_client_real->clientaddr.sin_port == (address)->sin_port) ?   \
                 incr_ref(cache_client_real), cache_client_real : _get_client_real((address)); \
+    })
+
+/* update the activity timestamp and the link activity timestamp */
+#define client_update_time(peer,timestamp) ({\
+    time_t t = timestamp;\
+    struct client * c = peer;\
+    c->time = t;\
+    c->last_keepalive = t;\
     })
 
 #endif /*PEER_H_*/

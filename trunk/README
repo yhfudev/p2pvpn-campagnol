@@ -242,7 +242,7 @@ quotation marks ("...") and special characters can be escaped with '\'
 
 Be sure to set the same values for the following options on every clients:
   "server_host" in the [NETWORK] section
-  server_port" in the [NETWORK] section
+  "server_port" in the [NETWORK] section
   "network" in the [VPN] section
   "cipher_list" in the [SECURITY] section (or at least the values must be
                 compatible)
