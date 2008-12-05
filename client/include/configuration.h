@@ -55,6 +55,7 @@ struct configuration {
     int timeout;                                // wait timeout secs before closing a session for inactivity
     int max_clients;                            // maximum number of clients
     char *pidfile;                              // PID file in daemon mode
+    unsigned int keepalive;                     // seconds between keepalive messages;
 };
 
 extern void parseConfFile(char *file);
@@ -90,6 +91,7 @@ extern void freeConfig(void);
 #define OPT_CLIENT_RATE     "client_max_rate"
 #define OPT_CONNECTION_RATE "connection_max_rate"
 #define OPT_TIMEOUT         "timeout"
+#define OPT_KEEPALIVE       "keepalive"
 #define OPT_MAX_CLIENTS     "max_clients"
 
 #endif /*CONFIGURATION_H_*/

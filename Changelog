@@ -5,6 +5,8 @@ v -:
 	OpenBSD port.
 	Add an option to force the local address sent to the RDV (it may be
 	usefull with multiple layers of NAT).
+	Send keepalive messages on the connections. Add an option to control
+	the interval between keepalive messages.
 
 	rdv server:
 	Add an option to set the maximum number of registered clients.

@@ -223,6 +223,7 @@ void parseConfFile(char *confFile) {
     config.key_pem = NULL;
     config.verif_pem = NULL;
     config.cipher_list = NULL;
+    config.keepalive = 10;
 
     // init config parser. no DEFAULT section, no empty value
     parser_init(&parser, 0, 0, 1);
@@ -488,6 +489,18 @@ void parseConfFile(char *confFile) {
     }
     else if (res == 0) {
         log_message("[%s:"OPT_MAX_CLIENTS":%d] Max number of clients is not valid: \"%s\"", confFile, nline, value);
+        exit(EXIT_FAILURE);
+    }
+
+    res = parser_getuint(SECTION_CLIENT, OPT_KEEPALIVE, &config.keepalive, &value, &nline, &parser);
+    if (res == 1) {
+        if (config.keepalive < 1) {
+            log_message("[%s:"OPT_KEEPALIVE":%d] Keepalive interval %d must be >=1", confFile, nline, config.keepalive);
+            exit(EXIT_FAILURE);
+        }
+    }
+    else if (res == 0) {
+        log_message("[%s:"OPT_KEEPALIVE":%d] Keepalive interval is not valid: \"%s\"", confFile, nline, value);
         exit(EXIT_FAILURE);
     }
 

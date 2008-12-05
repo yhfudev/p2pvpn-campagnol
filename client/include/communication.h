@@ -40,7 +40,7 @@
 #define ANS_CONNECTION 7
 #define REJ_CONNECTION 8
 #define PUNCH 9
-#define PUNCH_ACK 10
+#define PUNCH_KEEP_ALIVE 10
 #define BYE 11
 #define RECONNECT 12
 #define CLOSE_CONNECTION 13

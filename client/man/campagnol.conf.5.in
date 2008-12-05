@@ -264,6 +264,13 @@ This set the inactivity timeout before closing a session. The value is given in
 seconds. It's better to ensure that all the clients share the same value for
 this option.
 .TP
+.B keepalive
+.IR optional ", " "value: integer" ", " "default: 10 seconds"
+.IP
+This set the interval the client waits before sending a keepalive message to
+another client when the connection is inactive. This is required to maintain the
+contexts of the involved NATs and firewalls.
+.TP
 .B max_clients
 .IR optional ", " "value: integer" ", " "default: 100"
 .IP
