@@ -1,15 +1,13 @@
-.\" Set a register if the output device is ps. This is used to set fonts when needed
-.if "\*[.T]"ps" .nr useps 1
 .\" Begin/end an indented schematic
 .de BDRAWING
-.  if \n[useps] .fam C
+.  ft CR
 .  in +7n
 .  nf
 ..
 .de EDRAWING
 .  fi
 .  in -7n
-.  if \n[useps] .fam
+.  ft
 ..
 .\" campagnol.conf path
 .ds filename @sysconfdir@/campagnol.conf
@@ -33,20 +31,20 @@ be escaped with
 (\\\\, \\n, \\# ...). The white-spaces around the section names,
 the parameters and their values are stripped. All names are case sensitive.
 .PP
-.if \n[useps] .fam C
+.ft CR
 .nf
 [SOME_SECTION]
   param        = value        # comment
   other_param  = a few words
   quoted_value = "some chars \\t\\"\\#  "
 .fi
-.if \n[useps] .fam
+.ft
 .PP
 Inside a section, the syntax
 .I ${param}
 can be used to reference another value (param) from the same section. For example:
 .PP
-.if \n[useps] .fam C
+.ft CR
 .nf
 [SECURITY]
 basedir = "/etc/campagnol_certs"
@@ -55,7 +53,7 @@ certificate = ${basedir}/cert.pem  # expands to
 key = ${basedir}/key.pem           # expands to
                                    # "/etc/campagnol_certs/key.pem"
 .fi
-.if \n[useps] .fam
+.ft
 .PP
 The configuration file defines the following sections:
 .PP
