@@ -9,6 +9,16 @@
 .  in -7n
 .  ft
 ..
+.\" write a parameter name, its argument and default value
+.de PARAMETER
+\fB\\$1\fR = \fI\\$2\fR
+.  ie !"\\$3"" \{\
+\fIoptional\fR, default: \fI\\$3\fR
+.  \}
+.  el \{\
+\fImandatory\fR
+.  \}
+..
 .\" campagnol.conf path
 .ds filename @sysconfdir@/campagnol.conf
 .TH CAMPAGNOL.CONF 5 "November 29, 2008"
@@ -77,8 +87,7 @@ This is a list of all the available parameters, with their default value if they
 .\" *** NETWORK ***
 .SS [NETWORK] section
 .TP 15n
-.B local_host
-.IR optional ", " "value: IP address or hostname" ", " "default: search for a non local IP"
+.PARAMETER local_host "[IP address or hostname]" "search for a non local IP"
 .IP
 This parameter set the local IP address used by campagnol.
 If it is left undefined, the local IP address will firstly be searched with the 
@@ -91,23 +100,19 @@ will work but it is not compatible with the
 .B use_local_addr
 option.
 .TP
-.B local_port
-.IR optional ", " "value: integer" ", " "default: no port binding"
+.PARAMETER local_port "[port number]" "no port binding"
 .IP
 Bind the local UDP socket to this port number.
 .TP
-.B server_host
-.IR mandatory ", " "value: IP address or hostname"
+.PARAMETER server_host "[IP address or hostname]"
 .IP
 The rendezvous server hostname or IP address.
 .TP
-.B server_port
-.IR mandatory ", " "value: integer"
+.PARAMETER server_port "[port number]"
 .IP
 The rendezvous server port.
 .TP
-.B tun_mtu
-.IR optional ", " "value: integer" ", " "default: 1419"
+.PARAMETER tun_mtu integer 1419
 .IP
 This parameter set the MTU of the TUN device. This value must be the same on
 each clients.
@@ -119,8 +124,7 @@ ethernet) whichever cipher algorithm is used. The optimal value depends on the
 total overhead of campagnol. This is described in the source file
 .IR "include/communication.h" .
 .TP
-.B interface
-.IR optional ", " "value: a network interface name" ", " "default: no interface binding"
+.PARAMETER interface "[a network interface name]" "no interface binding"
 .IP
 If this parameter is defined, the UDP socket is bound to this interface
 (Linux only). This parameter is also used to find the local IP address to use
@@ -128,8 +132,7 @@ if the
 .B local_host
 parameter is not used.
 .TP
-.B use_local_addr
-.IR optional ", " "values: yes/no" ", " "default: yes"
+.PARAMETER use_local_addr "[yes/no]" "yes"
 .IP
 This parameter allows the client to publish it's local IP and UDP port. It's
 useful if this client and others clients of the VPN are behind a common NAT:
@@ -152,12 +155,11 @@ users want.
 .IP
 If the VPN configuration involes peers behind multiple level of NAT, see the
 next parameter
-.BR force_local_addr .
+.BR override_local_addr .
 Disable this option only if you know what you
 are doing!
 .TP
-.B force_local_addr
-.IR optional ", " "value: \[lq]IP port\[rq]" ", " "default: not enabled"
+.PARAMETER override_local_addr "\[lq]IP port\[rq]" "not enabled"
 .IP
 This option is used to define the local IP that will be published to the
 rendezvous server (if 
@@ -184,49 +186,42 @@ it will work only if the common NAT does UDP hairpin translation.
 With this parameter, you can send a fake local address to the rendezvous server
 instead of the real one. So another way to connect the two peers is to define a
 static port forwarding for A on NAT_A and to use
-.B force_local_addr
+.B override_local_addr
 to publish
 its intermediate IP address and port on NAT_A. When B tries to open a new
 connection with A, it will now use its address on NAT_A.
 .\" *** VPN ***
 .SS [VPN] section
 .TP 15n
-.B vpn_ip
-.IR mandatory ", " "value: IP address"
+.PARAMETER vpn_ip "[IP address]"
 .IP
 The IP address for the VPN.
 .TP
-.B network
-.IR mandatory ", " "value: netmask in CIDR notation"
+.PARAMETER network "[netmask in CIDR notation]"
 .IP
 The subnetwork for the VPN. This value must be the same for all peers. It's
 given using the CIDR notation, for example \[lq]10.0.0.0/24\[rq].
 .\" *** SECURITY ***
 .SS [SECURITY] section
 .TP 15n
-.B certificate
-.IR mandatory ", " "value: file path"
+.PARAMETER certificate path
 .IP
 The PEM file containing the client's X.509 certificate.
 .TP
-.B key
-.IR mandatory ", " "value: file path"
+.PARAMETER key path
 .IP
 The PEM file containing the client's private key.
 .TP
-.B ca_certificates
-.IR mandatory ", " "value: file path"
+.PARAMETER ca_certificates path
 .IP
 The PEM file containing the root certificate chain.
 .TP
-.B crl_file
-.IR optional ", " "value: file path" ", " "default: -"
+.PARAMETER crl_file path none
 .IP
 A PEM file containing a certificate revocation list (CRL). When a new connection
 is opened, the remote peer's certificate is checked against this CRL.
 .TP
-.B cipher_list
-.IR optional ", " "value: OpenSSL's cipher list" ", " "default: OpenSSL's default"
+.PARAMETER cipher_list "[OpenSSL's cipher list]" "OpenSSL's default"
 .IP
 The OpenSSL ciphers lists to use. If this value is defined, then it must be the
 same for every clients of the VPN, or at least the values must be compatible.
@@ -235,42 +230,36 @@ explains the syntax for this parameter and how to determine a cipherlist.
 .\" *** CLIENT ***
 .SS [CLIENT] section
 .TP 15n
-.B fifo_size
-.IR optional ", " "value: integer" ", " "default: 50"
+.PARAMETER fifo_size integer 50
 .IP
 The client uses one FIFO per connected peer. Each FIFO requires roughly N*2000
 bytes in memory.
 .TP
-.B client_max_rate
-.IR optional ", " "value: float" ", " "default: not enabled"
+.PARAMETER client_max_rate float "not enabled"
 .IP
 This option allows to limit the outgoing traffic for the whole client. The value
 is in kilobytes/seconds. If this parameter is commented out or set to 0, it
 is disabled.
 .TP
-.B connection_max_rate
-.IR optional ", " "value: float" ", " "default: not enabled"
+.PARAMETER connection_max_rate float "not enabled"
 .IP
 This option allows to limit the outgoing traffic for each connection to other
 peers. The value is in kilobytes/seconds. If this parameter is commented out or
 set to 0, it is disabled.
 .TP
-.B timeout
-.IR optional ", " "value: integer" ", " "default: 120 seconds"
+.PARAMETER timeout integer "120 seconds"
 .IP
 This set the inactivity timeout before closing a session. The value is given in
 seconds. It's better to ensure that all the clients share the same value for
 this option.
 .TP
-.B keepalive
-.IR optional ", " "value: integer" ", " "default: 10 seconds"
+.PARAMETER keepalive integer "10 seconds"
 .IP
 This set the interval the client waits before sending a keepalive message to
 another client when the connection is inactive. This is required to maintain the
 contexts of the involved NATs and firewalls.
 .TP
-.B max_clients
-.IR optional ", " "value: integer" ", " "default: 100"
+.PARAMETER max_clients integer 100
 .IP
 The maximum number of simultaneously opened connections with other clients.
 .SH SEE ALSO

@@ -35,9 +35,9 @@ struct configuration {
     struct in_addr vpnIP;                       // VPN IP address
     char *network;                              // VPN subnetwork
     int send_local_addr;                        // 1: Send the local IP/port to the RDV server
-                                                // 2: Send force_local_addr instead of the real local address
+                                                // 2: Send override_local_addr instead of the real local address
                                                 // 0: Do not publish a local address
-    struct sockaddr_in force_local_addr;
+    struct sockaddr_in override_local_addr;
     int tun_mtu;                                // MTU of the tun device
     struct in_addr vpnBroadcastIP;              // "broadcast" IP, computed from vpnIP and network
     char *iface;                                // bind to a specific network interface
