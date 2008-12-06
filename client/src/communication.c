@@ -157,8 +157,8 @@ int register_rdv(int sockfd) {
         smsg.port = tmp_addr.sin_port;
     }
     else if (config.send_local_addr == 2) {
-        init_smsg(&smsg, HELLO, config.vpnIP.s_addr, config.force_local_addr.sin_addr.s_addr);
-        smsg.port = config.force_local_addr.sin_port;
+        init_smsg(&smsg, HELLO, config.vpnIP.s_addr, config.override_local_addr.sin_addr.s_addr);
+        smsg.port = config.override_local_addr.sin_port;
     }
     else {
         init_smsg(&smsg, HELLO, config.vpnIP.s_addr, 0);

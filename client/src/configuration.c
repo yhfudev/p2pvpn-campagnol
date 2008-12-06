@@ -310,22 +310,22 @@ void parseConfFile(char *confFile) {
             if (port != NULL) {
                 back = *port;
                 *port = '\0';
-                res = inet_aton(address, &config.force_local_addr.sin_addr);
+                res = inet_aton(address, &config.override_local_addr.sin_addr);
                 if (res == 0) {
                     struct hostent *host = gethostbyname(address);
                     if (host==NULL) {
                         log_message("[%s:"OPT_OVRRIDE_LOCAL":%d] IP address or hostname is not valid: \"%s\"", confFile, nline, address);
                         exit(EXIT_FAILURE);
                     }
-                    memcpy(&(config.force_local_addr.sin_addr.s_addr), host->h_addr_list[0], sizeof(struct in_addr));
+                    memcpy(&(config.override_local_addr.sin_addr.s_addr), host->h_addr_list[0], sizeof(struct in_addr));
                 }
                 *port = back;
-                res = sscanf(port, "%hu", &config.force_local_addr.sin_port);
+                res = sscanf(port, "%hu", &config.override_local_addr.sin_port);
                 if (res != 1) {
                     log_message("[%s:"OPT_OVRRIDE_LOCAL":%d] Port number is not valid: \"%s\"", confFile, nline, port);
                     exit(EXIT_FAILURE);
                 }
-                config.force_local_addr.sin_port = htons(config.force_local_addr.sin_port);
+                config.override_local_addr.sin_port = htons(config.override_local_addr.sin_port);
                 config.send_local_addr = 2;
             }
             else {

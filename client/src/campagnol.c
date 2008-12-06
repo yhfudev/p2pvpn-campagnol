@@ -240,6 +240,11 @@ int main (int argc, char **argv) {
         puts("Configuration:");
         printf("  Local IP address: %s\n", inet_ntoa (config.localIP));
         if (config.iface) printf("  Using interface: %s\n", config.iface);
+        if (config.send_local_addr == 2) {
+            printf("  Send this local address to the RDV server: %s %d\n",
+                    inet_ntoa(config.override_local_addr.sin_addr),
+                    ntohs(config.override_local_addr.sin_port));
+        }
         if (config.localport != 0) printf("  Using local port: %d\n", config.localport);
         printf("  RDV server IP address: %s\n", inet_ntoa (config.serverAddr.sin_addr));
         printf("  RDV server port: %d\n", ntohs(config.serverAddr.sin_port));
@@ -255,6 +260,7 @@ int main (int argc, char **argv) {
         if (config.tb_client_rate > 0) printf("  Outgoing traffic: %.3f kb/s\n", config.tb_client_rate);
         if (config.tb_connection_rate > 0) printf("  Outgoing traffic per connection: %.3f kb/s\n", config.tb_connection_rate);
         printf("  Timeout: %d sec.\n", config.timeout);
+        printf("  Keepalive: %d sec.\n", config.keepalive);
         printf("  Maximum number of connections: %d\n\n", config.max_clients);
     }
 
