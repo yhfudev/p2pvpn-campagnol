@@ -1,6 +1,6 @@
 .ds configname @sysconfdir@/campagnol.conf
 .ds pidfilename @localstatedir@/run/campagnol.pid
-.TH "CAMPAGNOL CLIENT" 8 "October 21, 2008" "0.3"
+.TH "CAMPAGNOL CLIENT" 8 "October 21, 2008" "@version@"
 .SH NAME
 campagnol - Decentralized VPN over UDP tunneling
 .SH SYNOPSIS
@@ -100,6 +100,7 @@ You can use the sample configuration file as a basis for writting your own.
 .I \*[configname]
 The default configuration file used if none is given on the command line.
 .SH SEE ALSO
+.BR campagnol_rdv (8),
 .BR campagnol.conf (5),
 .BR openssl-ciphers (1),
 .BR "RFC 4347 ""Datagram Transport Layer Security"""

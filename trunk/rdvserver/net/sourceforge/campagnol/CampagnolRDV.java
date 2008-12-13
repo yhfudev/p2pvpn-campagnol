@@ -27,7 +27,7 @@ import java.util.ArrayList;
 
 public class CampagnolRDV {
     
-    public static String VERSION = "0.3";
+    public static String VERSION = "0.3.1";
     
     public static void usage() {
         System.err.println("Usage: campagnol_rdv [OPTION]...\n");

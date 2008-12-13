@@ -21,7 +21,7 @@
 ..
 .\" campagnol.conf path
 .ds filename @sysconfdir@/campagnol.conf
-.TH CAMPAGNOL.CONF 5 "November 29, 2008"
+.TH CAMPAGNOL.CONF 5 "November 29, 2008" "@version@"
 .SH NAME
 campagnol.conf - Campagnol VPN client configuration file
 .SH SYNOPSIS
@@ -263,7 +263,8 @@ contexts of the involved NATs and firewalls.
 .IP
 The maximum number of simultaneously opened connections with other clients.
 .SH SEE ALSO
-.BR campagnol (8), 
+.BR campagnol (8),
+.BR campagnol_rdv (8),
 .BR openssl-ciphers (1)
 .SH AUTHORS
 Florent Bondoux <fbondoux@users.sourceforge.net>
