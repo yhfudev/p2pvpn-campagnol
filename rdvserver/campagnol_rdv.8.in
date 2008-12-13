@@ -1,0 +1,54 @@
+.ds configname /usr/local/etc/campagnol.conf
+.ds pidfilename /usr/local/var/run/campagnol.pid
+.TH "CAMPAGNOL RDV SERVER" 8 "December 8, 2008" "@version@"
+.SH NAME
+campagnol_rdv - Decentralized VPN over UDP tunneling, RDV server
+.SH SYNOPSIS
+.B campagnol_rdv
+.RB [ \-dghvV ]
+.RB [ "-p \fIport\fR" ]
+.RB [ "-m \fIn_clients\fR" ]
+.LP
+.SH DESCRIPTION
+Campagnol is a distributed IP-based VPN software able to open new connections 
+through NATs or firewalls without any configuration. It uses UDP for the
+transport layer and utilizes tunneling and encryption (with DTLS).
+.LP
+This software is the rendezvous server of the VPN. It is used to register each
+participant of the VPN and is needed for the UDP hole punching. It regularly
+exchanges keepalive messages with each registered clients in order to maintain
+the contexts of the connections in the involved NATs and firewalls.
+.LP
+The server opens a UDP socket to communicate with the clients. The default port
+is \fI57888\fR.
+.LP
+This version has a small GUI that can be used to monitor the registered clients
+and ongoing connections.
+.LP
+.SH OPTIONS
+.TP
+.BR "\-d" ", " "--debug"
+debug mode
+.TP
+.BR "\-g" ", " "--gui"
+starts the server with a small monitoring GUI
+.TP
+.BR "\-h" ", " "--help"
+print help, then exit
+.TP
+.BR "\-v" ", " "--verbose"
+verbose mode
+.TP
+.BR "\-V" ", " "--version"
+show version information and exit
+.TP
+.BR "\-p" ", " "--port" "=\fI[port number]\fR"
+set the server UDP port
+.TP
+.BR "\-m" ", " "--max-clients" "=\fI[maximum number of clients]\fR"
+set the maximum number of registered clients. The default is to not limitate the number of clients. The use of this option is highly recommended.
+.SH SEE ALSO
+.BR campagnol (8),
+.BR campagnol.conf (5),
+.SH AUTHORS
+Florent Bondoux <fbondoux@users.sourceforge.net>

@@ -123,17 +123,18 @@ Compilation
 In order to compile Campagnol you need:
 - rendezvous server:
   * Java SDK >= 1.4 for the rendezvous server
-  * ant to build the rendezvous server
 - client:
   * OpenSSL library version >= 0.9.8g http://www.openssl.org/
   * Universal TUN/TAP driver          http://vtun.sourceforge.net/tun
 
-To build the server, the easiest way is to use ant. Just go in the "rdvserver"
-directory and type:
-$ ant
+To build the server, go in the "rdvserver" directory and type:
+$ make
 This will compile all the .java files and build a Java jar archive. Classes are
 outputed in the "classes" directory.
-You can also use the install.sh script to build and install the server.
+The Makefile will also create a small wrapper script to launch the application.
+To install the RDV server, edit the destination directories at the begining of
+the Makefile and then run:
+$ make install
 
 To build the client, go in the 'client' directory and run:
 $ ./configure

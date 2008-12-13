@@ -592,11 +592,9 @@ void * comm_socket(void * argument) {
                     }
                 }
                 else if (timestamp - peer->last_keepalive > config.keepalive) {
-                    if (peer->is_dtls_client) {
-                        init_smsg(&smsg, PUNCH_KEEP_ALIVE, 0, 0);
-                        sendto(sockfd ,&smsg, sizeof(smsg), 0, (struct sockaddr *)&(peer->clientaddr), sizeof(peer->clientaddr));
-                        peer->last_keepalive = timestamp;
-                    }
+                    init_smsg(&smsg, PUNCH_KEEP_ALIVE, 0, 0);
+                    sendto(sockfd ,&smsg, sizeof(smsg), 0, (struct sockaddr *)&(peer->clientaddr), sizeof(peer->clientaddr));
+                    peer->last_keepalive = timestamp;
                 }
                 peer = next;
             }
