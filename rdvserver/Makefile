@@ -6,7 +6,7 @@ pkgdatadir=/usr/local/share/campagnol/
 mandir=/usr/local/share/man/
 
 JAVAC=javac
-JAR=jar
+JAR=$$(which jar 2>/dev/null)
 ANT=$$(which ant 2>/dev/null)
 JAVACFLAGS=-source 1.4 -target 1.4
 
@@ -46,8 +46,17 @@ campagnol_rdv.jar: $(campagnol_rdv_sources)
 	else \
 	  echo "$(JAVAC) -d classes $(JAVACFLAGS) $(campagnol_rdv_sources)" ; \
 	  $(JAVAC) -d classes $(JAVACFLAGS) $(campagnol_rdv_sources) ; \
-	  echo "$(JAR) -cfe campagnol_rdv.jar net.sourceforge.campagnol.CampagnolRDV -C classes net" ; \
-	  $(JAR) -cfe campagnol_rdv.jar net.sourceforge.campagnol.CampagnolRDV -C classes net ; \
+	  if [ -x "$(JAR)" ]; then \
+	    echo "$(JAR) -cfm campagnol_rdv.jar MANIFEST.MF -C classes net" ; \
+	    $(JAR) -cfm campagnol_rdv.jar MANIFEST.MF -C classes net ; \
+	  else \
+	    echo "mkdir -p classes/META-INF" ; \
+	    mkdir -p classes/META-INF ; \
+	    echo "cp MANIFEST.MF classes/META-INF" ; \
+	    cp MANIFEST.MF classes/META-INF ; \
+	    echo "cd classes && zip -r campagnol_rdv.jar META-INF net && mv campagnol_rdv.jar ../ && cd ../" ; \
+	    cd classes && zip -r campagnol_rdv.jar META-INF net && mv campagnol_rdv.jar ../ && cd ../ ; \
+	  fi \
 	fi
 
 campagnol_rdv:
