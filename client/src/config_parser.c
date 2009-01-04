@@ -28,73 +28,11 @@
 #include <string.h>
 #include <pthread.h>
 
-/* GNU getline replacement */
 #ifndef HAVE_GETLINE
-ssize_t campagnol_getline(char **lineptr, size_t *n, FILE *stream) {
-    ASSERT(lineptr);
-    ASSERT(n);
-    ASSERT(stream);
-    char *new_lineptr;
-    char c;
-    size_t pos = 0;
-
-    if (*lineptr == NULL || *n == 0) {
-        *n = 120;
-        new_lineptr = (char *) realloc(*lineptr, *n);
-        if (new_lineptr == NULL) {
-            return -1;
-        }
-        *lineptr = new_lineptr;
-    }
-    for (;;) {
-        c = fgetc(stream);
-
-        if (c == EOF) {
-            break;
-        }
-        // not enough space for next char + final \0
-        if (pos + 2 > *n) {
-            new_lineptr = (char *) realloc(*lineptr, *n+120);
-            if (new_lineptr == NULL) {
-                return -1;
-            }
-            *lineptr = new_lineptr;
-            *n = *n + 120;
-        }
-
-        (*lineptr)[pos] = c;
-        pos++;
-
-        if (c == '\n') {
-            break;
-        }
-    }
-
-    if (pos == 0) return -1;
-
-    (*lineptr)[pos] = '\0';
-    return pos;
-}
-
-#   define getline campagnol_getline
+#   include "getline.h"
 #endif
-
-/* GNU tdestroy replacement */
 #ifndef HAVE_TDESTROY
-/* POSIX doesn't let us know about the node structure
- * so we simply use tdelete.
- * It's not efficient and we have to know the comparison routine
- */
-void campagnol_tdestroy(void *root, void (*free_node)(void *nodep), int (*compar)(const void *, const void *)) {
-    void *node;
-    while (root != NULL) {
-        node = *(void **)root;
-        tdelete(node, &root, compar);
-        free_node(node);
-    }
-}
-
-#   define tdestroy(root,free_node) campagnol_tdestroy(root,free_node,parser_compare)
+#   include "tdestroy.h"
 #endif
 
 /* internal comparison function (strncmp) */

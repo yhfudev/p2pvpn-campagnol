@@ -57,7 +57,8 @@ AC_TYPE_SSIZE_T
 # Checks for library functions.
 # getline and tdestroy are missing on FreeBSD and OpenBSD
 # sem_timedwait is missing on OpenBSD
-AC_CHECK_FUNCS([getline tdestroy sem_timedwait])
+AC_REPLACE_FUNCS([getline tdestroy])
+AC_CHECK_FUNCS([sem_timedwait])
 
 AC_CONFIG_FILES([Makefile src/Makefile man/Makefile samples/Makefile])
 AC_OUTPUT
