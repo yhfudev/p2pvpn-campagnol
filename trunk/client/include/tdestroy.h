@@ -1,0 +1,29 @@
+/*
+ * tdestroy replacement
+ *
+ * Copyright (C) 2009 Florent Bondoux
+ *
+ * This file is part of Campagnol.
+ *
+ * Campagnol is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Campagnol is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Campagnol.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+#ifndef TDESTROY_H_
+#define TDESTROY_H_
+
+extern void campagnol_tdestroy(void *root, void (*free_node)(void *nodep), int (*compar)(const void *, const void *));
+#define tdestroy(root,free_node) campagnol_tdestroy(root,free_node,parser_compare)
+
+#endif /* TDESTROY_H_ */

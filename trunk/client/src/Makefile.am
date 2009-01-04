@@ -9,7 +9,7 @@ endif
 if HAVE_OPENBSD
 campagnol_SOURCES += tun_device_openbsd.c
 endif
-campagnol_CPPFLAGS = -I"$(srcdir)/../include" -DSYSCONFDIR="\"$(abspath $(sysconfdir))\"" -DLOCALSTATEDIR="\"$(abspath $(localstatedir))\"" @OPENSSL_CFLAGS@
+campagnol_CPPFLAGS = -I"$(srcdir)/../include" -DSYSCONFDIR="\"$(sysconfdir)\"" -DLOCALSTATEDIR="\"$(localstatedir)\"" @OPENSSL_CFLAGS@
 campagnol_CFLAGS = -Wall -Wstrict-prototypes
-campagnol_LDADD = @OPENSSL_LIBS@ -lm
+campagnol_LDADD = @LIBOBJS@ @OPENSSL_LIBS@ -lm
 
