@@ -23,8 +23,6 @@
 
 #include "campagnol.h"
 
-#include <signal.h>
-
 #include <sys/ioctl.h>
 
 #include <arpa/inet.h>
@@ -43,7 +41,7 @@
 #include "log.h"
 #include "pthread_wrap.h"
 
-int end_campagnol = 0;
+volatile sig_atomic_t end_campagnol = 0;
 static char* pidfile = NULL;
 
 
@@ -290,7 +288,7 @@ int main (int argc, char **argv) {
 
     tunfd = init_tun(1);
     if (tunfd < 0) {
-        struct message smsg;
+        message_t smsg;
         smsg.ip1.s_addr = config.vpnIP.s_addr;
         smsg.ip2.s_addr = 0;
         smsg.port = 0;

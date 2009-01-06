@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 #include <unistd.h>
 #include <assert.h>
 #include <sys/types.h>
@@ -52,7 +53,7 @@
 #define DEFAULT_CONF_FILE SYSCONFDIR "/campagnol.conf"
 #define DEFAULT_PID_FILE LOCALSTATEDIR "/run/campagnol.pid"
 
-extern int end_campagnol;
+extern volatile sig_atomic_t end_campagnol;
 extern struct configuration config;
 
 #endif /*CAMPAGNOL_H_*/

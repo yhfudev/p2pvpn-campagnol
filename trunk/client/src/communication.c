@@ -81,8 +81,8 @@ struct tb_state global_rate_limiter;
 //}
 
 /* Initialise a message with the given fields */
-inline void init_smsg(struct message *smsg, unsigned char type, uint32_t ip1, uint32_t ip2) {
-    memset(smsg, 0, sizeof(struct message));
+inline void init_smsg(message_t *smsg, unsigned char type, uint32_t ip1, uint32_t ip2) {
+    memset(smsg, 0, sizeof(message_t));
     smsg->type = type;
     smsg->ip1.s_addr = ip1;
     smsg->ip2.s_addr = ip2;
@@ -100,7 +100,7 @@ inline void init_timeout(struct timeval *timeout) {
  */
 static int sockfd_global;
 void handler_sigTimerPing(int sig) {
-    struct message smsg;
+    message_t smsg;
     /* send a PING message to the RDV server */
     init_smsg(&smsg, PING,0,0);
     int s = sendto(sockfd_global,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
@@ -137,7 +137,7 @@ uint16_t compute_csum(uint16_t *addr, size_t count){
  * sockfd: UDP socket
  */
 int register_rdv(int sockfd) {
-    struct message smsg, rmsg;
+    message_t smsg, rmsg;
     struct timeval timeout;
     struct sockaddr_in tmp_addr;
     socklen_t tmp_addr_len;
@@ -181,7 +181,7 @@ int register_rdv(int sockfd) {
         if (FD_ISSET(sockfd, &fd_select)!=0 && !end_campagnol) {
             /* Got a message from the server */
             socklen_t len = sizeof(struct sockaddr_in);
-            if ( (r = recvfrom(sockfd,&rmsg,sizeof(struct message),0,(struct sockaddr *)&config.serverAddr,&len)) == -1) {
+            if ( (r = recvfrom(sockfd,&rmsg,sizeof(message_t),0,(struct sockaddr *)&config.serverAddr,&len)) == -1) {
                 log_error("recvfrom");
             }
             switch (rmsg.type) {
@@ -228,7 +228,7 @@ int register_rdv(int sockfd) {
 void *punch(void *arg) {
     int i;
     struct client *peer = (struct client *)arg;
-    struct message smsg;
+    message_t smsg;
     init_smsg(&smsg, PUNCH, config.vpnIP.s_addr, 0);
     client_update_time(peer, time(NULL));
     /* punching state */
@@ -273,19 +273,18 @@ void start_punch(struct client *peer, int sockfd) {
 void * SSL_reading(void * args) {
     int r;
     // union used to receive the messages
-    union {
-        struct ip ip;
-        unsigned char raw[MESSAGE_MAX_LENGTH];
-    } u;
+    packet_t u;
     struct client *peer = (struct client*) args;
     int tunfd = peer->tunfd;
+
+    u.raw = CHECK_ALLOC_FATAL(malloc(MESSAGE_MAX_LENGTH));
 
     // DTLS handshake
     r = peer->ssl->handshake_func(peer->ssl);
     if (r != 1) {
         log_message("Error during DTLS handshake with peer %s", inet_ntoa(peer->vpnIP));
         ERR_print_errors_fp(stderr);
-        struct message smsg;
+        message_t smsg;
         init_smsg(&smsg, CLOSE_CONNECTION, peer->vpnIP.s_addr, 0);
         sendto(peer->sockfd, &smsg, sizeof(smsg), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
         MUTEXLOCK;
@@ -296,6 +295,7 @@ void * SSL_reading(void * args) {
         decr_ref(peer);
         ERR_remove_state(0);
         MUTEXUNLOCK;
+        free(u.raw);
         return NULL;
     }
     /* Unlock the thread waiting for the connection */
@@ -307,7 +307,7 @@ void * SSL_reading(void * args) {
 
     while (1) {
         /* Read and uncrypt a message, send it on the TUN device */
-        r = SSL_read(peer->ssl, &u, MESSAGE_MAX_LENGTH);
+        r = SSL_read(peer->ssl, u.raw, MESSAGE_MAX_LENGTH);
         if (r < 0) { // error
             if (BIO_should_read(peer->rbio)) {
                 continue;
@@ -324,6 +324,7 @@ void * SSL_reading(void * args) {
             decr_ref(peer);
             ERR_remove_state(0);
             MUTEXUNLOCK;
+            free(u.raw);
             return NULL;
         }
         MUTEXLOCK;
@@ -338,6 +339,7 @@ void * SSL_reading(void * args) {
             decr_ref(peer);
             ERR_remove_state(0);
             MUTEXUNLOCK;
+            free(u.raw);
             return NULL;
         }
         else {// everything's fine
@@ -346,14 +348,14 @@ void * SSL_reading(void * args) {
             MUTEXUNLOCK;
             if (config.debug) printf("<< Received a VPN message: size %d from SRC = %u.%u.%u.%u to DST = %u.%u.%u.%u\n",
                             r,
-                            (ntohl(u.ip.ip_src.s_addr) >> 24) & 0xFF,
-                            (ntohl(u.ip.ip_src.s_addr) >> 16) & 0xFF,
-                            (ntohl(u.ip.ip_src.s_addr) >> 8) & 0xFF,
-                            (ntohl(u.ip.ip_src.s_addr) >> 0) & 0xFF,
-                            (ntohl(u.ip.ip_dst.s_addr) >> 24) & 0xFF,
-                            (ntohl(u.ip.ip_dst.s_addr) >> 16) & 0xFF,
-                            (ntohl(u.ip.ip_dst.s_addr) >> 8) & 0xFF,
-                            (ntohl(u.ip.ip_dst.s_addr) >> 0) & 0xFF);
+                            (ntohl(u.ip->ip_src.s_addr) >> 24) & 0xFF,
+                            (ntohl(u.ip->ip_src.s_addr) >> 16) & 0xFF,
+                            (ntohl(u.ip->ip_src.s_addr) >> 8) & 0xFF,
+                            (ntohl(u.ip->ip_src.s_addr) >> 0) & 0xFF,
+                            (ntohl(u.ip->ip_dst.s_addr) >> 24) & 0xFF,
+                            (ntohl(u.ip->ip_dst.s_addr) >> 16) & 0xFF,
+                            (ntohl(u.ip->ip_dst.s_addr) >> 8) & 0xFF,
+                            (ntohl(u.ip->ip_dst.s_addr) >> 0) & 0xFF);
             /*
              * If dest IP = VPN broadcast VPN
              * The TUN device creates a point to point connection which
@@ -361,13 +363,13 @@ void * SSL_reading(void * args) {
              * So alter the dest. IP to the normal VPN IP
              * and compute the new checksum
              */
-            if (u.ip.ip_dst.s_addr == config.vpnBroadcastIP.s_addr) {
-                u.ip.ip_dst.s_addr = config.vpnIP.s_addr;
-                u.ip.ip_sum = 0; // the checksum field is set to 0 for the calculation
-                u.ip.ip_sum = compute_csum((uint16_t*) &u.ip, sizeof(u.ip));
+            if (u.ip->ip_dst.s_addr == config.vpnBroadcastIP.s_addr) {
+                u.ip->ip_dst.s_addr = config.vpnIP.s_addr;
+                u.ip->ip_sum = 0; // the checksum field is set to 0 for the calculation
+                u.ip->ip_sum = compute_csum((uint16_t*) u.ip, sizeof(*u.ip));
             }
             // send it to the TUN device
-            write_tun(tunfd, (unsigned char *)&u, r);
+            write_tun(tunfd, u.raw, r);
         }
     }
 }
@@ -411,19 +413,13 @@ void * comm_socket(void * argument) {
     int r_select;
     fd_set fd_select;                           // for the select call
     struct timeval timeout;                     // timeout used with select
-    union {                                     // incoming messages
-        struct {
-            unsigned char contentType;          // same as struct message's type (unsigned char)
-            unsigned char protocolVersionMaj;
-            unsigned char protocolVersionMin;
-        } dtlsheader;
-        unsigned char raw[MESSAGE_MAX_LENGTH];
-    } u;
+    packet_t u;
     struct sockaddr_in unknownaddr;             // address of the sender
     socklen_t len = sizeof(struct sockaddr_in);
-    struct message *rmsg = (struct message *) &u;   // incoming struct message
-    struct message smsg; // outgoing message
+    message_t smsg; // outgoing message
     struct client *peer;
+
+    u.raw = CHECK_ALLOC_FATAL(malloc(MESSAGE_MAX_LENGTH));
 
     time_t timestamp, last_time = 0;
 
@@ -439,16 +435,16 @@ void * comm_socket(void * argument) {
 
         /* MESSAGE READ FROM THE SOCKET */
         if (r_select > 0) {
-            r = recvfrom(sockfd,(unsigned char *)&u,MESSAGE_MAX_LENGTH,0,(struct sockaddr *)&unknownaddr,&len);
+            r = recvfrom(sockfd,u.raw,MESSAGE_MAX_LENGTH,0,(struct sockaddr *)&unknownaddr,&len);
             /* from the RDV server ? */
             if (config.serverAddr.sin_addr.s_addr == unknownaddr.sin_addr.s_addr
                 && config.serverAddr.sin_port == unknownaddr.sin_port) {
                 /* which type */
-                switch (rmsg->type) {
+                switch (u.message->type) {
                     /* reject a new session */
                     case REJ_CONNECTION :
                         MUTEXLOCK;
-                        peer = get_client_VPN(&(rmsg->ip1));
+                        peer = get_client_VPN(&(u.message->ip1));
                         peer->state = CLOSED;
                         conditionSignal(&peer->cond_connected);
                         decr_ref(peer);
@@ -459,11 +455,11 @@ void * comm_socket(void * argument) {
                     case ANS_CONNECTION :
                         /* get the client */
                         MUTEXLOCK;
-                        peer = get_client_VPN(&(rmsg->ip2));
+                        peer = get_client_VPN(&(u.message->ip2));
                         /* complete its informations */
                         peer->state = PUNCHING;
-                        peer->clientaddr.sin_addr = rmsg->ip1;
-                        peer->clientaddr.sin_port = rmsg->port;
+                        peer->clientaddr.sin_addr = u.message->ip1;
+                        peer->clientaddr.sin_port = u.message->port;
                         client_update_time(peer,timestamp);
                         MUTEXUNLOCK;
                         /* and start punching */
@@ -473,9 +469,9 @@ void * comm_socket(void * argument) {
                     /* a client wants to open a new session with me */
                     case FWD_CONNECTION :
                         MUTEXLOCK;
-                        if (get_client_VPN(&(rmsg->ip2)) == NULL) {
+                        if (get_client_VPN(&(u.message->ip2)) == NULL) {
                             /* Unknown client, add a new structure */
-                            peer = add_client(sockfd, tunfd, PUNCHING, timestamp, rmsg->ip1, rmsg->port, rmsg->ip2, 0);
+                            peer = add_client(sockfd, tunfd, PUNCHING, timestamp, u.message->ip1, u.message->port, u.message->ip2, 0);
                             if (peer == NULL) {
                                 /* max number of clients */
                                 MUTEXUNLOCK;
@@ -506,30 +502,30 @@ void * comm_socket(void * argument) {
             else {
                 if (config.debug) printf("<  Received a UDP packet: size %d from %s\n", r, inet_ntoa(unknownaddr.sin_addr));
                 /* check the first byte to find the message type */
-                if (u.dtlsheader.contentType == DTLS_APPLICATION_DATA
-                        || u.dtlsheader.contentType == DTLS_HANDSHAKE
-                        || u.dtlsheader.contentType == DTLS_ALERT
-                        || u.dtlsheader.contentType == DTLS_CHANGE_CIPHER_SPEC) {
+                if (u.dtlsheader->contentType == DTLS_APPLICATION_DATA
+                        || u.dtlsheader->contentType == DTLS_HANDSHAKE
+                        || u.dtlsheader->contentType == DTLS_ALERT
+                        || u.dtlsheader->contentType == DTLS_CHANGE_CIPHER_SPEC) {
                     /* It's a DTLS packet, send it to the associated SSL_reading thread using the FIFO BIO */
                     MUTEXLOCK;
                     peer = get_client_real(&unknownaddr);
                     MUTEXUNLOCK;
                     if (peer != NULL) {
                         if (peer->state != CLOSED) {
-                            BIO_write(peer->rbio, &u, r);
+                            BIO_write(peer->rbio, u.raw, r);
                         }
                         decr_ref(peer);
                     }
                 }
-                else if (r == sizeof(struct message)) {
+                else if (r == sizeof(message_t)) {
                     /* UDP hole punching */
-                    switch (rmsg->type) {
+                    switch (u.message->type) {
                         case PUNCH :
                             /* we can now reach the client */
                             MUTEXLOCK;
-                            peer = get_client_VPN(&(rmsg->ip1));
+                            peer = get_client_VPN(&(u.message->ip1));
                             if (peer != NULL) {
-                                if (config.verbose && peer->state != ESTABLISHED) printf("punch received from %s\n", inet_ntoa(rmsg->ip1));
+                                if (config.verbose && peer->state != ESTABLISHED) printf("punch received from %s\n", inet_ntoa(u.message->ip1));
                                 client_update_time(peer,timestamp);
                                 peer->clientaddr = unknownaddr;
                                 if (peer->thread_ssl_running == 0) {
@@ -604,6 +600,7 @@ void * comm_socket(void * argument) {
 
     }
 
+    free(u.raw);
     MUTEXLOCK; // avoid a potential double free bug in OpenSSL's internals
     ERR_remove_state(0);
     MUTEXUNLOCK;
@@ -625,13 +622,12 @@ void * comm_tun(void * argument) {
     fd_set fd_select;                           // for the select call
     struct timeval timeout;                     // timeout used with select
     struct timespec timeout_connect;            // timeout used when opening new connections
-    union {
-        struct ip ip;
-        unsigned char raw[MESSAGE_MAX_LENGTH];
-    } u;
+    packet_t u;
     struct in_addr dest;
-    struct message smsg;
+    message_t smsg;
     struct client *peer;
+
+    u.raw = CHECK_ALLOC_FATAL(malloc(MESSAGE_MAX_LENGTH));
 
 
     while (!end_campagnol) {
@@ -644,18 +640,18 @@ void * comm_tun(void * argument) {
 
         /* MESSAGE READ FROM TUN DEVICE */
         if (r_select > 0) {
-            r = read_tun(tunfd, &u, sizeof(u));
+            r = read_tun(tunfd, u.raw, MESSAGE_MAX_LENGTH);
             if (config.debug) printf(">> Sending a VPN message: size %d from SRC = %u.%u.%u.%u to DST = %u.%u.%u.%u\n",
                                 r,
-                                (ntohl(u.ip.ip_src.s_addr) >> 24) & 0xFF,
-                                (ntohl(u.ip.ip_src.s_addr) >> 16) & 0xFF,
-                                (ntohl(u.ip.ip_src.s_addr) >> 8) & 0xFF,
-                                (ntohl(u.ip.ip_src.s_addr) >> 0) & 0xFF,
-                                (ntohl(u.ip.ip_dst.s_addr) >> 24) & 0xFF,
-                                (ntohl(u.ip.ip_dst.s_addr) >> 16) & 0xFF,
-                                (ntohl(u.ip.ip_dst.s_addr) >> 8) & 0xFF,
-                                (ntohl(u.ip.ip_dst.s_addr) >> 0) & 0xFF);
-            dest.s_addr = u.ip.ip_dst.s_addr;
+                                (ntohl(u.ip->ip_src.s_addr) >> 24) & 0xFF,
+                                (ntohl(u.ip->ip_src.s_addr) >> 16) & 0xFF,
+                                (ntohl(u.ip->ip_src.s_addr) >> 8) & 0xFF,
+                                (ntohl(u.ip->ip_src.s_addr) >> 0) & 0xFF,
+                                (ntohl(u.ip->ip_dst.s_addr) >> 24) & 0xFF,
+                                (ntohl(u.ip->ip_dst.s_addr) >> 16) & 0xFF,
+                                (ntohl(u.ip->ip_dst.s_addr) >> 8) & 0xFF,
+                                (ntohl(u.ip->ip_dst.s_addr) >> 0) & 0xFF);
+            dest.s_addr = u.ip->ip_dst.s_addr;
 
             /*
              * If dest IP = VPN broadcast VPN
@@ -666,7 +662,7 @@ void * comm_tun(void * argument) {
                 while (peer != NULL) {
                     struct client *next = peer->next;
                     if (peer->state == ESTABLISHED) {
-                        SSL_write(peer->ssl, &u, r);
+                        SSL_write(peer->ssl, u.raw, r);
                     }
                     peer = next;
                 }
@@ -676,7 +672,7 @@ void * comm_tun(void * argument) {
              * Local packet...
              */
             else if (dest.s_addr == config.vpnIP.s_addr) {
-                write_tun(tunfd, (unsigned char *)&u, r);
+                write_tun(tunfd, u.raw, r);
             }
             else {
                 MUTEXLOCK;
@@ -701,7 +697,7 @@ void * comm_tun(void * argument) {
                         peer = get_client_VPN(&dest);
                         if (peer != NULL) {// the new connection is opened
                             if (peer->state == ESTABLISHED) {
-                                SSL_write(peer->ssl, &u, r);
+                                SSL_write(peer->ssl, u.raw, r);
                             }
                             decr_ref(peer);
                         }
@@ -718,7 +714,7 @@ void * comm_tun(void * argument) {
                         MUTEXLOCK;
                         client_update_time(peer,time(NULL));
                         MUTEXUNLOCK;
-                        SSL_write(peer->ssl, &u, r);
+                        SSL_write(peer->ssl, u.raw, r);
                         decr_ref(peer);
                         break;
                     /* Lost connection */
@@ -739,7 +735,7 @@ void * comm_tun(void * argument) {
                             peer = get_client_VPN(&dest);
                             if (peer != NULL) {// the new connection is opened
                                 if (peer->state == ESTABLISHED) {
-                                    SSL_write(peer->ssl, &u, r);
+                                    SSL_write(peer->ssl, u.raw, r);
                                 }
                                 decr_ref(peer);
                             }
@@ -762,7 +758,7 @@ void * comm_tun(void * argument) {
                             peer = get_client_VPN(&dest);
                             if (peer != NULL) {// the new connection is opened
                                 if (peer->state == ESTABLISHED) {
-                                    SSL_write(peer->ssl, &u, r);
+                                    SSL_write(peer->ssl, u.raw, r);
                                 }
                                 decr_ref(peer);
                             }
@@ -781,6 +777,7 @@ void * comm_tun(void * argument) {
 
     }
 
+    free(u.raw);
     MUTEXLOCK; // avoid a potential double free bug in OpenSSL's internals
     ERR_remove_state(0);
     MUTEXUNLOCK;
@@ -795,7 +792,7 @@ void * comm_tun(void * argument) {
  * set end_campagnol to 1 un order to stop both threads (and others)
  */
 void start_vpn(int sockfd, int tunfd) {
-    struct message smsg;
+    message_t smsg;
     struct comm_args *args = (struct comm_args*) CHECK_ALLOC_FATAL(malloc(sizeof(struct comm_args)));
     args->sockfd = sockfd;
     args->tunfd = tunfd;
