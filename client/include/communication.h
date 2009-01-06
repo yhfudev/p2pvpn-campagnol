@@ -121,16 +121,33 @@
 #define PUNCH_DELAY_USEC 200000
 
 
-
 /*
  * The structure of the UDP messages between a client and the RDV server
  */
-struct message {
+typedef struct {
     unsigned char type;           // 1 byte : message type
     uint16_t port;                // 2 bytes : port
     struct in_addr ip1;           // 4 bytes : IP address 1 (IPv4)
     struct in_addr ip2;           // 4 bytes : IP address 2 (IPv4)
-}  __attribute__ ((packed)); // important
+}  __attribute__ ((packed)) // important
+message_t;
+
+/* DTLS header */
+typedef struct {
+    unsigned char contentType;          // same as struct message's type (unsigned char)
+    unsigned char protocolVersionMaj;
+    unsigned char protocolVersionMin;
+} dtlsheader_t;
+
+/*
+ * Union used to store a VPN packet
+ */
+typedef union {
+    struct ip *ip;
+    dtlsheader_t *dtlsheader;
+    message_t *message;
+    unsigned char *raw;
+} packet_t;
 
 /* arguments for the punch thread */
 struct punch_arg {
