@@ -205,7 +205,7 @@ int register_rdv(int sockfd) {
     /* Registration failed. The server may be down */
     if (notRegistered) {
         log_message_verb("The connection with the RDV server failed");
-        return 1;
+        return -1;
     }
 
     /* set a timer for the ping messages */
@@ -791,7 +791,7 @@ void * comm_tun(void * argument) {
  *
  * set end_campagnol to 1 un order to stop both threads (and others)
  */
-void start_vpn(int sockfd, int tunfd) {
+int start_vpn(int sockfd, int tunfd) {
     message_t smsg;
     struct comm_args *args = (struct comm_args*) CHECK_ALLOC_FATAL(malloc(sizeof(struct comm_args)));
     args->sockfd = sockfd;
@@ -803,6 +803,9 @@ void start_vpn(int sockfd, int tunfd) {
     }
 
     mutex_clients_init();
+    if (initDTLS() == -1) {
+        return -1;
+    }
 
     pthread_t th_socket, th_tun;
     th_socket = createThread(comm_socket, args);
@@ -821,7 +824,7 @@ void start_vpn(int sockfd, int tunfd) {
         if (peer->thread_ssl_running) {
             end_SSL_reading(peer);
             // don't wait for the SSL_reading thread terminaison here !
-            // it requires to lock the mutex
+            // the thread needs to lock the mutex
         }
         else {
             peer->state = CLOSED;
@@ -840,6 +843,8 @@ void start_vpn(int sockfd, int tunfd) {
     // wait for all the SSL_reading thread to finish
     while (n_clients != 0) { usleep(100000); }
 
+    clearDTLS();
     mutex_clients_destroy();
+    return 0;
 }
 
