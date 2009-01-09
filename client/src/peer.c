@@ -34,15 +34,22 @@
 
 #include <arpa/inet.h>
 
+static int createClientSSL(struct client *peer);
+
 /* List of known clients */
 struct client *clients = NULL;
 int n_clients = 0;
+
 /*
  * mutex used to manipulate 'clients'
  * It needs to be recursive since decr_ref may lock it
  */
 pthread_mutex_t mutex_clients;
 pthread_mutexattr_t attrs_mutex_clients;
+
+/* SSL contexts */
+SSL_CTX *campagnol_ctx_client;
+SSL_CTX *campagnol_ctx_server;
 
 void mutex_clients_init(void) {
     mutexattrInit(&attrs_mutex_clients);
@@ -132,7 +139,7 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct
     mutexInit(&(peer->mutex_ref), NULL);
     peer->ref_count = 2;
 
-    r = createClientSSL(peer, 0);
+    r = createClientSSL(peer);
     if (r != 0) {
         free(peer);
         log_error("Could not create the new client");
@@ -164,7 +171,6 @@ void remove_client(struct client *peer) {
     conditionDestroy(&peer->cond_connected);
     mutexDestroy(&peer->mutex_ref);
     SSL_free(peer->ssl);
-    SSL_CTX_free(peer->ctx);
 
     if (peer->next) peer->next->prev = peer->prev;
     if (peer->prev) {
@@ -268,52 +274,112 @@ void ctx_info_callback(const SSL *ssl, int where, int ret) {
 }
 
 /*
- * Build the SSL structure for a client
- * if recreate is true, delete existing structures
+ * Allocate and configure a DTLS context
  */
-int createClientSSL(struct client *peer, int recreate) {
-    struct timespec recv_timeout;
-    BIO *wbio_tmp;
+static SSL_CTX * createContext(int is_client) {
+    SSL_CTX *ctx;
 
-    if (recreate) {
-        SSL_CTX_free(peer->ctx);
-        SSL_free(peer->ssl);
+    if (is_client) {
+        ctx = SSL_CTX_new(DTLSv1_client_method());
     }
-
-    SSL_METHOD *meth = peer->is_dtls_client ? DTLSv1_client_method() : DTLSv1_server_method();
-    peer->ctx = SSL_CTX_new(meth);
-
-    if (!SSL_CTX_use_certificate_chain_file(peer->ctx, config.certificate_pem)) {
+    else {
+        ctx = SSL_CTX_new(DTLSv1_server_method());
+    }
+    if (ctx == NULL) {
+        ERR_print_errors_fp(stderr);
+        log_error("SSL_CTX_new");
+        return NULL;
+    }
+    if (!SSL_CTX_use_certificate_chain_file(ctx, config.certificate_pem)) {
         ERR_print_errors_fp(stderr);
         log_error("SSL_CTX_use_certificate_chain_file");
         log_message("%s", config.certificate_pem);
-        exit(EXIT_FAILURE);
+        SSL_CTX_free(ctx);
+        return NULL;
     }
-    if (!SSL_CTX_use_PrivateKey_file(peer->ctx, config.key_pem, SSL_FILETYPE_PEM)) {
+    if (!SSL_CTX_use_PrivateKey_file(ctx, config.key_pem, SSL_FILETYPE_PEM)) {
         ERR_print_errors_fp(stderr);
         log_error("SSL_CTX_use_PrivateKey_file");
-        exit(EXIT_FAILURE);
+        SSL_CTX_free(ctx);
+        return NULL;
     }
-    SSL_CTX_set_verify(peer->ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT , verify_crl);
-    SSL_CTX_set_verify_depth(peer->ctx, 1);
-    if (!SSL_CTX_load_verify_locations(peer->ctx, config.verif_pem, NULL)) {
+    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT , verify_crl);
+    SSL_CTX_set_verify_depth(ctx, 1);
+    if (!SSL_CTX_load_verify_locations(ctx, config.verif_pem, NULL)) {
         ERR_print_errors_fp(stderr);
         log_error("SSL_CTX_load_verify_locations");
-        exit(EXIT_FAILURE);
+        SSL_CTX_free(ctx);
+        return NULL;
     }
 
     if (config.debug) {
-        SSL_CTX_set_info_callback(peer->ctx, ctx_info_callback);
+        SSL_CTX_set_info_callback(ctx, ctx_info_callback);
     }
 
     /* Mandatory for DTLS */
-    SSL_CTX_set_read_ahead(peer->ctx, 1);
+    SSL_CTX_set_read_ahead(ctx, 1);
+
+    /* No zlib compression */
+    ctx->comp_methods = NULL;
+    /* Algorithms */
+    if (config.cipher_list != NULL) {
+        if (! SSL_CTX_set_cipher_list(ctx, config.cipher_list)){
+            log_error("SSL_CTX_set_cipher_list");
+            ERR_print_errors_fp(stderr);
+            SSL_CTX_free(ctx);
+            return NULL;
+        }
+    }
+
+    if (!is_client) {
+        SSL_CTX_set_client_CA_list(ctx, SSL_load_client_CA_file(config.verif_pem));
+    }
+
+    return ctx;
+}
+
+/*
+ * Create two DTLS context: client and server
+ * return -1 on error.
+ */
+int initDTLS() {
+    campagnol_ctx_client = createContext(1);
+    if (campagnol_ctx_client == NULL) {
+        log_error("Cannot allocate a new SSL context");
+        return -1;
+    }
+    campagnol_ctx_server = createContext(0);
+    if (campagnol_ctx_client == NULL) {
+        SSL_CTX_free(campagnol_ctx_client);
+        log_error("Cannot allocate a new SSL context");
+        return -1;
+    }
+    return 0;
+}
+
+void clearDTLS() {
+    SSL_CTX_free(campagnol_ctx_client);
+    SSL_CTX_free(campagnol_ctx_server);
+}
+
+/*
+ * Build the SSL structure for a client
+ */
+static int createClientSSL(struct client *peer) {
+    struct timespec recv_timeout;
+    BIO *wbio_tmp;
+
+    if (peer->is_dtls_client) {
+        peer->ctx = campagnol_ctx_client;
+    }
+    else {
+        peer->ctx = campagnol_ctx_server;
+    }
 
     peer->ssl = SSL_new(peer->ctx);
     if (peer->ssl == NULL) {
         ERR_print_errors_fp(stderr);
         log_error("SSL_new");
-        SSL_CTX_free(peer->ctx);
         return -1;
     }
     wbio_tmp = BIO_new_dgram(peer->sockfd, BIO_NOCLOSE);
@@ -321,7 +387,6 @@ int createClientSSL(struct client *peer, int recreate) {
         ERR_print_errors_fp(stderr);
         log_error("BIO_new_dgram");
         SSL_free(peer->ssl);
-        SSL_CTX_free(peer->ctx);
         return -1;
     }
     /* create a BIO for the rate limiter if required */
@@ -334,7 +399,6 @@ int createClientSSL(struct client *peer, int recreate) {
             log_error("BIO_f_new_rate_limiter");
             BIO_free(wbio_tmp);
             SSL_free(peer->ssl);
-            SSL_CTX_free(peer->ctx);
             return -1;
         }
         BIO_push(peer->wbio, wbio_tmp);
@@ -349,7 +413,6 @@ int createClientSSL(struct client *peer, int recreate) {
         log_error("BIO_new(BIO_s_fifo())");
         BIO_free_all(peer->wbio);
         SSL_free(peer->ssl);
-        SSL_CTX_free(peer->ctx);
         return -1;
     }
     recv_timeout.tv_nsec = PEER_RECV_TIMEMOUT_NSEC;
@@ -357,23 +420,11 @@ int createClientSSL(struct client *peer, int recreate) {
     BIO_ctrl(peer->rbio, BIO_CTRL_FIFO_SET_RECV_TIMEOUT, 0, &recv_timeout);
     SSL_set_bio(peer->ssl, peer->rbio, peer->wbio);
 
-    /* No zlib compression */
-    peer->ssl->ctx->comp_methods = NULL;
-    /* Algorithms */
-    if (config.cipher_list != NULL) {
-        if (! SSL_CTX_set_cipher_list(peer->ssl->ctx, config.cipher_list)){
-            log_error("SSL_CTX_set_cipher_list");
-            ERR_print_errors_fp(stderr);
-            exit(EXIT_FAILURE);
-        }
-    }
-
     if (peer->is_dtls_client) {
         SSL_set_connect_state(peer->ssl);
     }
     else {
         SSL_set_accept_state(peer->ssl);
-        SSL_CTX_set_client_CA_list(peer->ctx, SSL_load_client_CA_file(config.verif_pem));
     }
 
     /* Don't try to discover the MTU

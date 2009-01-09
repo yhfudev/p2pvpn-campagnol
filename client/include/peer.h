@@ -71,8 +71,10 @@ extern pthread_mutex_t mutex_clients;
 extern void mutex_clients_init(void);
 extern void mutex_clients_destroy(void);
 
+extern int initDTLS(void);
+extern void clearDTLS(void);
+
 extern struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct in_addr clientIP, uint16_t clientPort, struct in_addr vpnIP, int is_dtls_client);
-extern int createClientSSL(struct client *peer, int recreate);
 extern void remove_client(struct client *peer);
 
 extern struct client * _get_client_VPN(struct in_addr *address);

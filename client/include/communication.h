@@ -162,7 +162,7 @@ struct comm_args {
 };
 
 extern int register_rdv(int sockfd);
-extern void start_vpn(int sockfd, int tunfd);
+extern int start_vpn(int sockfd, int tunfd);
 
 /* the handler for SIGALRM */
 extern void handler_sigTimerPing(int sig);

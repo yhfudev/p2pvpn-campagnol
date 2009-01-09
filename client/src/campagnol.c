@@ -201,9 +201,10 @@ void * sig_handler(void * arg) {
 
 int main (int argc, char **argv) {
     char *configFile = NULL;
-    int sockfd, tunfd;
+    int sockfd = 0, tunfd = 0;
     int pa;
     int exit_status = EXIT_SUCCESS;
+    int send_bye = 0;
 
     config.pidfile = NULL;
     pa = parse_args(argc, argv, &configFile);
@@ -281,13 +282,29 @@ int main (int argc, char **argv) {
     /* The UDP socket is configured
      * Now, register to the rendezvous server
      */
-    if (register_rdv(sockfd)) {
+    if (register_rdv(sockfd) == -1) {
         exit_status = EXIT_FAILURE;
         goto clean_end;
     }
 
     tunfd = init_tun(1);
     if (tunfd < 0) {
+        send_bye = 1;
+        exit_status = EXIT_FAILURE;
+        goto clean_end;
+    }
+
+    log_message("Starting VPN");
+
+    if (start_vpn(sockfd, tunfd) == -1) {
+        send_bye = 1;
+        exit_status = EXIT_FAILURE;
+    }
+
+
+    clean_end:
+
+    if (send_bye) {
         message_t smsg;
         smsg.ip1.s_addr = config.vpnIP.s_addr;
         smsg.ip2.s_addr = 0;
@@ -295,24 +312,18 @@ int main (int argc, char **argv) {
         smsg.type = BYE;
         if (config.debug) printf("Sending BYE\n");
         sendto(sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
-        exit_status = EXIT_FAILURE;
-        goto clean_end;
     }
 
-    log_message("Starting VPN");
-
-    start_vpn(sockfd, tunfd);
-
+    if (tunfd > 0)
+        close_tun(tunfd);
+    if (sockfd > 0)
+        close(sockfd);
 
     log_close();
-    close_tun(tunfd);
-    close(sockfd);
 
-
-    clean_end:
     /* try to clean up everything in openssl
      * OpenSSL has no cleanup function
-     * IFAIK there is nothing to cleanup the compression methods
+     * AFAIK there is nothing to cleanup the compression methods
      */
     // free config.crl and the strings stored in config
     freeConfig();
@@ -320,7 +331,7 @@ int main (int argc, char **argv) {
     ERR_remove_state(0);
     // engine
     ENGINE_cleanup();
-    CONF_modules_unload(1);
+    CONF_modules_free();
 
     ERR_free_strings();
     EVP_cleanup();
