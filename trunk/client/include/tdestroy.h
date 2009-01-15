@@ -24,6 +24,5 @@
 #define TDESTROY_H_
 
 extern void campagnol_tdestroy(void *root, void (*free_node)(void *nodep), int (*compar)(const void *, const void *));
-#define tdestroy(root,free_node) campagnol_tdestroy(root,free_node,parser_compare)
 
 #endif /* TDESTROY_H_ */

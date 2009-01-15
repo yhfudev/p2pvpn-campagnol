@@ -33,6 +33,7 @@
 #endif
 #ifndef HAVE_TDESTROY
 #   include "tdestroy.h"
+#   define tdestroy(root,free_node) campagnol_tdestroy(root,free_node,parser_compare)
 #endif
 
 /* internal comparison function (strncmp) */
