@@ -22,11 +22,11 @@ AC_ARG_WITH([openssl-libs], [AS_HELP_STRING([--with-openssl-libs=DIR],[OpenSSL l
              OPENSSL_LIBS="-L$withval -lssl -lcrypto"
             ]
            )
-if test $openssl_set == 1; then
+AS_IF([test "x$openssl_set" = "x1"],[
         AC_CHECK_FUNC([dlopen],[],[AC_SEARCH_LIBS([dlopen], [dl], [OPENSSL_LIBS+=" -ldl"])])
         AC_SUBST(OPENSSL_CFLAGS)
         AC_SUBST(OPENSSL_LIBS)
-else
+],[
         PKG_CHECK_MODULES([OPENSSL],[openssl >= 0.9.8g])
-fi
+])
 ])
