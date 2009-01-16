@@ -35,7 +35,7 @@
 #include "net_socket.h"
 #include "peer.h"
 #include "tun_device.h"
-#include "log.h"
+#include "../common/log.h"
 
 struct tb_state global_rate_limiter;
 

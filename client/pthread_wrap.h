@@ -33,7 +33,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
-#include "log.h"
+#include "../common/log.h"
 
 static inline void mutexInit(pthread_mutex_t *mutex, pthread_mutexattr_t *attrs);
 static inline void mutexDestroy(pthread_mutex_t *mutex);

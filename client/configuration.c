@@ -28,7 +28,7 @@
 #include "configuration.h"
 #include "config_parser.h"
 #include "communication.h"
-#include "log.h"
+#include "../common/log.h"
 
 #include <arpa/inet.h>
 #include <netdb.h>

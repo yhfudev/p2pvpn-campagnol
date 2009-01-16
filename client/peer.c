@@ -29,7 +29,7 @@
 #include "pthread_wrap.h"
 #include "bss_fifo.h"
 #include "bf_rate_limiter.h"
-#include "log.h"
+#include "../common/log.h"
 #include "communication.h"
 
 #include <arpa/inet.h>
