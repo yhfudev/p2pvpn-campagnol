@@ -2,7 +2,7 @@ AC_PREREQ([2.61])
 AC_INIT([campagnol],[0.3.1],[florent.bondoux@resel.fr])
 AM_INIT_AUTOMAKE([-Wall foreign])
 AM_MAINTAINER_MODE
-AC_CONFIG_SRCDIR([src/campagnol.c])
+AC_CONFIG_SRCDIR([client/campagnol.c])
 AC_CONFIG_HEADERS([config.h])
 
 AC_GNU_SOURCE
@@ -60,5 +60,5 @@ AC_TYPE_SSIZE_T
 AC_REPLACE_FUNCS([getline tdestroy])
 AC_CHECK_FUNCS([sem_timedwait])
 
-AC_CONFIG_FILES([Makefile src/Makefile man/Makefile samples/Makefile])
+AC_CONFIG_FILES([Makefile client/Makefile man/Makefile samples/Makefile])
 AC_OUTPUT
