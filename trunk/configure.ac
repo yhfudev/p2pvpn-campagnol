@@ -5,7 +5,21 @@ AM_MAINTAINER_MODE
 AC_CONFIG_SRCDIR([client/campagnol.c])
 AC_CONFIG_HEADERS([config.h])
 
-AC_GNU_SOURCE
+AC_ARG_ENABLE([client],[AS_HELP_STRING([--disable-client],[do not build the client])],
+[build_client=$enableval],[build_client=yes]
+)
+AC_ARG_ENABLE([server],[AS_HELP_STRING([--disable-server],[do not build the RDV server])],
+[build_server=$enableval],[build_server=yes]
+)
+AM_CONDITIONAL([BUILD_CLIENT], [test "x$build_client" != "xno"])
+AM_CONDITIONAL([BUILD_SERVER], [test "x$build_server" != "xno"])
+
+AS_IF([test "x$build_client" = "xno" -a "x$build_server" = "xno"],[
+  AC_MSG_ERROR([Both the client and the server are disabled. Please enable at least one of them.])
+])
+
+
+AC_USE_SYSTEM_EXTENSIONS
 
 # Checks host type
 AC_CANONICAL_HOST
@@ -35,15 +49,19 @@ AC_CACHE_SAVE
 AC_PROG_CC
 AC_CACHE_SAVE
 
-# Checks for libraries.
-AC_SEARCH_LIBS([pthread_create], [pthread], [], [AC_MSG_ERROR([Requires pthreads])])
-OPENSSL_CHECK
-# later: search into libposix4 for Solaris support
-AC_SEARCH_LIBS([clock_gettime], [rt], [], [AC_MSG_ERROR([Requires clock_gettime])])
-AC_CACHE_SAVE
+# If we build the client: 
+AS_IF([test "x$build_client" != "xno"],[
+  # Checks for libraries.
+  AC_SEARCH_LIBS([pthread_create], [pthread], [], [AC_MSG_ERROR([Requires pthreads])])
+  OPENSSL_CHECK
+  # later: search into libposix4 for Solaris support
+  AC_SEARCH_LIBS([clock_gettime], [rt], [], [AC_MSG_ERROR([Requires clock_gettime])])
+  AC_CACHE_SAVE
 
-# Checks for header files.
-AC_CHECK_HEADERS([ifaddrs.h])
+  # Checks for header files.
+  AC_CHECK_HEADERS([ifaddrs.h])
+])
+
 AC_HEADER_ASSERT
 
 # Checks for typedefs, structures, and compiler characteristics.
@@ -58,8 +76,10 @@ AC_TYPE_SSIZE_T
 # getline and tdestroy are missing on FreeBSD and OpenBSD
 # sem_timedwait is missing on OpenBSD
 AC_CONFIG_LIBOBJ_DIR([lib])
-AC_REPLACE_FUNCS([getline tdestroy])
-AC_CHECK_FUNCS([sem_timedwait])
+AS_IF([test "x$build_client" != "xno"],[
+  AC_REPLACE_FUNCS([getline tdestroy])
+  AC_CHECK_FUNCS([sem_timedwait])
+])
 
 AC_CONFIG_FILES([Makefile client/Makefile rdvserver/Makefile man/Makefile samples/Makefile])
 AC_OUTPUT
