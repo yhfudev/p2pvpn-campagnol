@@ -57,6 +57,7 @@ AC_TYPE_SSIZE_T
 # Checks for library functions.
 # getline and tdestroy are missing on FreeBSD and OpenBSD
 # sem_timedwait is missing on OpenBSD
+AC_CONFIG_LIBOBJ_DIR([lib])
 AC_REPLACE_FUNCS([getline tdestroy])
 AC_CHECK_FUNCS([sem_timedwait])
 
