@@ -32,7 +32,7 @@
 #include "configuration.h"
 #include "communication.h"
 #include "tun_device.h"
-#include "log.h"
+#include "../common/log.h"
 
 /*
  * Open a new TUN virtual interface

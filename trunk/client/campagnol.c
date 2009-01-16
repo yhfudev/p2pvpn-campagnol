@@ -38,7 +38,7 @@
 #include "net_socket.h"
 #include "communication.h"
 #include "configuration.h"
-#include "log.h"
+#include "../common/log.h"
 #include "pthread_wrap.h"
 
 volatile sig_atomic_t end_campagnol = 0;

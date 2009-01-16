@@ -28,7 +28,7 @@
 
 #include "configuration.h"
 #include "net_socket.h"
-#include "log.h"
+#include "../common/log.h"
 
 /* Create the UDP socket
  * Bind it to config.localIP

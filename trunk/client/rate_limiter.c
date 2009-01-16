@@ -32,7 +32,7 @@
 #include <time.h>
 #include <math.h>
 
-#include "log.h"
+#include "../common/log.h"
 #include "rate_limiter.h"
 
 /*

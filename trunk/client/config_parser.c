@@ -22,17 +22,17 @@
 
 #include "campagnol.h"
 #include "config_parser.h"
-#include "log.h"
+#include "../common/log.h"
 
 #include <search.h>
 #include <string.h>
 #include <pthread.h>
 
 #ifndef HAVE_GETLINE
-#   include "getline.h"
+#   include "../lib/getline.h"
 #endif
 #ifndef HAVE_TDESTROY
-#   include "tdestroy.h"
+#   include "../lib/tdestroy.h"
 #   define tdestroy(root,free_node) campagnol_tdestroy(root,free_node,parser_compare)
 #endif
 

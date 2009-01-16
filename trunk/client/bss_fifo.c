@@ -32,7 +32,7 @@
 #include <unistd.h>
 #include <pthread.h>
 
-#include "log.h"
+#include "../common/log.h"
 #include "bss_fifo.h"
 #ifdef USE_SEMAPHORES
 #include "sem_wrap.h"
