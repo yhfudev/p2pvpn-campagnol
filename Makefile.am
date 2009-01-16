@@ -1,4 +1,4 @@
 ACLOCAL_AMFLAGS = -I m4 --install
 
-SUBDIRS = client man samples 
+SUBDIRS = client rdvserver man samples 
 EXTRA_DIST = 

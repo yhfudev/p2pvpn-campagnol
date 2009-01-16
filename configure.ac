@@ -61,5 +61,5 @@ AC_CONFIG_LIBOBJ_DIR([lib])
 AC_REPLACE_FUNCS([getline tdestroy])
 AC_CHECK_FUNCS([sem_timedwait])
 
-AC_CONFIG_FILES([Makefile client/Makefile man/Makefile samples/Makefile])
+AC_CONFIG_FILES([Makefile client/Makefile rdvserver/Makefile man/Makefile samples/Makefile])
 AC_OUTPUT
