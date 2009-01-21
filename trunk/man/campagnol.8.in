@@ -8,7 +8,6 @@ campagnol - Decentralized VPN over UDP tunneling
 .RB [ \-dDhvV ]
 .RB [ "-p \fIpidfile\fR" ]
 .RI [ configuration_file ]
-.LP
 .SH DESCRIPTION
 Campagnol is a distributed IP-based VPN software able to open new connections 
 through NATs or firewalls without any configuration. It uses UDP for the
@@ -32,7 +31,6 @@ connection is established, the two peers open a DTLS session, authenticate each
 other and eventually the link is ready. This is a peer to peer connection: no
 data will flow through the RDV server or any other node. After some time of
 inactivity (or if one of the peer exits) the session will be closed.
-.LP
 .SH OPTIONS
 .TP
 .BR "\-d" ", " "--debug"
