@@ -305,7 +305,7 @@ static SSL_CTX * createContext(int is_client) {
     }
     SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT , verify_crl);
     SSL_CTX_set_verify_depth(ctx, 1);
-    if (!SSL_CTX_load_verify_locations(ctx, config.verif_pem, NULL)) {
+    if (!SSL_CTX_load_verify_locations(ctx, config.verif_pem, config.verif_dir)) {
         ERR_print_errors_fp(stderr);
         log_error("SSL_CTX_load_verify_locations");
         SSL_CTX_free(ctx);

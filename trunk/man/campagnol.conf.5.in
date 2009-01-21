@@ -212,9 +212,22 @@ The PEM file containing the client's X.509 certificate.
 .IP
 The PEM file containing the client's private key.
 .TP
-.PARAMETER ca_certificates path
+.PARAMETER ca_certificates path none
 .IP
-The PEM file containing the root certificate chain.
+The PEM file containing the root certificates chain in PEM format. This file can
+contain several CA certificates. Also see the next parameter
+.BR ca_certificates_dir .
+.TP
+.PARAMETER ca_certificates_dir path none
+.IP
+A directory containing the root certificates in PEM format. This directory must
+be prepared with the \fBc_rehash\fR OpenSSL's utility. See
+.BR SSL_CTX_load_verify_locations (3)
+for a description of the format. At least one of
+.BR ca_certificates " and " ca_certificates_dir
+must be defined. If both are defined, 
+.BR ca_certificates
+is searched first.
 .TP
 .PARAMETER crl_file path none
 .IP

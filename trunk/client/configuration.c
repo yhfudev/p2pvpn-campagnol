@@ -222,6 +222,7 @@ void parseConfFile(char *confFile) {
     config.certificate_pem = NULL;
     config.key_pem = NULL;
     config.verif_pem = NULL;
+    config.verif_dir = NULL;
     config.cipher_list = NULL;
     config.keepalive = 10;
 
@@ -412,8 +413,12 @@ void parseConfFile(char *confFile) {
     if (value != NULL) {
         config.verif_pem = CHECK_ALLOC_FATAL(strdup(value));
     }
-    else {
-        log_message("[%s] Parameter \""OPT_CA"\" is mandatory", confFile);
+    value = parser_get(SECTION_SECURITY, OPT_CA_DIR, &nline, &parser);
+    if (value != NULL) {
+        config.verif_dir = CHECK_ALLOC_FATAL(strdup(value));
+    }
+    if (config.verif_pem == NULL && config.verif_dir == NULL) {
+        log_message("[%s] At least one of \""OPT_CA"\" and \""OPT_CA_DIR"\"is required", confFile);
         exit(EXIT_FAILURE);
     }
 
@@ -551,6 +556,7 @@ void freeConfig() {
     if (config.certificate_pem) free(config.certificate_pem);
     if (config.key_pem) free(config.key_pem);
     if (config.verif_pem) free(config.verif_pem);
+    if (config.verif_dir) free(config.verif_dir);
     if (config.cipher_list) free(config.cipher_list);
     if (config.pidfile) free(config.pidfile);
 }
