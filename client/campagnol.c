@@ -252,7 +252,8 @@ int main (int argc, char **argv) {
         printf("  VPN subnetwork: %s\n", config.network);
         printf("  DTLS certificate file: %s\n", config.certificate_pem);
         printf("  DTLS private key file: %s\n", config.key_pem);
-        printf("  DTLS root certificates chain file: %s\n", config.verif_pem);
+        if (config.verif_pem != NULL) printf("  DTLS root certificates chain file: %s\n", config.verif_pem);
+        if (config.verif_dir != NULL) printf("  DTLS root certificates directory: %s\n", config.verif_dir);
         if (config.cipher_list) printf("  DTLS cipher list: %s\n", config.cipher_list);
         if (config.crl) printf("  Using a certificate revocation list (%d entries)\n", sk_num(X509_CRL_get_REVOKED(config.crl)));
         printf("  FIFO size: %d\n", config.FIFO_size);

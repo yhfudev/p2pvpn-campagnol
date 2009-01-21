@@ -44,6 +44,7 @@ struct configuration {
     char *certificate_pem;                      // PEM formated file containing the client certificate
     char *key_pem;                              // PEM formated file containing the client private key
     char *verif_pem;                            // PEM formated file containing the root certificates
+    char *verif_dir;                            // directory containing root certificates
     char *cipher_list;                          // ciphers list for SSL_CTX_set_cipher_list
                                                 // see openssl ciphers man page
     X509_CRL *crl;                              // The parsed CRL or NULL
@@ -84,6 +85,7 @@ extern void freeConfig(void);
 #define OPT_CERTIFICATE     "certificate"
 #define OPT_KEY             "key"
 #define OPT_CA              "ca_certificates"
+#define OPT_CA_DIR          "ca_certificates_dir"
 #define OPT_CRL             "crl_file"
 #define OPT_CIPHERS         "cipher_list"
 
