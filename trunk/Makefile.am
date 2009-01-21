@@ -1,6 +1,6 @@
 ACLOCAL_AMFLAGS = -I m4 --install
 
-SUBDIRS = man
+SUBDIRS = man common
 if BUILD_CLIENT
 SUBDIRS += client samples
 endif

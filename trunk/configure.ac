@@ -47,6 +47,7 @@ AC_CACHE_SAVE
 
 # Checks for programs.
 AC_PROG_CC
+AC_PROG_RANLIB
 AC_CACHE_SAVE
 
 # If we build the client: 
@@ -81,5 +82,5 @@ AS_IF([test "x$build_client" != "xno"],[
   AC_CHECK_FUNCS([sem_timedwait])
 ])
 
-AC_CONFIG_FILES([Makefile client/Makefile rdvserver/Makefile man/Makefile samples/Makefile])
+AC_CONFIG_FILES([Makefile common/Makefile client/Makefile rdvserver/Makefile man/Makefile samples/Makefile])
 AC_OUTPUT
