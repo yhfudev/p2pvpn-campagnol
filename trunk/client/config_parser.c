@@ -62,6 +62,7 @@ void parser_set(const char *section, const char *option, const char *value,
         item_section->name = CHECK_ALLOC_FATAL(strdup(section));
         item_section->values_tree = NULL;
         item_section->parser = parser;
+        item_section->n_values = 0;
     }
     else {
         item_section = *(void **) tmp;
@@ -74,6 +75,7 @@ void parser_set(const char *section, const char *option, const char *value,
         item_value = (item_value_t *) CHECK_ALLOC_FATAL(malloc(sizeof(item_value_t)));
         *(void **) tmp = item_value;
         item_value->name = CHECK_ALLOC_FATAL(strdup(option));
+        item_section->n_values++;
     }
     else {
         item_value = *(void **) tmp;
@@ -103,6 +105,7 @@ void parser_add_section(const char *section, parser_context_t *parser) {
         item_section->name = CHECK_ALLOC_FATAL(strdup(section));
         item_section->values_tree = NULL;
         item_section->parser = parser;
+        item_section->n_values = 0;
     }
 }
 
@@ -114,6 +117,20 @@ int parser_has_section(const char *section, parser_context_t *parser) {
     tmp_section.name = (char *) section;
     tmp = tfind(&tmp_section, &parser->data, parser_compare);
     return tmp != NULL;
+}
+
+/* Return the number of keys in a section, or -1 if it doesn't exist */
+int parser_section_count(const char *section, parser_context_t *parser) {
+    void *tmp;
+    item_section_t tmp_section, *item;
+
+    tmp_section.name = (char *) section;
+    tmp = tfind(&tmp_section, &parser->data, parser_compare);
+    if (tmp != NULL) {
+        item = *(void **)tmp;
+        return item->n_values;
+    }
+    return -1;
 }
 
 /* Indicate whether [section] option is defined */
@@ -138,7 +155,7 @@ int parser_has_option(const char *section, const char *option,
 
 /* Perform option value substitution
  * return a newly allocated string */
-static char*parser_substitution(const char *section, const char *value, parser_context_t *parser) {
+static char *parser_substitution(const char *section, const char *value, parser_context_t *parser) {
     size_t len, len_written;
     const char *src;
     char *end, *v;
@@ -245,6 +262,26 @@ static char*parser_substitution(const char *section, const char *value, parser_c
     return new_value;
 }
 
+static char *parser_get_expanded(item_value_t *item_value) {
+    char *new_value;
+    // do we need to expand item_value->value
+    if (!item_value->section->parser->allow_value_expansions) {
+        return item_value->value;
+    }
+    else if (item_value->expanding) {
+        // value is beeing expanded
+        return "${RECURSION ERROR}";
+    }
+    else {
+        item_value->expanding = 1;
+        new_value = parser_substitution(item_value->section->name, item_value->value, item_value->section->parser);
+        free(item_value->expanded_value);
+        item_value->expanded_value = new_value;
+        item_value->expanding = 0;
+        return item_value->expanded_value;
+    }
+}
+
 /* Return the value of [section] option
  * If section or option is not defined, then return NULL
  * if nline is not NULL, copy the line number into nline
@@ -255,7 +292,6 @@ char *parser_get(const char *section, const char *option, int *nline,
     item_value_t *item_value;
     item_common_t tmp_item;
     void *tmp;
-    char *new_value;
 
     tmp_item.name = (char *) section;
     tmp = tfind(&tmp_item, &parser->data, parser_compare);
@@ -274,22 +310,7 @@ char *parser_get(const char *section, const char *option, int *nline,
     if (nline != NULL)
         *nline = item_value->nline;
 
-    // do we need to expand item_value->value
-    if (!parser->allow_value_expansions) {
-        return item_value->value;
-    }
-    else if (item_value->expanding) {
-        // value is beeing expanded
-        return "${RECURSION ERROR}";
-    }
-    else {
-        item_value->expanding = 1;
-        new_value = parser_substitution(section, item_value->value, parser);
-        free(item_value->expanded_value);
-        item_value->expanded_value = new_value;
-        item_value->expanding = 0;
-        return item_value->expanded_value;
-    }
+    return parser_get_expanded(item_value);
 }
 
 /* Parse [section] option into value as an integer
@@ -629,6 +650,8 @@ void parser_read(const char *confFile, parser_context_t *parser) {
             }
             strcpy(section, token);
 
+            parser_add_section(section, parser);
+
             continue;
         }
 
@@ -645,8 +668,6 @@ void parser_read(const char *confFile, parser_context_t *parser) {
                 continue;
             }
         }
-
-        parser_add_section(section, parser);
 
         // find first equal sign:
         line_eq = strchr(token, '=');
@@ -775,19 +796,21 @@ void parser_write(FILE *file, parser_context_t *parser) {
 static void parser_forall_option(const void *nodep, const VISIT which,
         const int depth) {
     item_value_t *item;
+    char *v;
     switch (which) {
         case postorder:
         case leaf:
             item = *(item_value_t **) nodep;
+            v = parser_get_expanded(item);
             item->section->parser->forall_function(item->section->name,
-                    item->name, item->value, item->nline);
+                    item->name, v, item->nline);
             break;
         default:
             break;
     }
 }
 
-static void parser_forall_section(const void *nodep, const VISIT which,
+static void parser_forall_sec(const void *nodep, const VISIT which,
         const int depth) {
     item_section_t *item;
     switch (which) {
@@ -804,5 +827,22 @@ static void parser_forall_section(const void *nodep, const VISIT which,
 /* execute f on each option */
 void parser_forall(parser_action_t f, parser_context_t *parser) {
     parser->forall_function = f;
-    twalk(parser->data, parser_forall_section);
+    twalk(parser->data, parser_forall_sec);
+}
+
+/* execute f on each option of the given section */
+void parser_forall_section(const char *section, parser_action_t f, parser_context_t *parser) {
+    void *tmp;
+    item_section_t *item_section;
+    item_section_t tmp_section;
+
+    tmp_section.name = (char *) section;
+    tmp = tfind(&tmp_section, &parser->data, parser_compare);
+    if (tmp == NULL) {
+        return;
+    }
+
+    item_section = *(void **)tmp;
+    parser->forall_function = f;
+    twalk(item_section->values_tree, parser_forall_option);
 }
