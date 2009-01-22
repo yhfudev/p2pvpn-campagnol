@@ -87,6 +87,7 @@ typedef struct parser_context parser_context_t;
 struct item_section {
     __ITEM_COMMON;
     void *values_tree;
+    int n_values;
     parser_context_t *parser; // pointer to its parser_context
 };
 typedef struct item_section item_section_t;
@@ -146,6 +147,8 @@ extern int parser_getboolean(const char *section, const char *option,
 extern void parser_add_section(const char *section, parser_context_t *parser);
 /* Indicates whether the section exist */
 extern int parser_has_section(const char *section, parser_context_t *parser);
+/* Return the number of keys in a section, or -1 if it doesn't exist */
+extern int parser_section_count(const char *section, parser_context_t *parser);
 /* Indicates whether the option is defined */
 extern int parser_has_option(const char *section, const char *option,
         parser_context_t *parser);
@@ -162,5 +165,7 @@ extern void parser_write(FILE *file, parser_context_t *parser);
 
 /* Execute action(section, option, value) for all options in the parser. */
 extern void parser_forall(parser_action_t, parser_context_t *parser);
+/* execute f on each option of the given section */
+extern void parser_forall_section(const char *section, parser_action_t f, parser_context_t *parser);
 
 #endif /* CONFIG_PARSER_H_ */
