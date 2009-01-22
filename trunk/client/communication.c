@@ -469,7 +469,8 @@ void * comm_socket(void * argument) {
                     /* a client wants to open a new session with me */
                     case FWD_CONNECTION :
                         MUTEXLOCK;
-                        if (get_client_VPN(&(u.message->ip2)) == NULL) {
+                        peer = get_client_VPN(&(u.message->ip2));
+                        if (peer == NULL) {
                             /* Unknown client, add a new structure */
                             peer = add_client(sockfd, tunfd, PUNCHING, timestamp, u.message->ip1, u.message->port, u.message->ip2, 0);
                             if (peer == NULL) {
@@ -479,6 +480,9 @@ void * comm_socket(void * argument) {
                             }
                             /* start punching */
                             start_punch(peer, sockfd);
+                            decr_ref(peer);
+                        }
+                        else {
                             decr_ref(peer);
                         }
                         MUTEXUNLOCK;
