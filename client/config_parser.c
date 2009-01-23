@@ -462,6 +462,7 @@ void parser_remove_option(const char *section, const char *option,
     if (tmp != NULL) {
         item_value = *(void **) tmp;
         tdelete(option, &item_section->values_tree, parser_compare);
+        item_section->n_values--;
         free_value(item_value);
     }
 }
