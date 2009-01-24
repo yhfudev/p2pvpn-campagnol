@@ -1,7 +1,7 @@
 /*
  * Pseudo INI file parser
  *
- * Copyright (C) 2008 Florent Bondoux
+ * Copyright (C) 2008-2009 Florent Bondoux
  *
  * This file is part of Campagnol.
  *

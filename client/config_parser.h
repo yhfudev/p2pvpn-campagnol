@@ -1,7 +1,7 @@
 /*
  * Basic INI file parser
  *
- * Copyright (C) 2008 Florent Bondoux
+ * Copyright (C) 2008-2009 Florent Bondoux
  *
  * This file is part of Campagnol.
  *
@@ -41,7 +41,10 @@
  *   - comments start with a ';' or a '#' and continue to the end of the line
  * - Blank lines are allowed
  * - Values
- *   - values can be quoted between "
+ *   - values can be quoted between "". A quoted value can expand to several
+ *     lines.
+ *   - A '\' at the end of a line is treated as a line continuation
+ *     even inside a quoted value.
  *   - values can reference other values from the same section:
  *       [SECTION]
  *       dir = /home/foo/
