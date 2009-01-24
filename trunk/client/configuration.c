@@ -188,6 +188,17 @@ int load_CRL(char *crl_file) {
     return 0;
 }
 
+/* helper function
+ * copy a value from the configuration into get_up_down_dest[get_up_down_index]
+ * used to get the values from the sections UP and DOWN with parser_forall_section
+ */
+static int get_up_down_index;
+static char ** get_up_down_dest;
+void get_up_down(const char *section, const char *key, const char *value, int nline) {
+    get_up_down_dest[get_up_down_index] = CHECK_ALLOC_FATAL(strdup(value));
+    get_up_down_index++;
+}
+
 /*
  * Main parsing function
  */
@@ -195,7 +206,7 @@ void parseConfFile(char *confFile) {
     parser_context_t parser;
     char *value;
     int res;
-    int nline;
+    int nline, n;
     unsigned int port_tmp;
 
     int localIP_set = 0;    // config.localIP is defined
@@ -225,6 +236,8 @@ void parseConfFile(char *confFile) {
     config.verif_dir = NULL;
     config.cipher_list = NULL;
     config.keepalive = 10;
+    config.exec_up = NULL;
+    config.exec_down = NULL;
 
     // init config parser. no DEFAULT section, no empty value
     parser_init(&parser, 0, 0, 1);
@@ -545,11 +558,35 @@ void parseConfFile(char *confFile) {
             config.tb_connection_size = (size_t) 3*MESSAGE_MAX_LENGTH;
     }
 
+
+    /* get the shell commands in SECTION_UP and SECTION_DOWN
+     * copy them into config.exec_up and config.exec_down
+     */
+    n = parser_section_count(SECTION_UP, &parser);
+    if (n >= 0) {
+        config.exec_up = malloc(sizeof(char *) * (n+1));
+        config.exec_up[n] = NULL;
+        get_up_down_index = 0;
+        get_up_down_dest = config.exec_up;
+        parser_forall_section(SECTION_UP, get_up_down, &parser);
+    }
+
+    n = parser_section_count(SECTION_DOWN, &parser);
+    if (n >= 0) {
+        config.exec_down = malloc(sizeof(char *) * (n+1));
+        config.exec_down[n] = NULL;
+        get_up_down_index = 0;
+        get_up_down_dest = config.exec_down;
+        parser_forall_section(SECTION_DOWN, get_up_down, &parser);
+    }
+
+
     parser_free(&parser);
 
 }
 
 void freeConfig() {
+    char **s;
     if (config.crl != NULL) X509_CRL_free(config.crl);
     if (config.iface) free(config.iface);
     if (config.network) free(config.network);
@@ -559,5 +596,21 @@ void freeConfig() {
     if (config.verif_dir) free(config.verif_dir);
     if (config.cipher_list) free(config.cipher_list);
     if (config.pidfile) free(config.pidfile);
+    if (config.exec_up) {
+        s = config.exec_up;
+        while (*s) {
+            free(*s);
+            s++;
+        }
+        free(config.exec_up);
+    }
+    if (config.exec_down) {
+        s = config.exec_down;
+        while (*s) {
+            free(*s);
+            s++;
+        }
+        free(config.exec_down);
+    }
 }
 

@@ -2,7 +2,7 @@
  * Create and configure a tun device
  *
  * Copyright (C) 2007 Antoine Vianey
- *               2008 Florent Bondoux
+ *               2008-2009 Florent Bondoux
  *
  * This file is part of Campagnol.
  *
@@ -34,6 +34,15 @@
 #include "tun_device.h"
 #include "../common/log.h"
 
+static char *device;
+
+char *tun_default_up[] = {
+        "ifconfig %D %V mtu %M up",
+        "ip route replace %N via %V || route add -net %N gw %V",
+        NULL
+};
+char *tun_default_down[] = {NULL};
+
 /*
  * Open a new TUN virtual interface
  * Bind it to config.vpnIP
@@ -42,7 +51,6 @@
 int init_tun(int istun) {
     int tunfd;
     struct ifreq ifr;                   // interface request used to open the TUN device
-    char systemcall[100] = "";          // used to configure the new interface with system shell commands
 
     /* Open TUN interface */
     if (config.verbose) printf("TUN interface initialization\n");
@@ -70,33 +78,17 @@ int init_tun(int istun) {
         return -1;
     }
 
-    if (config.debug) printf("Using TUN device: %s\n",ifr.ifr_name);
-
     /* Inteface configuration */
-    if (config.verbose) printf("TUN interface configuration (%s MTU %d)\n", ifr.ifr_name, config.tun_mtu);
-    if (config.debug) printf("ifconfig...\n");
-    snprintf(systemcall, 100, "ifconfig %s %s mtu %d up", ifr.ifr_name, inet_ntoa (config.vpnIP), config.tun_mtu);
-    if (config.debug) puts(systemcall);
-    system(systemcall);
-    if (config.debug) printf("ip route...\n");
-    snprintf(systemcall, 100, "ip route replace %s via %s", config.network, inet_ntoa (config.vpnIP));
-    if (config.debug) puts(systemcall);
-    int r = system(systemcall);
-    if (r != 0) { // iproute2 is not installed ? try with route
-        if (config.debug) puts("route add...");
-        snprintf(systemcall, 100, "route add -net %s gw %s", config.network, inet_ntoa (config.vpnIP));
-        if (config.debug) puts(systemcall);
-        r = system(systemcall);
-    }
-    if (r != 0) {
-        log_message_verb("Error while configuring the TUN interface");
-        return -1;
-    }
+    device = CHECK_ALLOC_FATAL(strdup(ifr.ifr_name));
+    if (config.verbose) printf("TUN interface configuration (%s MTU %d)\n", device, config.tun_mtu);
+    exec_up(device);
 
     return tunfd;
 }
 
 int close_tun(int fd) {
-    return close(fd);
+    exec_down(device);
+    free(device);
+    return close(fd); // the close call destroys the device
 }
 

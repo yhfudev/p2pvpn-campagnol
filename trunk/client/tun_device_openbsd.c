@@ -2,7 +2,7 @@
  * Create and configure a tun device
  *
  * Copyright (C) 2007 Antoine Vianey
- *               2008 Florent Bondoux
+ *               2008-2009 Florent Bondoux
  *
  * This file is part of Campagnol.
  *
@@ -40,6 +40,15 @@
 #include "tun_device.h"
 #include "../common/log.h"
 
+static char *device;
+
+char *tun_default_up[] = {
+        "ifconfig %D inet %V %V up",
+        "route add -net %N %V",
+        NULL
+};
+char *tun_default_down[] = {NULL};
+
 /*
  * Open a new TUN virtual interface
  * Bind it to config.vpnIP
@@ -47,8 +56,7 @@
  */
 int init_tun(int istun) {
     int tunfd;
-    char systemcall[100] = "";          // used to configure the new interface with system shell commands
-    int r, i;
+    int i;
     char devicename[20];
     struct tuninfo infos;
 
@@ -68,23 +76,17 @@ int init_tun(int istun) {
 
     /* Inteface configuration */
     if (config.verbose) printf("TUN interface configuration (tun%d MTU %d)\n", i, config.tun_mtu);
-    if (config.debug) printf("ifconfig...\n");
-    snprintf(systemcall, 100, "ifconfig tun%d inet %s %s up", i, inet_ntoa (config.vpnIP), inet_ntoa(config.vpnIP));
-    if (config.debug) puts(systemcall);
-    system(systemcall);
-    if (config.debug) puts("route add...");
-    snprintf(systemcall, 100, "route add -net %s %s", config.network, inet_ntoa (config.vpnIP));
-    if (config.debug) puts(systemcall);
-    r = system(systemcall);
-    if (r != 0) {
-        log_message_verb("Error while configuring the TUN interface");
-        return -1;
-    }
+
+    device = CHECK_ALLOC_FATAL(malloc(20));
+    snprintf(device, 20, "tun%d", i);
+    exec_up(device);
 
     return tunfd;
 }
 
 int close_tun(int fd) {
+    exec_down(device);
+    free(device);
     return close(fd);
 }
 
