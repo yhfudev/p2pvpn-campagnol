@@ -127,7 +127,7 @@ int parser_section_count(const char *section, parser_context_t *parser) {
     tmp_section.name = (char *) section;
     tmp = tfind(&tmp_section, &parser->data, parser_compare);
     if (tmp != NULL) {
-        item = *(void **)tmp;
+        item = *(void **) tmp;
         return item->n_values;
     }
     return -1;
@@ -155,7 +155,8 @@ int parser_has_option(const char *section, const char *option,
 
 /* Perform option value substitution
  * return a newly allocated string */
-static char *parser_substitution(const char *section, const char *value, parser_context_t *parser) {
+static char *parser_substitution(const char *section, const char *value,
+        parser_context_t *parser) {
     size_t len, len_written;
     const char *src;
     char *end, *v;
@@ -175,14 +176,17 @@ static char *parser_substitution(const char *section, const char *value, parser_
             if (*src == '\\')
                 escaped = 1;
             // ${ ... }, skip it
-            else if (*src == '$' && *(src+1) == '{' && (end = strchr(src+2, '}')) != NULL) {
+            else if (*src == '$' && *(src + 1) == '{' && (end = strchr(src + 2,
+                    '}')) != NULL) {
                 src = end;
             }
-            else // normal character
+            else
+                // normal character
                 len++;
         }
         else {
-            if (*src != '$') len++;
+            if (*src != '$')
+                len++;
             len++;
             escaped = 0;
         }
@@ -190,12 +194,11 @@ static char *parser_substitution(const char *section, const char *value, parser_
             break;
     }
 
-
     // Now create the exanded value into new_value
 
-    len_written = 0;    // number of chars already written
+    len_written = 0; // number of chars already written
     new_value = malloc(len);
-    dst = new_value;    // dst pointer
+    dst = new_value; // dst pointer
     *dst = '\0';
     src = value;
     escaped = 0;
@@ -204,14 +207,15 @@ static char *parser_substitution(const char *section, const char *value, parser_
             if (*src == '\\')
                 escaped = 1;
             // ${ ... }
-            else if (*src == '$' && *(src+1) == '{' && (end = strchr(src+2, '}')) != NULL) {
+            else if (*src == '$' && *(src + 1) == '{' && (end = strchr(src + 2,
+                    '}')) != NULL) {
                 *end = '\0';
-                v = parser_get(section, src+2, NULL, parser);
+                v = parser_get(section, src + 2, NULL, parser);
                 if (v != NULL) { // replace ${...} by it's value after a realloc
                     len += strlen(v);
                     new_value = realloc(new_value, len);
                     dst = new_value + len_written;
-                    for (i=0; i<strlen(v); i++) {
+                    for (i = 0; i < strlen(v); i++) {
                         dst[i] = v[i];
                         len_written++;
                     }
@@ -222,7 +226,7 @@ static char *parser_substitution(const char *section, const char *value, parser_
                     len += (end - src + 1);
                     new_value = realloc(new_value, len);
                     dst = new_value + len_written;
-                    for (i=0; i<(end - src); i++) {
+                    for (i = 0; i < (end - src); i++) {
                         *dst = src[i];
                         len_written++;
                         dst++;
@@ -244,7 +248,7 @@ static char *parser_substitution(const char *section, const char *value, parser_
         else {
             if (*src != '$') {
                 *dst = '\\';
-                len_written ++;
+                len_written++;
                 dst++;
             }
             *dst = *src;
@@ -274,7 +278,8 @@ static char *parser_get_expanded(item_value_t *item_value) {
     }
     else {
         item_value->expanding = 1;
-        new_value = parser_substitution(item_value->section->name, item_value->value, item_value->section->parser);
+        new_value = parser_substitution(item_value->section->name,
+                item_value->value, item_value->section->parser);
         free(item_value->expanded_value);
         item_value->expanded_value = new_value;
         item_value->expanding = 0;
@@ -316,7 +321,8 @@ char *parser_get(const char *section, const char *option, int *nline,
 /* Parse [section] option into value as an integer
  * if nline is not NULL, copy the line number into nline
  * if raw is not NULL, copy the string value pointer into *raw
- * Return 1 in case of success, 0 if the option is not an integer, -1 if the option is not defined
+ * Return 1 in case of success, 0 if the option is not an integer, -1 if the
+ * option is not defined
  */
 int parser_getint(const char *section, const char *option, int *value,
         char **raw, int *nline, parser_context_t *parser) {
@@ -335,7 +341,8 @@ int parser_getint(const char *section, const char *option, int *value,
 /* Parse [section] option into value as an unsigned integer
  * if nline is not NULL, copy the line number into nline
  * if raw is not NULL, copy the string value pointer into *raw
- * Return 1 in case of success, 0 if the option is not an integer, -1 if the option is not defined
+ * Return 1 in case of success, 0 if the option is not an integer, -1 if the
+ * option is not defined
  */
 int parser_getuint(const char *section, const char *option,
         unsigned int *value, char **raw, int *nline, parser_context_t *parser) {
@@ -354,7 +361,8 @@ int parser_getuint(const char *section, const char *option,
 /* Parse [section] option into value as a float
  * if nline is not NULL, copy the line number into nline
  * if raw is not NULL, copy the string value pointer into *raw
- * Return 1 in case of success, 0 if the option is not a float, -1 if the option is not defined
+ * Return 1 in case of success, 0 if the option is not a float, -1 if the option
+ * is not defined
  */
 int parser_getfloat(const char *section, const char *option, float *value,
         char **raw, int *nline, parser_context_t *parser) {
@@ -373,7 +381,8 @@ int parser_getfloat(const char *section, const char *option, float *value,
 /* Parse [section] option into value as a boolean
  * if nline is not NULL, copy the line number into nline
  * if raw is not NULL, copy the string value pointer into *raw
- * Return 1 in case of success, 0 if the option is not valid, -1 if the option is not defined
+ * Return 1 in case of success, 0 if the option is not valid, -1 if the option
+ * is not defined
  * valid values are "yes", "on", "1", "true"
  *                  "no", "off", "0", "false"
  * Values are case insensitive
@@ -523,29 +532,42 @@ static int remove_comments(char *line) {
 /* value expansion
  *
  * expand characters \# \; \t \n \r \\ and \"
- * if line is quoted, remove the quotes
+ * Remove the quotes around the value
+ *
+ * continued is set to 1 if the token ends with '\'<newline>
+ * quoted must be set to 1 if we are inside a quoted value and will be
+ * set accordingly.
+ * return the length of token after expansion or -1 if the syntax of the line
+ * continuation is wrong.
  */
-static int expand_token(char *token) {
+static int expand_token(char *token, int *quoted, int *continued) {
     const char *src = token;
     char *dst = token;
     int escaped = 0;
-    int quoted = 0;
+    char *escape_pos = NULL;
+    int end_quotes = 0;
 
-    if (*src == '"') {
-        quoted = 1;
+    *continued = 0;
+
+    if (*src == '"' && !*quoted) {
+        *quoted = 1;
         src++;
     }
 
     for (;; src++) {
         if (!escaped) {
-            if (*src == '\\')
+            if (*src == '\\') { // escape char
                 escaped = 1;
-            else if (*src == '"' && quoted) {
+                escape_pos = dst;
+            }
+            else if (*src == '"' && *quoted) { // closing quote
                 *dst = '\0';
                 dst++;
+                end_quotes = 1;
+                *quoted = 0;
                 break;
             }
-            else {
+            else { // normal char
                 *dst = *src;
                 dst++;
             }
@@ -566,13 +588,43 @@ static int expand_token(char *token) {
                     break;
             }
             dst++;
-            escaped = 0;
+            if (*src != '\0') // keep escaped=1 at the end of line
+                escaped = 0;
         }
 
         if (*src == '\0')
             break;
     }
 
+    if (end_quotes) { // last char was a closing ", search for line continuation
+        src++;
+        while (*src) {
+            switch (*src) {
+                case ' ':
+                    if (*continued == 1) {
+                        return -1;
+                    }
+                    break;
+                case '\\':
+                    if (*continued == 1) {
+                        return -1;
+                    }
+                    *continued = 1;
+                    break;
+                default:
+                    return -1;
+                    break;
+            }
+            src++;
+        }
+    }
+    else if (escaped) { // last char was a '\'
+        *continued = 1;
+        *escape_pos = '\0'; // remove last '\'
+        dst = escape_pos + 1;
+    }
+
+    //ASSERT((dst-token-1) == strlen(token));
     return (dst - token) - 1;
 }
 
@@ -593,7 +645,8 @@ void parser_read(const char *confFile, parser_context_t *parser) {
     char *section = NULL; // current section
     size_t name_length = 0, value_length = 0, section_length = 0;
 
-    //    int res;
+    int continued, r_continued;
+    int quoted;
     char *token_end;
     char *line_eq;
     char *eol;
@@ -602,6 +655,8 @@ void parser_read(const char *confFile, parser_context_t *parser) {
     /* Read the configuration file */
     while ((r = getline(&line, &line_len, conf)) != -1) {
         nline++;
+
+        quoted = 0;
 
         // end of line
         eol = strstr(line, "\r\n");
@@ -631,8 +686,8 @@ void parser_read(const char *confFile, parser_context_t *parser) {
                 token++;
             token_end = strrchr(token, ']');
             if (token_end == NULL) {
-                log_message("[%s:%d] Syntax error, section declaration", confFile,
-                        nline);
+                log_message("[%s:%d] Syntax error, section declaration",
+                        confFile, nline);
                 continue;
             }
             if (token_end == token) {
@@ -706,19 +761,99 @@ void parser_read(const char *confFile, parser_context_t *parser) {
         *token_end = '\0';
 
         // remove quotes and expand escaped chars
-        r = expand_token(token);
+        r = expand_token(token, &quoted, &continued);
 
-        if (!parser->allow_empty_value && r == 0) {
-            log_message("[%s:%d] Syntax error, empty value", confFile, nline);
+        if (r == -1) {
+            log_message("[%s:%d] Syntax error, line continuation", confFile,
+                    nline);
             continue;
         }
 
+        // inside a quotation: append \n to the token
+        if (quoted && !continued)
+            r++;
+
+        // copy what we have into value
         if (value_length < r + 1) {
             value_length = r + 1;
             free(value);
             value = malloc(value_length);
         }
         strcpy(value, token);
+
+        // append \n if necessary
+        if (quoted && !continued)
+            strcat(value, "\n");
+
+        // continue the reading if the line ends with a line continuation
+        // or if we are inside a quotation
+        while (continued || quoted) {
+            r_continued = getline(&line, &line_len, conf);
+            if (r_continued == -1) {
+                log_message("[%s:%d] End of file, line continuation error",
+                        confFile, nline);
+                break;
+            }
+            nline++;
+
+            // end of line
+            eol = strstr(line, "\r\n");
+            if (eol == NULL)
+                eol = strchr(line, '\n');
+            if (eol != NULL) {
+                *eol = '\0';
+            }
+
+            token = line;
+            if (!quoted) {
+                // remove leading spaces:
+                while (*token == ' ' || *token == '\t')
+                    token++;
+
+                // remove comments
+                r_continued = remove_comments(token);
+
+                if (r_continued == 0)
+                    break;
+
+                token_end = token + strlen(token);
+
+                // strip trailing spaces
+                while (*(token_end - 1) == ' ' || *(token_end - 1) == '\t')
+                    token_end--;
+                *token_end = '\0';
+
+            }
+
+            // remove quotes and expand escaped chars
+            r_continued = expand_token(token, &quoted, &continued);
+
+            if (r_continued == -1) {
+                log_message("[%s:%d] Syntax error, line continuation",
+                        confFile, nline);
+                break;
+            }
+
+            if (quoted && !continued)
+                r_continued++;
+
+            // append the line to value
+            if (r_continued != 0) {
+                r += r_continued;
+                if (value_length < r + 1) {
+                    value_length = r + 1;
+                    value = realloc(value, value_length);
+                }
+                strcat(value, token);
+                if (quoted && !continued)
+                    strcat(value, "\n");
+            }
+        }
+
+        if (!parser->allow_empty_value && r == 0) {
+            log_message("[%s:%d] Syntax error, empty value", confFile, nline);
+            continue;
+        }
 
         if (config.debug) {
             printf("[%s:%d] [%s] '%s' = '%s'\n", confFile, nline, section,
@@ -756,12 +891,18 @@ static void parser_write_option(const void *nodep, const VISIT which,
                 case '#':
                 case ';':
                 case '\\':
-                case '"':;
+                case '"':
                     fprintf(item->section->parser->dump_file, "\\%c", *c);
                     break;
-                case '\t': fprintf(item->section->parser->dump_file, "\\t"); break;
-                case '\n': fprintf(item->section->parser->dump_file, "\\n"); break;
-                case '\r': fprintf(item->section->parser->dump_file, "\\r"); break;
+                case '\t':
+                    fprintf(item->section->parser->dump_file, "\\t");
+                    break;
+                case '\n':
+                    fprintf(item->section->parser->dump_file, "\\n");
+                    break;
+                case '\r':
+                    fprintf(item->section->parser->dump_file, "\\r");
+                    break;
                 default:
                     fprintf(item->section->parser->dump_file, "%c", *c);
                     break;
@@ -832,7 +973,8 @@ void parser_forall(parser_action_t f, parser_context_t *parser) {
 }
 
 /* execute f on each option of the given section */
-void parser_forall_section(const char *section, parser_action_t f, parser_context_t *parser) {
+void parser_forall_section(const char *section, parser_action_t f,
+        parser_context_t *parser) {
     void *tmp;
     item_section_t *item_section;
     item_section_t tmp_section;
@@ -843,7 +985,7 @@ void parser_forall_section(const char *section, parser_action_t f, parser_contex
         return;
     }
 
-    item_section = *(void **)tmp;
+    item_section = *(void **) tmp;
     parser->forall_function = f;
     twalk(item_section->values_tree, parser_forall_option);
 }
