@@ -57,6 +57,9 @@ struct configuration {
     int max_clients;                            // maximum number of clients
     char *pidfile;                              // PID file in daemon mode
     unsigned int keepalive;                     // seconds between keepalive messages;
+
+    char ** exec_up;
+    char ** exec_down;
 };
 
 extern void parseConfFile(char *file);
@@ -67,6 +70,8 @@ extern void freeConfig(void);
 #define SECTION_VPN         "VPN"
 #define SECTION_CLIENT      "CLIENT"
 #define SECTION_SECURITY    "SECURITY"
+#define SECTION_UP          "UP"
+#define SECTION_DOWN        "DOWN"
 
 #define SECTION_DEFAULT     "DEFAULT"
 

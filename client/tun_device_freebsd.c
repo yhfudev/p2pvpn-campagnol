@@ -2,7 +2,7 @@
  * Create and configure a tun device
  *
  * Copyright (C) 2007 Antoine Vianey
- *               2008 Florent Bondoux
+ *               2008-2009 Florent Bondoux
  *
  * This file is part of Campagnol.
  *
@@ -38,6 +38,16 @@
 #include "tun_device.h"
 #include "../common/log.h"
 
+char *tun_default_up[] = {
+        "ifconfig %D inet %V %V mtu %M up",
+        "route add -net %N %V",
+        NULL
+};
+char *tun_default_down[] = {
+        "ifconfig %D destroy",
+        NULL
+};
+
 /*
  * Open a new TUN virtual interface
  * Bind it to config.vpnIP
@@ -46,8 +56,6 @@
 int init_tun(int istun) {
     int tunfd;
     struct stat buf;
-    int r;
-    char systemcall[100] = "";          // used to configure the new interface with system shell commands
 
     /* Open TUN interface */
     if (config.verbose) printf("TUN interface initialization\n");
@@ -63,31 +71,19 @@ int init_tun(int istun) {
 
     /* Inteface configuration */
     if (config.verbose) printf("TUN interface configuration (%s MTU %d)\n", devname(buf.st_rdev, S_IFCHR), config.tun_mtu);
-    if (config.debug) printf("ifconfig...\n");
-    snprintf(systemcall, 100, "ifconfig %s inet %s %s mtu %d up", devname(buf.st_rdev, S_IFCHR), inet_ntoa (config.vpnIP), inet_ntoa(config.vpnIP), config.tun_mtu);
-    if (config.debug) puts(systemcall);
-    system(systemcall);
-    if (config.debug) puts("route add...");
-    snprintf(systemcall, 100, "route add -net %s %s", config.network, inet_ntoa (config.vpnIP));
-    if (config.debug) puts(systemcall);
-    r = system(systemcall);
-    if (r != 0) {
-        log_message_verb("Error while configuring the TUN interface");
-        return -1;
-    }
+    exec_up(devname(buf.st_rdev, S_IFCHR));
 
     return tunfd;
 }
 
 int close_tun(int fd) {
     struct stat buf;
-    char systemcall[100] = "";
+    int r;
 
     fstat(fd, &buf);
-    close(fd);
-    snprintf(systemcall, 100, "ifconfig %s destroy", devname(buf.st_rdev, S_IFCHR));
-    if (config.debug) puts(systemcall);
-    system(systemcall);
-    return 0;
+    r = close(fd);
+    exec_down(devname(buf.st_rdev, S_IFCHR));
+
+    return r;
 }
 

@@ -2,7 +2,7 @@
  * Create and configure a tun device
  *
  * Copyright (C) 2007 Antoine Vianey
- *               2008 Florent Bondoux
+ *               2008-2009 Florent Bondoux
  *
  * This file is part of Campagnol.
  *
@@ -26,6 +26,11 @@
 
 extern int init_tun(int istun);
 extern int close_tun(int fd);
+
+extern void exec_up(char *device);
+extern void exec_down(char *device);
+extern char *tun_default_up[];
+extern char *tun_default_down[];
 
 #if defined (HAVE_FREEBSD) || defined (HAVE_LINUX)
 #   define read_tun(fd,buf,count) read(fd,buf,count)

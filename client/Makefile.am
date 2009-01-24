@@ -14,7 +14,7 @@ campagnol_SOURCES = bf_rate_limiter.c bf_rate_limiter.h \
 	pthread_wrap.h \
 	rate_limiter.c rate_limiter.h \
 	sem_wrap.h \
-	tun_device.h
+	tun_device_common.c tun_device.h
 if HAVE_LINUX
 campagnol_SOURCES += tun_device_linux.c
 endif
