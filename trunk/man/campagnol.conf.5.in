@@ -41,12 +41,41 @@ be escaped with
 (\\\\, \\n, \\# ...). The white-spaces around the section names,
 the parameters and their values are stripped. All names are case sensitive.
 .PP
+A \[oq]\\\[cq] at the end of the value is treated as a line continuation. It is
+removed and the parser continue to read the value with the next line. Quoted
+values can also extend to several lines.
+.PP
 .ft CR
 .nf
 [SOME_SECTION]
   param        = value        # comment
   other_param  = a few words
   quoted_value = "some chars \\t\\"\\#  "
+
+
+[MULTILINE 1]
+# The following definitions are equivalent
+a = "aze rty uio"
+b = "aze"\\
+    " rty "\\
+    "uio"
+c = aze\\
+    " rty "\\
+    uio
+d = "aze\\
+ rty \\
+uio"
+
+
+[MULTILINE 2]
+# The following definitions are equivalent
+a = "aze\\n  rty\\n uio"
+b = "aze
+  rty
+ uio"
+c = "aze\\n"\\
+    "  rty\\n"\\
+    " uio"
 .fi
 .ft
 .PP
@@ -81,6 +110,12 @@ All the DTLS-related parameters.
 .TP
 .B [CLIENT]
 This section is used to adjust the client's behavior.
+.TP
+.B [UP]
+This section is optional and defines the commands executed to configure the TUN device.
+.TP
+.B [DOWN]
+This section is optional and defines the commands executed when the TUN device is closed.
 .RE
 .SH PARAMETERS
 This is a list of all the available parameters, with their default value if they are optional and their expected format.
@@ -275,6 +310,97 @@ contexts of the involved NATs and firewalls.
 .PARAMETER max_clients integer 100
 .IP
 The maximum number of simultaneously opened connections with other clients.
+.\" *** UP ***
+.SS [UP] section
+This section is optional. It defines the programs that are launched to configure
+the TUN device. It should be used to run ifconfig, set the MTU, add a route,
+open som port on the firewall...
+.PP
+If the section is not defined, campagnol will execute some plateform-dependent
+default commands to setup the interface, its MTU and add a route. If it is
+empty, then no command are executed.
+.PP
+The order of execution of the shell commands is defined by their keys wich are
+sorted with 
+.BR strcmp (3).
+.PP
+The following special variables are available:
+.RS
+.TP 8n
+.B %D
+the TUN device
+.TP
+.B %V
+the VPN IP, as defined in the
+.BR [VPN]
+section.
+.TP
+.B %M
+the MTU of the TUN device, as defined in the
+.BR [NETWORK]
+section
+.TP
+.B %I
+the local IP
+.TP
+.B %P
+the local UDP port
+.TP
+.B %N
+the netmask of the VPN, as defined in the
+.BR [VPN]
+section.
+.TP
+.B %%
+the \[oq]%\[cq] character
+.RE
+.PP
+The following example corresponds to the default shell commands for Linux.
+.PP
+.ft CR
+.nf
+[UP]
+01 = "ifconfig %D %V mtu %M up"
+02 = "ip route replace %N via %V || route add -net %N gw %V"
+.fi
+.ft
+.PP
+This is the default commands for FreeBSD:
+.PP
+.ft CR
+.nf
+01 = "ifconfig %D inet %V %V mtu %M up"
+02 = "route add -net %N %V"
+.fi
+.ft
+.PP
+This is the default commands for OpenBSD. Note that you do not need to manually
+set the MTU with ifconfig for OpenBSD.
+.PP
+.ft CR
+.nf
+01 = "ifconfig %D inet %V %V up"
+02 = "route add -net %N %V"
+.fi
+.ft
+.\" *** DOWN ***
+.SS [DOWN] section
+This section is optional. It has the same syntax than the
+.BR [UP]
+section but it defines the shell commands that are executed when the TUN device is
+closed. The same special variables are available.
+.PP
+The default for Linux and OpenBSD is to execute nothing.
+.PP
+The following corresponds to the default for FreeBSD. We need to explicitely
+close the TUN device with ifconfig:
+.PP
+.ft CR
+.nf
+[DOWN]
+01 = "ifconfig %D destroy"
+.fi
+.ft
 .SH SEE ALSO
 .BR campagnol (8),
 .BR campagnol_rdv (8),
