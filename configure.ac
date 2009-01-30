@@ -1,5 +1,5 @@
 AC_PREREQ([2.61])
-AC_INIT([campagnol],[0.3.1],[florent.bondoux@resel.fr])
+AC_INIT([campagnol],[0.3.2],[florent.bondoux@resel.fr])
 AM_INIT_AUTOMAKE([-Wall foreign])
 AM_MAINTAINER_MODE
 AC_CONFIG_SRCDIR([client/campagnol.c])
@@ -48,21 +48,38 @@ AC_CACHE_SAVE
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_CC_C99
+AM_PROG_CC_C_O
 AC_PROG_RANLIB
 AC_CACHE_SAVE
 
-# If we build the client: 
+# Backup LIBS
+OLD_LIBS=$LIBS
+
+# If we build the client:
 AS_IF([test "x$build_client" != "xno"],[
   # Checks for libraries.
-  AC_SEARCH_LIBS([pthread_create], [pthread], [], [AC_MSG_ERROR([Requires pthreads])])
+  AC_SEARCH_LIBS([pthread_create], [pthread],
+    [test "$ac_res" = "none required" || CLIENT_LIBS="$ac_res $CLIENT_LIBS"],
+    [AC_MSG_ERROR([Requires pthreads])]
+  )
   OPENSSL_CHECK
   # later: search into libposix4 for Solaris support
-  AC_SEARCH_LIBS([clock_gettime], [rt], [], [AC_MSG_ERROR([Requires clock_gettime])])
+  AC_SEARCH_LIBS([clock_gettime], [rt], 
+    [test "$ac_res" = "none required" || CLIENT_LIBS="$ac_res $CLIENT_LIBS"],
+    [AC_MSG_ERROR([Requires clock_gettime])]
+  )
   AC_CACHE_SAVE
 
   # Checks for header files.
   AC_CHECK_HEADERS([ifaddrs.h])
+
+  AC_SUBST(CLIENT_LIBS)
+  LIBS=$OLD_LIBS
 ])
+
+RDV_LIBS=""
+AC_SUBST(RDV_LIBS)
+
 
 AC_HEADER_ASSERT
 
@@ -79,8 +96,10 @@ AC_TYPE_SSIZE_T
 # sem_timedwait is missing on OpenBSD
 AC_CONFIG_LIBOBJ_DIR([lib])
 AS_IF([test "x$build_client" != "xno"],[
+  LIBS=$CLIENT_LIBS
   AC_REPLACE_FUNCS([getline tdestroy])
   AC_CHECK_FUNCS([sem_timedwait])
+  LIBS=$OLD_LIBS
 ])
 
 AC_CONFIG_FILES([Makefile common/Makefile client/Makefile rdvserver/Makefile man/Makefile samples/Makefile])

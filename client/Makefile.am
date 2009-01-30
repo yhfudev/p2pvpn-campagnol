@@ -26,5 +26,5 @@ campagnol_SOURCES += tun_device_openbsd.c
 endif
 campagnol_CPPFLAGS = -DSYSCONFDIR="\"$(sysconfdir)\"" -DLOCALSTATEDIR="\"$(localstatedir)\"" @OPENSSL_CFLAGS@
 campagnol_CFLAGS = -Wall -Wstrict-prototypes
-campagnol_LDADD = $(LIBOBJS) ../common/libcommon.a @OPENSSL_LIBS@ -lm
+campagnol_LDADD = $(LIBOBJS) ../common/libcommon.a -lm @OPENSSL_LIBS@ @CLIENT_LIBS@
 
