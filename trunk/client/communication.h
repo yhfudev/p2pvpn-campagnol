@@ -114,7 +114,7 @@
 /*
  * Number of punch messages
  */
-#define PUNCH_NUMBER 25
+#define PUNCH_NUMBER 10
 /*
  * Duration between two punch messages
  */
