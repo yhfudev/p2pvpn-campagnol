@@ -81,7 +81,7 @@ struct tb_state global_rate_limiter;
 //}
 
 /* Initialise a message with the given fields */
-inline void init_smsg(message_t *smsg, unsigned char type, uint32_t ip1, uint32_t ip2) {
+static inline void init_smsg(message_t *smsg, unsigned char type, uint32_t ip1, uint32_t ip2) {
     memset(smsg, 0, sizeof(message_t));
     smsg->type = type;
     smsg->ip1.s_addr = ip1;
@@ -89,7 +89,7 @@ inline void init_smsg(message_t *smsg, unsigned char type, uint32_t ip1, uint32_
 }
 
 /* Initialise a timeval structure to use with select */
-inline void init_timeout(struct timeval *timeout) {
+static inline void init_timeout(struct timeval *timeout) {
     timeout->tv_sec = SELECT_DELAY_SEC;
     timeout->tv_usec = SELECT_DELAY_USEC;
 }
@@ -113,7 +113,7 @@ void handler_sigTimerPing(int sig) {
  * http://tools.ietf.org/html/rfc1071
  * This function is based on the example in the RFC
  */
-uint16_t compute_csum(uint16_t *addr, size_t count){
+static uint16_t compute_csum(uint16_t *addr, size_t count){
    register int32_t sum = 0;
 
     while( count > 1 )  {
@@ -225,7 +225,7 @@ int register_rdv(int sockfd) {
  * Function sending the punch messages for UDP hole punching
  * arg: struct punch_arg
  */
-void *punch(void *arg) {
+static void *punch(void *arg) {
     int i;
     struct client *peer = (struct client *)arg;
     message_t smsg;
@@ -255,7 +255,7 @@ void *punch(void *arg) {
 /*
  * Create a thread executing "punch"
  */
-void start_punch(struct client *peer, int sockfd) {
+static void start_punch(struct client *peer, int sockfd) {
     incr_ref(peer);
     createDetachedThread(punch, (void *)peer);
 }
@@ -270,7 +270,7 @@ void start_punch(struct client *peer, int sockfd) {
  *
  * args: the connected peer (struct client *)
  */
-void * SSL_reading(void * args) {
+static void * SSL_reading(void * args) {
     int r;
     // union used to receive the messages
     packet_t u;
@@ -280,7 +280,7 @@ void * SSL_reading(void * args) {
     u.raw = CHECK_ALLOC_FATAL(malloc(MESSAGE_MAX_LENGTH));
 
     // DTLS handshake
-    r = peer->ssl->handshake_func(peer->ssl);
+    r = SSL_do_handshake(peer->ssl);
     if (r != 1) {
         log_message("Error during DTLS handshake with peer %s", inet_ntoa(peer->vpnIP));
         ERR_print_errors_fp(stderr);
@@ -344,7 +344,6 @@ void * SSL_reading(void * args) {
         }
         else {// everything's fine
             client_update_time(peer, time(NULL));
-            peer->state = ESTABLISHED;
             MUTEXUNLOCK;
             if (config.debug) printf("<< Received a VPN message: size %d from SRC = %u.%u.%u.%u to DST = %u.%u.%u.%u\n",
                             r,
@@ -377,8 +376,9 @@ void * SSL_reading(void * args) {
 /*
  * Create the SSL_reading thread
  */
-void start_SSL_reading(struct client *peer) {
+static void start_SSL_reading(struct client *peer) {
     peer->thread_ssl_running = 1;
+    BIO_ctrl(peer->wbio, BIO_CTRL_DGRAM_SET_PEER, 0, &peer->clientaddr);
     incr_ref(peer);
     createDetachedThread(SSL_reading, peer);
 }
@@ -389,7 +389,7 @@ void start_SSL_reading(struct client *peer) {
  * The peer is detroyed after calling end_SSL_reading.
  * This insure that there is no inconsistency between the threads
  */
-inline void end_SSL_reading(struct client *peer) {
+static inline void end_SSL_reading(struct client *peer) {
     peer->thread_ssl_running = 0;
     peer->send_shutdown = 1;
     /* SSL_read will return with 0, which is the same
@@ -404,7 +404,7 @@ inline void end_SSL_reading(struct client *peer) {
  * Manage the incoming messages from the UDP socket
  * argument: struct comm_args *
  */
-void * comm_socket(void * argument) {
+static void * comm_socket(void * argument) {
     struct comm_args * args = argument;
     int sockfd = args->sockfd;
     int tunfd = args->tunfd;
@@ -515,7 +515,7 @@ void * comm_socket(void * argument) {
                     peer = get_client_real(&unknownaddr);
                     MUTEXUNLOCK;
                     if (peer != NULL) {
-                        if (peer->state != CLOSED) {
+                        if (peer->state == ESTABLISHED || peer->state == PUNCHING || peer->state == TIMEOUT) {
                             BIO_write(peer->rbio, u.raw, r);
                         }
                         decr_ref(peer);
@@ -529,12 +529,13 @@ void * comm_socket(void * argument) {
                             MUTEXLOCK;
                             peer = get_client_VPN(&(u.message->ip1));
                             if (peer != NULL) {
-                                if (config.verbose && peer->state != ESTABLISHED) printf("punch received from %s\n", inet_ntoa(u.message->ip1));
-                                client_update_time(peer,timestamp);
-                                peer->clientaddr = unknownaddr;
-                                if (peer->thread_ssl_running == 0) {
-                                    BIO_ctrl(peer->wbio, BIO_CTRL_DGRAM_SET_PEER, 0, &peer->clientaddr);
-                                    start_SSL_reading(peer);
+                                if (peer->state != CLOSED) {
+                                    if (config.verbose && peer->state != ESTABLISHED) printf("punch received from %s\n", inet_ntoa(u.message->ip1));
+                                    client_update_time(peer,timestamp);
+                                    peer->clientaddr = unknownaddr;
+                                    if (peer->thread_ssl_running == 0) {
+                                        start_SSL_reading(peer);
+                                    }
                                 }
                                 decr_ref(peer);
                             }
@@ -559,6 +560,11 @@ void * comm_socket(void * argument) {
             peer = clients;
             while (peer != NULL) {
                 struct client *next = peer->next;
+                if (timestamp - peer->last_keepalive > config.keepalive) {
+                    init_smsg(&smsg, PUNCH_KEEP_ALIVE, 0, 0);
+                    sendto(sockfd ,&smsg, sizeof(smsg), 0, (struct sockaddr *)&(peer->clientaddr), sizeof(peer->clientaddr));
+                    peer->last_keepalive = timestamp;
+                }
                 if (timestamp - peer->time > config.timeout+10) {
                     log_message_verb("Is the peer %s dead ? cleaning connection", inet_ntoa(peer->vpnIP));
                     if (peer->thread_ssl_running) {
@@ -591,11 +597,6 @@ void * comm_socket(void * argument) {
                         }
                     }
                 }
-                else if (timestamp - peer->last_keepalive > config.keepalive) {
-                    init_smsg(&smsg, PUNCH_KEEP_ALIVE, 0, 0);
-                    sendto(sockfd ,&smsg, sizeof(smsg), 0, (struct sockaddr *)&(peer->clientaddr), sizeof(peer->clientaddr));
-                    peer->last_keepalive = timestamp;
-                }
                 peer = next;
             }
             MUTEXUNLOCK;
@@ -616,7 +617,7 @@ void * comm_socket(void * argument) {
  * Manage the incoming messages from the TUN device
  * argument: struct comm_args *
  */
-void * comm_tun(void * argument) {
+static void * comm_tun(void * argument) {
     struct comm_args * args = argument;
     int sockfd = args->sockfd;
     int tunfd = args->tunfd;
@@ -749,28 +750,12 @@ void * comm_tun(void * argument) {
                         }
                         MUTEXUNLOCK;
                         break;
-                    /* PUNCHING or WAITING
-                     * The connection is in progress
+                    /* WAITING
+                     * kill
                      */
-                    case PUNCHING:
                     case WAITING:
-                        clock_gettime(CLOCK_REALTIME, &timeout_connect);
-                        timeout_connect.tv_sec += 2; // wait another 2 secs
-                        MUTEXLOCK;
-                        if (conditionTimedwait(&peer->cond_connected, &mutex_clients, &timeout_connect) == 0) {
-                            decr_ref(peer);
-                            peer = get_client_VPN(&dest);
-                            if (peer != NULL) {// the new connection is opened
-                                if (peer->state == ESTABLISHED) {
-                                    SSL_write(peer->ssl, u.raw, r);
-                                }
-                                decr_ref(peer);
-                            }
-                        }
-                        else {
-                            decr_ref(peer);
-                        }
-                        MUTEXUNLOCK;
+                        decr_ref(peer);
+                        decr_ref(peer);
                         break;
                     default:
                         decr_ref(peer);
