@@ -160,34 +160,6 @@ int get_ipv4_broadcast(uint32_t vpnip, int len, uint32_t *broadcast) {
 }
 
 
-/*
- * Load the CRL file
- * Store the resulting X509_CRL structure in config.crl
- */
-int load_CRL(char *crl_file) {
-    X509_CRL *crl = NULL;
-    BIO *bfile = NULL;
-    bfile = BIO_new(BIO_s_file());
-
-    // Read the CRL with a BIO
-    if (BIO_read_filename(bfile, crl_file) <= 0) {
-        if (config.debug) fprintf(stderr, "load_CRL: BIO_read_filename\n");
-        BIO_free(bfile);
-        return -1;
-    }
-    crl = PEM_read_bio_X509_CRL(bfile, NULL, NULL, NULL);
-
-    if (crl == NULL) {
-        if (config.debug) fprintf(stderr, "load_CRL: CRL file is not valid\n");
-        BIO_free(bfile);
-        return -1;
-    }
-    config.crl = crl;
-
-    BIO_free(bfile);
-    return 0;
-}
-
 /* helper function
  * copy a value from the configuration into get_up_down_dest[get_up_down_index]
  * used to get the values from the sections UP and DOWN with parser_forall_section
@@ -234,6 +206,7 @@ void parseConfFile(char *confFile) {
     config.key_pem = NULL;
     config.verif_pem = NULL;
     config.verif_dir = NULL;
+    config.verify_depth = 0;
     config.cipher_list = NULL;
     config.keepalive = 10;
     config.exec_up = NULL;
@@ -435,6 +408,18 @@ void parseConfFile(char *confFile) {
         exit(EXIT_FAILURE);
     }
 
+    res = parser_getint(SECTION_SECURITY, OPT_DEPTH, &config.verify_depth, &value, &nline, &parser);
+    if (res == 1) {
+        if (config.verify_depth <= 0) {
+            log_message("[%s:"OPT_DEPTH":%d] Maximum depth for certificate verification %d must be > 0", confFile, nline, config.tun_mtu);
+            exit(EXIT_FAILURE);
+        }
+    }
+    else if (res == 0) {
+        log_message("[%s:"OPT_DEPTH":%d] Maximum depth for certificate verification is not valid: \"%s\"", confFile, nline, value);
+        exit(EXIT_FAILURE);
+    }
+
     value = parser_get(SECTION_SECURITY, OPT_CIPHERS, &nline, &parser);
     if (value != NULL) {
         config.cipher_list = CHECK_ALLOC_FATAL(strdup(value));
@@ -442,10 +427,7 @@ void parseConfFile(char *confFile) {
 
     value = parser_get(SECTION_SECURITY, OPT_CRL, &nline, &parser);
     if (value != NULL) {
-        if (load_CRL(value)) {
-            log_message("[%s:"OPT_CRL":%d] Error while loading the CRL file \"%s\"", confFile, nline, value);
-            //non fatal error
-        }
+        config.crl = CHECK_ALLOC_FATAL(strdup(value));
     }
 
 
@@ -587,7 +569,7 @@ void parseConfFile(char *confFile) {
 
 void freeConfig() {
     char **s;
-    if (config.crl != NULL) X509_CRL_free(config.crl);
+    if (config.crl) free(config.crl);
     if (config.iface) free(config.iface);
     if (config.network) free(config.network);
     if (config.certificate_pem) free(config.certificate_pem);

@@ -42,6 +42,7 @@
 #include "pthread_wrap.h"
 
 volatile sig_atomic_t end_campagnol = 0;
+volatile sig_atomic_t reload = 0;
 static char* pidfile = NULL;
 
 
@@ -191,6 +192,11 @@ void * sig_handler(void * arg) {
             case SIGALRM:
                 handler_sigTimerPing(sig);
                 break;
+            case SIGUSR1:
+                end_campagnol = 1;
+                reload = 1;
+                log_message("received signal %d, reloading client...", sig);
+                break;
             default:
                 break;
         }
@@ -224,10 +230,6 @@ int main (int argc, char **argv) {
 
 
     parseConfFile(configFile);
-    /* Print the current OpenSSL error stack (missing CRL file)
-     * Empty the error stack
-     */
-    ERR_print_errors_fp(stderr);
 
     if (config.daemonize) {
         char *pidtmp = (config.pidfile != NULL) ? config.pidfile : DEFAULT_PID_FILE;
@@ -255,7 +257,7 @@ int main (int argc, char **argv) {
         if (config.verif_pem != NULL) printf("  DTLS root certificates chain file: %s\n", config.verif_pem);
         if (config.verif_dir != NULL) printf("  DTLS root certificates directory: %s\n", config.verif_dir);
         if (config.cipher_list) printf("  DTLS cipher list: %s\n", config.cipher_list);
-        if (config.crl) printf("  Using a certificate revocation list (%d entries)\n", sk_num(X509_CRL_get_REVOKED(config.crl)));
+        if (config.crl != NULL) printf("  Using a certificate revocation list: %s\n", config.crl);
         printf("  FIFO size: %d\n", config.FIFO_size);
         if (config.tb_client_rate > 0) printf("  Outgoing traffic: %.3f kb/s\n", config.tb_client_rate);
         if (config.tb_connection_rate > 0) printf("  Outgoing traffic per connection: %.3f kb/s\n", config.tb_connection_rate);
@@ -279,28 +281,35 @@ int main (int argc, char **argv) {
     /* start the signal handler */
     createDetachedThread(sig_handler, NULL);
 
-
-    /* The UDP socket is configured
-     * Now, register to the rendezvous server
-     */
-    if (register_rdv(sockfd) == -1) {
-        exit_status = EXIT_FAILURE;
-        goto clean_end;
-    }
-
     tunfd = init_tun(1);
     if (tunfd < 0) {
-        send_bye = 1;
         exit_status = EXIT_FAILURE;
         goto clean_end;
     }
 
-    log_message("Starting VPN");
+    do {
+        if (reload) {
+            reload = 0;
+            end_campagnol = 0;
+        }
 
-    if (start_vpn(sockfd, tunfd) == -1) {
-        send_bye = 1;
-        exit_status = EXIT_FAILURE;
+        /* The UDP socket is configured
+         * Now, register to the rendezvous server
+         */
+        if (register_rdv(sockfd) == -1) {
+            exit_status = EXIT_FAILURE;
+            goto clean_end;
+        }
+
+        log_message("Starting VPN");
+
+        if (start_vpn(sockfd, tunfd) == -1) {
+            send_bye = 1;
+            exit_status = EXIT_FAILURE;
+        }
+
     }
+    while(reload);
 
 
     clean_end:
@@ -326,7 +335,7 @@ int main (int argc, char **argv) {
      * OpenSSL has no cleanup function
      * AFAIK there is nothing to cleanup the compression methods
      */
-    // free config.crl and the strings stored in config
+    // free the strings stored in config
     freeConfig();
     // thread error state. must be called by each thread
     ERR_remove_state(0);
