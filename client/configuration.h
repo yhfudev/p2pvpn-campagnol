@@ -23,8 +23,6 @@
 #ifndef CONFIGURATION_H_
 #define CONFIGURATION_H_
 
-#include <openssl/ssl.h>
-
 struct configuration {
     int verbose;                                // verbose
     int debug;                                  // more verbose
@@ -45,9 +43,10 @@ struct configuration {
     char *key_pem;                              // PEM formated file containing the client private key
     char *verif_pem;                            // PEM formated file containing the root certificates
     char *verif_dir;                            // directory containing root certificates
+    int verify_depth;                           // Maximum depth for the certificate chain verification
     char *cipher_list;                          // ciphers list for SSL_CTX_set_cipher_list
                                                 // see openssl ciphers man page
-    X509_CRL *crl;                              // The parsed CRL or NULL
+    char *crl;                                  // A CRL or NULL
     int FIFO_size;                              // Size of the FIFO list for the incoming packets
     float tb_client_rate;                       // Maximum outgoing rate for the client
     float tb_connection_rate;                   // Maximum outgoing rate for each connection
@@ -92,6 +91,7 @@ extern void freeConfig(void);
 #define OPT_CA              "ca_certificates"
 #define OPT_CA_DIR          "ca_certificates_dir"
 #define OPT_CRL             "crl_file"
+#define OPT_DEPTH           "verify_depth"
 #define OPT_CIPHERS         "cipher_list"
 
 #define OPT_FIFO            "fifo_size"

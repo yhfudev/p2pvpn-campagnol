@@ -76,7 +76,6 @@ struct fifo_data {
 struct fifo_item {
     int size;                       // Size of the packet
     char *data;                     // Contains the data
-    struct fifo_item *next;
 };
 
 #endif /*BSS_FIFO_H_*/

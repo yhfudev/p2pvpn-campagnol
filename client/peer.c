@@ -224,40 +224,42 @@ struct client * _get_client_real(struct sockaddr_in *cl_address) {
 }
 
 /*
- * Callback function used to check a certificate against a CRL
+ * Callback function for certificate validation
  * A transparent callback would return preverify_ok
- * If preverify_ok == 0, return.
+ * Log error messages and accept an old CRL.
  */
-int verify_crl(int preverify_ok, X509_STORE_CTX *x509_ctx) {
-    X509_REVOKED *revoked;
-    int i, n;
+int verify_callback(int ok, X509_STORE_CTX *ctx) {
+    char buf[256];
+    X509 *err_cert;
+    int err, depth;
+    err_cert = X509_STORE_CTX_get_current_cert(ctx);
+    err = X509_STORE_CTX_get_error(ctx);
+    depth = X509_STORE_CTX_get_error_depth(ctx);
 
-    if (!preverify_ok)
-        return preverify_ok;
-
-    if (config.crl) {
-        /* Check the name of the certificate issuer */
-        if (X509_NAME_cmp(X509_CRL_get_issuer(config.crl), X509_get_issuer_name(x509_ctx->current_cert)) != 0) {
-            log_message("The received certificate and the CRL have different issuers!");
-            ERR_print_errors_fp(stderr);
-            return 0;
+    X509_NAME_oneline(X509_get_subject_name(err_cert), buf, sizeof buf);
+    if (!ok) {
+        log_message("Error while verifying a certificate at depth=%d: %s",
+                depth, buf);
+        log_message("Verify error (%d): %s", err,
+                X509_verify_cert_error_string(err));
+        if (depth > config.verify_depth) {
+            log_message("%s", X509_verify_cert_error_string(
+                    X509_V_ERR_CERT_CHAIN_TOO_LONG));
         }
 
-        /* Number of certificates in the CRL */
-        n = sk_num(X509_CRL_get_REVOKED(config.crl));
-
-        /* Compare the certificate serial number with the one of every certificates in the list */
-        for (i = 0; i < n; i++) {
-            revoked = (X509_REVOKED *)sk_value(X509_CRL_get_REVOKED(config.crl), i);
-            if (ASN1_INTEGER_cmp(revoked->serialNumber, X509_get_serialNumber(x509_ctx->current_cert)) == 0) {
-              log_message("The received certificate is revoked!");
-              ERR_print_errors_fp(stderr);
-              return 0;
-            }
+        switch (ctx->error) {
+            case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT:
+                X509_NAME_oneline(X509_get_issuer_name(ctx->current_cert), buf,
+                        sizeof buf);
+                log_message("issuer= %s\n", buf);
+                break;
+            case X509_V_ERR_CRL_HAS_EXPIRED:
+                log_message("Warning: the CRL has expired. Ignoring.");
+                ok = 1;
+                break;
         }
     }
-
-    return preverify_ok;
+    return (ok);
 }
 
 /*
@@ -303,11 +305,29 @@ static SSL_CTX * createContext(int is_client) {
         SSL_CTX_free(ctx);
         return NULL;
     }
-    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT , verify_crl);
-    SSL_CTX_set_verify_depth(ctx, 1);
+    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT , verify_callback);
+
+    if (config.verify_depth > 0) {
+        SSL_CTX_set_verify_depth(ctx, config.verify_depth);
+    }
     if (!SSL_CTX_load_verify_locations(ctx, config.verif_pem, config.verif_dir)) {
         ERR_print_errors_fp(stderr);
         log_error("SSL_CTX_load_verify_locations");
+        SSL_CTX_free(ctx);
+        return NULL;
+    }
+
+    // add CRL
+    if (config.crl) {
+        X509_STORE *x509 = SSL_CTX_get_cert_store(ctx);
+        X509_LOOKUP *file_lookup = X509_STORE_add_lookup(x509, X509_LOOKUP_file());
+        X509_load_crl_file(file_lookup, config.crl, X509_FILETYPE_PEM);
+        X509_STORE_set_flags(x509, X509_V_FLAG_CRL_CHECK);
+    }
+
+    // validate the key
+    if (!SSL_CTX_check_private_key(ctx)) {
+        log_error("SSL_CTX_check_private_key");
         SSL_CTX_free(ctx);
         return NULL;
     }
