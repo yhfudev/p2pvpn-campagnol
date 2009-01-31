@@ -2,7 +2,7 @@
  * Startup code
  *
  * Copyright (C) 2007 Antoine Vianey
- *               2008 Florent Bondoux
+ *               2008-2009 Florent Bondoux
  *
  * This file is part of Campagnol.
  *
@@ -38,6 +38,7 @@
 #include "net_socket.h"
 #include "communication.h"
 #include "configuration.h"
+#include "dtls_utils.h"
 #include "../common/log.h"
 #include "pthread_wrap.h"
 
@@ -193,9 +194,15 @@ void * sig_handler(void * arg) {
                 handler_sigTimerPing(sig);
                 break;
             case SIGUSR1:
+                log_message("received signal %d, reloading client...", sig);
                 end_campagnol = 1;
                 reload = 1;
-                log_message("received signal %d, reloading client...", sig);
+                break;
+            case SIGUSR2:
+                if (!end_campagnol) {
+                    log_message("received signal %d, recreating DTLS contexts...", sig);
+                    rebuildDTLS();
+                }
                 break;
             default:
                 break;

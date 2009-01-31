@@ -9,6 +9,7 @@ campagnol_SOURCES = bf_rate_limiter.c bf_rate_limiter.h \
 	communication.c communication.h \
 	config_parser.c config_parser.h \
 	configuration.c configuration.h \
+	dtls_utils.c dtls_utils.h \
 	net_socket.c net_socket.h \
 	peer.c peer.h \
 	pthread_wrap.h \

@@ -2,7 +2,7 @@
  * Campagnol main code
  *
  * Copyright (C) 2007 Antoine Vianey
- *               2008 Florent Bondoux
+ *               2008-2009 Florent Bondoux
  *
  * This file is part of Campagnol.
  *
@@ -34,6 +34,7 @@
 #include "pthread_wrap.h"
 #include "net_socket.h"
 #include "peer.h"
+#include "dtls_utils.h"
 #include "tun_device.h"
 #include "../common/log.h"
 
