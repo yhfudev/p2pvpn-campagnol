@@ -1,0 +1,87 @@
+ca_wrap is a small wrapper script around the openssl utilities. Its purpose is 
+to easily create a small CA to use with Campagnol.
+The script can be used to:
+- create a basic OpenSSL configuration file
+- build the root certificate authority key and certificate
+- create new keys and signed certificates for your VPN
+- revoke certificates
+- generate a certificate revocation list
+
+See openssl-ca(1)
+
+
+STARTUP
+
+1. Create a directory (e.g. /etc/campagnol/) for your CA and copy the script 
+   into this directory
+2. Edit the script. You will have to check/set the variables defined at the top 
+   of the file:
+   - TOP_DIR is the working directory. It can be an absolute path or a relative 
+     path from your current directory.
+   - the SSL_*_DEFAULT variables define the default certificate validity period, 
+     the default key size, and the default values for the certificate fields. 
+     They are used to generate the configuration file.
+3. Run "./ca_wrap.sh gen_conf" to create the directories and the configuration 
+   file.
+4. You may review the generated file.
+
+
+CREATE THE ROOT CA
+
+1. ./ca_wrap.sh gen_ca
+   This will create the private key, the root certificate and the necessary 
+   files.
+2. You are asked for a pass phrase to protect the CA private key
+3. You are asked for the fields of the certificate. The default values are the 
+   one you defined at the beginning of the script.
+
+
+CREATE A KEY AND A SIGNED CERTIFICATE FOR A CLIENT
+For each client on the VPN, you will have to create a new key/certificate
+
+1. Use the gen_cert command, for example:
+   ./ca_wrap.sh gen_cert box_1
+   This will create a new key and signed certificate that will be output in the 
+   directory "box_1".
+2. You are asked for fields of the certificate.
+   The default "Organizational Unit Name" is set to the directory name.
+   You should set something unique for the "Common Name" but it's not required.
+   The default values are fine for the other fields.
+   Note that with the generated configuration file, the "Country Name", 
+   "State Or Province Name" and "Organization Name" fields must be the same for 
+   the CA certificate and the client certificates.
+3. The password of the CA key is asked to sign the certificate request.
+4. The key is in box_1/key.pem
+   The certificate is in box_1/certificate.pem and a copy is kept in the 
+   certs/ directory
+   The database of the CA has been updated with the new certificate.
+5. The client will need this key and certificate, and the CA certificate 
+   (cacert.pem) to do mutual authentication. Keep the key private and distribute 
+   it to the client using a secure channel.
+
+
+REVOKE A CERTIFICATE
+If the key of a client has been compromised or if you do not want to authorise
+it anymore, you can revoke the certificate.
+
+1. If you want to revoke the certificate in the "old_cert" directory (which must 
+   have been created with "./ca_wrap.sh gen_cert old_cert"), run
+   ./ca_wrap.sh revoke_crt old_cert
+2. You are asked for the pass phrase of the CA private key
+3. The CA database is updated
+
+
+GENERATE A CRL
+To tell the clients that some certificate have been revoked, you have to create 
+a Certificate Revocation List and distribute it to all the clients.
+
+1. ./ca_wrap.sh gen_crl
+2. You are asked for the pass phrase of the CA private key
+3. The CRL is in crl.pem. It's default validity period is defined in the 
+   configuration file.
+
+
+PRINT THE CONTENT OF THE CURRENT CRL
+
+1. ./ca_wrap.sh print_crl
+
