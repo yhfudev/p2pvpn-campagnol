@@ -84,6 +84,20 @@ command from OpenSSL to see the available algorithms:
 $ openssl ciphers -v -tls1 DEFAULT
 .fi
 .RE
+.SH SIGNALS
+.TP
+.BR SIGINT ", " SIGQUIT " and " SIGTERM
+Campagnol will close all connections and quit.
+.TP
+.BR SIGUSR1
+will cause Campagnol to close all connections, disconnect from the RDV server,
+reread the key, the certificates and the CRL, and restart. The configuration
+file is not reread.
+.TP
+.BR SIGUSR2
+will cause Campagnol to reread the key, the certificates and the CRL. The new
+files will be used for the subsequent connections. It's especially useful to
+load a new CRL.
 .SH CONFIGURATION
 Campagnol needs a configuration file. It will use by default
 .I \*[configname]
