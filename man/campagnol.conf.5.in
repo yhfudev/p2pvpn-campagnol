@@ -269,6 +269,10 @@ is searched first.
 A PEM file containing a certificate revocation list (CRL). When a new connection
 is opened, the remote peer's certificate is checked against this CRL.
 .TP
+.PARAMETER verify_depth integer "9 (OpenSSL's default)"
+.IP
+This parameter defines the maximum depth for the certificate chain verification.
+.TP
 .PARAMETER cipher_list "[OpenSSL's cipher list]" "OpenSSL's default"
 .IP
 The OpenSSL ciphers lists to use. If this value is defined, then it must be the

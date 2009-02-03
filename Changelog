@@ -1,11 +1,13 @@
 v 0.3.2:
 	client:
-	Read the DTLS data (keys, certificates) only once at startup.
+	Read the DTLS data (key and certificates) only once at startup.
 	Add an option to give a directory with the root certificates (instead of
 	giving a certificate chain file).
 	Add the possibility to define which commands are run when the TUN
 	device is opened or closed.
 	The configuration files now accepts line continuation.
+	Better CRL handling. Possibility to reload the CRL/key/certificate on
+	signals.
 
 	rdv server:
 	Replace the java implementation by a new one in C.
