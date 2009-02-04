@@ -31,6 +31,9 @@ extern int initDTLS(void);
 extern void clearDTLS(void);
 extern int rebuildDTLS(void);
 
+extern void setup_openssl_thread(void);
+extern void cleanup_openssl_thread(void);
+
 extern int createClientSSL(struct client *peer);
 
 #endif /* DTLS_UTILS_H_ */

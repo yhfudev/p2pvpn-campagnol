@@ -33,8 +33,10 @@
 /* SSL contexts */
 static SSL_CTX *campagnol_ctx_client;
 static SSL_CTX *campagnol_ctx_server;
-
 static pthread_mutex_t ctx_lock;
+
+/* mutexes for OpenSSL internal use */
+static pthread_mutex_t *crypto_mutexes = NULL;
 
 /*
  * Callback function for certificate validation
@@ -176,7 +178,6 @@ static SSL_CTX * createContext(int is_client) {
  * return -1 on error.
  */
 int initDTLS() {
-    mutexInit(&ctx_lock, NULL);
     campagnol_ctx_client = createContext(1);
     if (campagnol_ctx_client == NULL) {
         log_error("Cannot allocate a new SSL context");
@@ -188,6 +189,7 @@ int initDTLS() {
         log_error("Cannot allocate a new SSL context");
         return -1;
     }
+    mutexInit(&ctx_lock, NULL);
     return 0;
 }
 
@@ -305,4 +307,49 @@ int createClientSSL(struct client *peer) {
 
     mutexUnlock(&ctx_lock);
     return 0;
+}
+
+/* locking callback function for openssl */
+void openssl_locking_function(int mode, int n, const char *file, int line) {
+    if (mode & CRYPTO_LOCK) {
+        mutexLock(&crypto_mutexes[n]);
+    }
+    else {
+        mutexUnlock(&crypto_mutexes[n]);
+    }
+}
+
+/* if_function for openssl threading support */
+unsigned long openssl_id_function(void) {
+    /* linux: pthread_t is a unsigned long int, ok
+     * freebsd/openbsd: pthread_t is a pointer, ok
+     */
+    return (unsigned long) pthread_self();
+}
+
+/* setup callback functions for openssl threading support */
+void setup_openssl_thread() {
+    int i, n;
+    n = CRYPTO_num_locks();
+
+    crypto_mutexes = CHECK_ALLOC_FATAL(malloc(sizeof(pthread_mutex_t)*n));
+    for (i=0; i<n; i++) {
+        mutexInit(&crypto_mutexes[i], NULL);
+    }
+    CRYPTO_set_id_callback(&openssl_id_function);
+    CRYPTO_set_locking_callback(&openssl_locking_function);
+}
+
+/* clean callback functions */
+void cleanup_openssl_thread() {
+    int i, n;
+    n = CRYPTO_num_locks();
+
+    CRYPTO_set_id_callback(NULL);
+    CRYPTO_set_locking_callback(NULL);
+
+    for (i=0; i<n; i++) {
+        mutexDestroy(&crypto_mutexes[i]);
+    }
+    free(crypto_mutexes);
 }

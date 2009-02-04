@@ -63,7 +63,7 @@ void usage(void) {
 void version(void) {
     fprintf(stderr, "Campagnol VPN | Client | Version %s\n", VERSION);
     fprintf(stderr, "Copyright (c) 2007 Antoine Vianey\n");
-    fprintf(stderr, "              2008 Florent Bondoux\n");
+    fprintf(stderr, "              2008-2009 Florent Bondoux\n");
     exit(EXIT_SUCCESS);
 }
 
@@ -231,10 +231,10 @@ int main (int argc, char **argv) {
     if (config.daemonize) daemonize();
     log_init(config.daemonize, config.verbose, "campagnol");
 
-    /* init openssl before reading the configuration file */
+    /* init openssl */
     SSL_library_init();
     SSL_load_error_strings();
-
+    setup_openssl_thread();
 
     parseConfFile(configFile);
 
@@ -346,6 +346,7 @@ int main (int argc, char **argv) {
     freeConfig();
     // thread error state. must be called by each thread
     ERR_remove_state(0);
+    cleanup_openssl_thread();
     // engine
     ENGINE_cleanup();
     CONF_modules_free();
