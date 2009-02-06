@@ -4,13 +4,15 @@ TODO LIST
 
 Known issues
 ------------
-- Client do not handle the loss of DLTS shutdown packets.
+- Clients do not handle the loss of DLTS shutdown packets.
 
 
 Plans
 -----
-- Rewrite the rendezvous server in C.
 - Use DTLS between the rendezvous server and the peers, except for the ping messages.
 - Possibility to define the common options in the rendezvous server and to distribute them to the peers.
-- Maybe use OCSP instead of a CRL which has to be distributed and maintained for every clients.
-- OpenBSD port, maybe solaris too.
+- Maybe use OCSP instead of a CRL which has to be distributed to and maintained by every clients.
+- Solaris port
+- UPnP ?
+- Relay connections trough the RDV server ? And load sharing ?
+- IPv6 support
