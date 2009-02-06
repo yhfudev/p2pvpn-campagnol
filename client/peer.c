@@ -31,10 +31,20 @@
 #include "../common/log.h"
 
 #include <arpa/inet.h>
+#include <search.h>
 
 /* List of known clients */
 struct client *clients = NULL;
 int n_clients = 0;
+/* tree, items ordered by VPN IP */
+static void *clients_vpn_root = NULL;
+
+/* comparison routine for clients_vpn_root */
+static int compare_clients_vpn(const void *itema, const void *itemb) {
+    struct client *peer1 = (struct client *) itema;
+    struct client *peer2 = (struct client *) itemb;
+    return memcmp(&peer1->vpnIP, &peer2->vpnIP, sizeof(peer1->vpnIP));
+}
 
 /*
  * mutex used to manipulate 'clients'
@@ -94,6 +104,7 @@ void decr_ref(struct client *peer) {
  */
 struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct in_addr clientIP, uint16_t clientPort, struct in_addr vpnIP, int is_dtls_client) {
     int r;
+    void *slot;
 
     if (n_clients >= config.max_clients) {
         if (config.debug) {
@@ -133,8 +144,20 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct
 
     r = createClientSSL(peer);
     if (r != 0) {
+        mutexDestroy(&peer->mutex_ref);
+        conditionDestroy(&peer->cond_connected);
         free(peer);
         log_error("Could not create the new client");
+        return NULL;
+    }
+
+    slot = tsearch((void *) peer, &clients_vpn_root, compare_clients_vpn);
+    if (slot == NULL) {
+        mutexDestroy(&peer->mutex_ref);
+        conditionDestroy(&peer->cond_connected);
+        SSL_free(peer->ssl);
+        free(peer);
+        log_error("Cannot allocate a new client (tsearch)");
         return NULL;
     }
 
@@ -172,9 +195,13 @@ void remove_client(struct client *peer) {
         clients = peer->next;
     }
 
+    tdelete(peer, &clients_vpn_root, compare_clients_vpn);
+
+    if(peer == cache_client_VPN)
+        cache_client_VPN = NULL;
+    if (peer == cache_client_real)
+        cache_client_real = NULL;
     free(peer);
-    cache_client_VPN = NULL;
-    cache_client_real = NULL;
     n_clients --;
 }
 
@@ -183,17 +210,15 @@ void remove_client(struct client *peer) {
  * return NULL if the client is unknown
  */
 struct client * _get_client_VPN(struct in_addr *address) {
-    struct client *peer = clients;
-    while (peer != NULL) {
-        if (peer->vpnIP.s_addr == address->s_addr) {
-            /* found */
-            cache_client_VPN = peer;
-            incr_ref(peer);
-            return peer;
-        }
-        peer = peer->next;
+    struct client peer_tmp, *peer;
+    peer_tmp.vpnIP.s_addr = address->s_addr;
+    peer = tfind(&peer_tmp, &clients_vpn_root, compare_clients_vpn);
+    if (peer != NULL) {
+        peer = *(void **) peer;
+        cache_client_VPN = peer;
+        incr_ref(peer);
     }
-    return NULL;
+    return peer;
 }
 
 /*
