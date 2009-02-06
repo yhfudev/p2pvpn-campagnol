@@ -345,6 +345,8 @@ static void * SSL_reading(void * args) {
         }
         else {// everything's fine
             client_update_time(peer, time(NULL));
+            if (peer->state == TIMEOUT)
+                peer->state = ESTABLISHED;
             MUTEXUNLOCK;
             if (config.debug) printf("<< Received a VPN message: size %d from SRC = %u.%u.%u.%u to DST = %u.%u.%u.%u\n",
                             r,
@@ -484,6 +486,7 @@ static void * comm_socket(void * argument) {
                             decr_ref(peer);
                         }
                         else {
+                            start_punch(peer, sockfd);
                             decr_ref(peer);
                         }
                         MUTEXUNLOCK;
@@ -514,13 +517,13 @@ static void * comm_socket(void * argument) {
                     /* It's a DTLS packet, send it to the associated SSL_reading thread using the FIFO BIO */
                     MUTEXLOCK;
                     peer = get_client_real(&unknownaddr);
-                    MUTEXUNLOCK;
                     if (peer != NULL) {
                         if (peer->state == ESTABLISHED || peer->state == PUNCHING || peer->state == TIMEOUT) {
                             BIO_write(peer->rbio, u.raw, r);
                         }
                         decr_ref(peer);
                     }
+                    MUTEXUNLOCK;
                 }
                 else if (r == sizeof(message_t)) {
                     /* UDP hole punching */
@@ -528,14 +531,17 @@ static void * comm_socket(void * argument) {
                         case PUNCH :
                             /* we can now reach the client */
                             MUTEXLOCK;
-                            peer = get_client_VPN(&(u.message->ip1));
+                            peer = get_client_real(&unknownaddr);
                             if (peer != NULL) {
                                 if (peer->state != CLOSED) {
                                     if (config.verbose && peer->state != ESTABLISHED) printf("punch received from %s\n", inet_ntoa(u.message->ip1));
                                     client_update_time(peer,timestamp);
-                                    peer->clientaddr = unknownaddr;
                                     if (peer->thread_ssl_running == 0) {
                                         start_SSL_reading(peer);
+                                    }
+                                    else {
+                                        peer->state = ESTABLISHED;
+                                        conditionSignal(&peer->cond_connected);
                                     }
                                 }
                                 decr_ref(peer);
@@ -683,12 +689,10 @@ static void * comm_tun(void * argument) {
             else {
                 MUTEXLOCK;
                 peer = get_client_VPN(&dest);
-                MUTEXUNLOCK;
                 if (peer == NULL) {
-                    MUTEXLOCK;
                     peer = add_client(sockfd, tunfd, TIMEOUT, time(NULL), (struct in_addr) { 0 }, 0, dest, 1);
-                    MUTEXUNLOCK;
                     if (peer == NULL) {
+                        MUTEXUNLOCK;
                         continue;
                     }
                     /* ask the RDV server for a new connection with peer */
@@ -697,7 +701,6 @@ static void * comm_tun(void * argument) {
 
                     clock_gettime(CLOCK_REALTIME, &timeout_connect);
                     timeout_connect.tv_sec += 3; // wait 3 secs
-                    MUTEXLOCK;
                     if (peer->state != CLOSED && conditionTimedwait(&peer->cond_connected, &mutex_clients, &timeout_connect) == 0) {
                         decr_ref(peer);
                         peer = get_client_VPN(&dest);
@@ -711,31 +714,24 @@ static void * comm_tun(void * argument) {
                     else {
                         decr_ref(peer);
                     }
-                    MUTEXUNLOCK;
-
                 }
                 else switch (peer->state) {
                     /* Already connected */
                     case ESTABLISHED :
-                        MUTEXLOCK;
                         client_update_time(peer,time(NULL));
-                        MUTEXUNLOCK;
                         SSL_write(peer->ssl, u.raw, r);
                         decr_ref(peer);
                         break;
                     /* Lost connection */
                     case TIMEOUT :
                         /* try to reopen the connection */
-                        MUTEXLOCK;
                         peer->time = time(NULL);
-                        MUTEXUNLOCK;
                         /* ask the RDV server for a new connection with peer */
                         init_smsg(&smsg, ASK_CONNECTION, dest.s_addr, 0);
                         sendto(sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
 
                         clock_gettime(CLOCK_REALTIME, &timeout_connect);
                         timeout_connect.tv_sec += 3;
-                        MUTEXLOCK;
                         if (peer->state != CLOSED && conditionTimedwait(&peer->cond_connected, &mutex_clients, &timeout_connect) == 0) {
                             decr_ref(peer);
                             peer = get_client_VPN(&dest);
@@ -747,21 +743,22 @@ static void * comm_tun(void * argument) {
                             }
                         }
                         else {
+                            if (peer->thread_ssl_running) {
+                                end_SSL_reading(peer);
+                            }
+                            peer->state = CLOSED;
                             decr_ref(peer);
                         }
-                        MUTEXUNLOCK;
                         break;
-                    /* WAITING
-                     * kill
-                     */
+                    /* WAITING */
                     case WAITING:
-                        decr_ref(peer);
                         decr_ref(peer);
                         break;
                     default:
                         decr_ref(peer);
                         break;
                 }
+                MUTEXUNLOCK;
             }
         }
 
