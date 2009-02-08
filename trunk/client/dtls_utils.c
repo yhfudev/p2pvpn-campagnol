@@ -38,6 +38,8 @@ static pthread_mutex_t ctx_lock;
 /* mutexes for OpenSSL internal use */
 static pthread_mutex_t *crypto_mutexes = NULL;
 
+pthread_mutex_t mutex_ssl_err;
+
 /*
  * Callback function for certificate validation
  * A transparent callback would return preverify_ok
@@ -190,6 +192,7 @@ int initDTLS() {
         return -1;
     }
     mutexInit(&ctx_lock, NULL);
+    mutexInit(&mutex_ssl_err, NULL);
     return 0;
 }
 
@@ -197,6 +200,7 @@ void clearDTLS() {
     SSL_CTX_free(campagnol_ctx_client);
     SSL_CTX_free(campagnol_ctx_server);
     mutexDestroy(&ctx_lock);
+    mutexDestroy(&mutex_ssl_err);
 }
 
 int rebuildDTLS() {
