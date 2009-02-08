@@ -57,7 +57,14 @@ void semDestroy(sem_t *sem) {
 
 void semWait(sem_t *sem) {
     ASSERT(sem);
+#ifdef HAVE_LINUX
+    int r;
+    // sem_wait is not restarted after a signal or STOP/CONT for linux <= 2.6.21
+    do r = sem_wait(sem);
+    while (r != 0 && errno == EINTR);
+#else
     int r = sem_wait(sem);
+#endif
     if (r != 0) {
         log_message("Error sem_wait(): %s", strerror(errno));
         exit(EXIT_FAILURE);
@@ -67,7 +74,13 @@ void semWait(sem_t *sem) {
 int semTimedwait(sem_t *sem, const struct timespec *abs_timeout) {
     ASSERT(sem);
     ASSERT(abs_timeout);
+#ifdef HAVE_LINUX
+    int r;
+    do r = sem_timedwait(sem, abs_timeout);
+    while (r != 0 && errno == EINTR);
+#else
     int r = sem_timedwait(sem, abs_timeout);
+#endif
     if (r != 0 && errno != ETIMEDOUT) {
         log_message("Error sem_timedwait(): %s", strerror(errno));
         exit(EXIT_FAILURE);
