@@ -8,6 +8,9 @@ v 0.3.2:
 	The configuration files now accepts line continuation.
 	Better CRL handling. Possibility to reload the CRL/key/certificate on
 	signals.
+	Correct the bad handling of timed-out connections or failed hole
+	punching.
+	Finer locking granularity.
 
 	rdv server:
 	Replace the java implementation by a new one in C.

@@ -54,6 +54,8 @@ struct client {
     int send_shutdown;              // Send a shutdown message after SSL_read returns 0
     struct tb_state rate_limiter;   // Rate limiter for this client
 
+    pthread_mutex_t mutex;          // local mutex;
+
     pthread_mutex_t mutex_ref;      // mutex used to change the reference counter
     unsigned int ref_count;         // reference counter
 };
@@ -65,8 +67,10 @@ extern int n_clients;
 extern pthread_mutex_t mutex_clients;
 
 /* mutex manipulation */
-#define MUTEXLOCK {/*fprintf(stderr, "lock %s %d\n",__FILE__,__LINE__);*/mutexLock(&mutex_clients);}
-#define MUTEXUNLOCK {/*fprintf(stderr, "unlock %s %d\n",__FILE__,__LINE__);*/mutexUnlock(&mutex_clients);}
+#define GLOBAL_MUTEXLOCK {/*fprintf(stderr, "lock %s %d\n",__FILE__,__LINE__);*/mutexLock(&mutex_clients);}
+#define GLOBAL_MUTEXUNLOCK {/*fprintf(stderr, "unlock %s %d\n",__FILE__,__LINE__);*/mutexUnlock(&mutex_clients);}
+#define CLIENT_MUTEXLOCK(c) {/*fprintf(stderr, "lock %d %s %d\n",(c)->vpnIP.s_addr,__FILE__,__LINE__);*/mutexLock(&(c)->mutex);}
+#define CLIENT_MUTEXUNLOCK(c) {/*fprintf(stderr, "unlock %d %s %d\n",(c)->vpnIP.s_addr,__FILE__,__LINE__);*/mutexUnlock(&(c)->mutex);}
 
 extern void mutex_clients_init(void);
 extern void mutex_clients_destroy(void);

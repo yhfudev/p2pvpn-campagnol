@@ -84,9 +84,7 @@ void decr_ref(struct client *peer) {
 //    fprintf(stderr, "decr %s [%d]\n", inet_ntoa(peer->vpnIP), peer->ref_count);
     if (peer->ref_count == 0) {
         mutexUnlock(&peer->mutex_ref);
-        MUTEXLOCK;
         remove_client(peer);
-        MUTEXUNLOCK;
     }
     else {
         mutexUnlock(&peer->mutex_ref);
@@ -106,10 +104,13 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct
     int r;
     void *slot;
 
+    GLOBAL_MUTEXLOCK;
+
     if (n_clients >= config.max_clients) {
         if (config.debug) {
             printf("Cannot open a new connection: maximum number of connections reached\n");
         }
+        GLOBAL_MUTEXUNLOCK;
         return NULL;
     }
 
@@ -117,6 +118,7 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct
     struct client *peer = malloc(sizeof(struct client));
     if (peer == NULL) {
         log_error("Cannot allocate a new client (malloc)");
+        GLOBAL_MUTEXUNLOCK;
         return NULL;
     }
     peer->time = time;
@@ -130,6 +132,7 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct
     peer->tunfd = tunfd;
     peer->sockfd = sockfd;
     conditionInit(&peer->cond_connected, NULL);
+    mutexInit(&peer->mutex, NULL);
     peer->send_shutdown = 0;
 
     /* initialize rate limiter */
@@ -145,19 +148,23 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct
     r = createClientSSL(peer);
     if (r != 0) {
         mutexDestroy(&peer->mutex_ref);
+        mutexDestroy(&peer->mutex);
         conditionDestroy(&peer->cond_connected);
         free(peer);
         log_error("Could not create the new client");
+        GLOBAL_MUTEXUNLOCK;
         return NULL;
     }
 
     slot = tsearch((void *) peer, &clients_vpn_root, compare_clients_vpn);
     if (slot == NULL) {
         mutexDestroy(&peer->mutex_ref);
+        mutexDestroy(&peer->mutex);
         conditionDestroy(&peer->cond_connected);
         SSL_free(peer->ssl);
         free(peer);
         log_error("Cannot allocate a new client (tsearch)");
+        GLOBAL_MUTEXUNLOCK;
         return NULL;
     }
 
@@ -166,6 +173,7 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct
     if (peer->next) peer->next->prev = peer;
     clients = peer;
     n_clients ++;
+    GLOBAL_MUTEXUNLOCK;
     return peer;
 }
 
@@ -181,9 +189,11 @@ struct client *cache_client_real = NULL;
  * Free the associated SSL structures
  */
 void remove_client(struct client *peer) {
+    GLOBAL_MUTEXLOCK;
     if (config.debug) printf("Deleting the client %s\n", inet_ntoa(peer->vpnIP));
 
     conditionDestroy(&peer->cond_connected);
+    mutexDestroy(&peer->mutex);
     mutexDestroy(&peer->mutex_ref);
     SSL_free(peer->ssl);
 
@@ -203,6 +213,7 @@ void remove_client(struct client *peer) {
         cache_client_real = NULL;
     free(peer);
     n_clients --;
+    GLOBAL_MUTEXUNLOCK;
 }
 
 /*
@@ -211,6 +222,7 @@ void remove_client(struct client *peer) {
  */
 struct client * _get_client_VPN(struct in_addr *address) {
     struct client peer_tmp, *peer;
+    GLOBAL_MUTEXLOCK;
     peer_tmp.vpnIP.s_addr = address->s_addr;
     peer = tfind(&peer_tmp, &clients_vpn_root, compare_clients_vpn);
     if (peer != NULL) {
@@ -218,6 +230,7 @@ struct client * _get_client_VPN(struct in_addr *address) {
         cache_client_VPN = peer;
         incr_ref(peer);
     }
+    GLOBAL_MUTEXUNLOCK;
     return peer;
 }
 
@@ -227,15 +240,18 @@ struct client * _get_client_VPN(struct in_addr *address) {
  */
 struct client * _get_client_real(struct sockaddr_in *cl_address) {
     struct client *peer = clients;
+    GLOBAL_MUTEXLOCK;
     while (peer != NULL) {
         if (peer->clientaddr.sin_addr.s_addr == cl_address->sin_addr.s_addr
             && peer->clientaddr.sin_port == cl_address->sin_port) {
             /* found */
             cache_client_real = peer;
             incr_ref(peer);
+            GLOBAL_MUTEXUNLOCK;
             return peer;
         }
         peer = peer->next;
     }
+    GLOBAL_MUTEXUNLOCK;
     return NULL;
 }
