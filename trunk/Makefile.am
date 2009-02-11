@@ -7,4 +7,6 @@ endif
 if BUILD_SERVER
 SUBDIRS += rdvserver
 endif
-EXTRA_DIST = 
+EXTRA_DIST = Changelog \
+	lib/getline.c lib/getline.h \
+	lib/tdestroy.c lib/tdestroy.h
