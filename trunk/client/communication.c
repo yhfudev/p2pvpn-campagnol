@@ -279,6 +279,7 @@ static void start_punch(struct client *peer, int sockfd) {
  */
 static void * SSL_reading(void * args) {
     int r;
+    int err;
     // union used to receive the messages
     packet_t u;
     struct client *peer = (struct client*) args;
@@ -317,31 +318,33 @@ static void * SSL_reading(void * args) {
     while (1) {
         /* Read and uncrypt a message, send it on the TUN device */
         r = SSL_read(peer->ssl, u.raw, MESSAGE_MAX_LENGTH);
-        if (r < 0) { // error
-            if (BIO_should_read(peer->rbio)) {
+        if (r <= 0) { // error or shutdown
+            if (BIO_should_read(peer->rbio))
                 continue;
-            }
-            int err = SSL_get_error(peer->ssl, r);
-            if (err == SSL_ERROR_SSL) {
-                ERR_print_errors_fp(stderr);
-            }
-            log_message("DTLS error, shutting down the connexion.");
-            CLIENT_MUTEXLOCK(peer);
-            peer->thread_ssl_running = 0;
-            peer->state = CLOSED;
-            CLIENT_MUTEXUNLOCK(peer);
-            decr_ref(peer);
-            decr_ref(peer);
-            DTLS_MUTEXLOCK;
-            ERR_remove_state(0);
-            DTLS_MUTEXUNLOCK;
-            free(u.raw);
-            return NULL;
-        }
-        if (r == 0) { // close connection
-            log_message_verb("DTLS connection closed with peer %s", inet_ntoa(peer->vpnIP));
-            if (peer->send_shutdown) {
-                SSL_shutdown(peer->ssl);
+            err = SSL_get_error(peer->ssl, r);
+            switch(err) {
+                case SSL_ERROR_WANT_READ:
+                    continue;
+                    break;
+                case SSL_ERROR_ZERO_RETURN: // shutdown received
+                    log_message_verb("DTLS connection closed by peer %s", inet_ntoa(peer->vpnIP));
+                    break;
+                case SSL_ERROR_SYSCALL: // end_SSL_reading or error
+                    if (!peer->thread_ssl_running) { //end_SSL_reading was called
+                        log_message_verb("Closing DTLS connection with peer %s", inet_ntoa(peer->vpnIP));
+                        if (peer->send_shutdown) {
+                            SSL_shutdown(peer->ssl);
+                        }
+                    }
+                    else {// I don't think we can get there
+                        ERR_print_errors_fp(stderr);
+                        log_message("DTLS error, shutting down the connexion.");
+                    }
+                    break;
+                default:
+                    ERR_print_errors_fp(stderr);
+                    log_message("DTLS error, shutting down the connexion.");
+                    break;
             }
             CLIENT_MUTEXLOCK(peer);
             peer->thread_ssl_running = 0;
@@ -528,10 +531,11 @@ static void * comm_socket(void * argument) {
             else {
                 if (config.debug) printf("<  Received a UDP packet: size %d from %s\n", r, inet_ntoa(unknownaddr.sin_addr));
                 /* check the first byte to find the message type */
-                if (u.dtlsheader->contentType == DTLS_APPLICATION_DATA
+                if (r >= sizeof(dtlsheader_t) &&
+                        (u.dtlsheader->contentType == DTLS_APPLICATION_DATA
                         || u.dtlsheader->contentType == DTLS_HANDSHAKE
                         || u.dtlsheader->contentType == DTLS_ALERT
-                        || u.dtlsheader->contentType == DTLS_CHANGE_CIPHER_SPEC) {
+                        || u.dtlsheader->contentType == DTLS_CHANGE_CIPHER_SPEC)) {
                     /* It's a DTLS packet, send it to the associated SSL_reading thread using the FIFO BIO */
                     peer = get_client_real(&unknownaddr);
                     if (peer != NULL) {
