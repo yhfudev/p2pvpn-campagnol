@@ -1,7 +1,7 @@
 /*
  * OpenSSL BIO FIFO
  *
- * Copyright (C) 2008 Florent Bondoux
+ * Copyright (C) 2008-2009 Florent Bondoux
  *
  * This file is part of Campagnol.
  *
@@ -25,12 +25,12 @@
 #define BSS_FIFO_H_
 
 #ifdef HAVE_SEM_TIMEDWAIT
-#define USE_SEMAPHORES 1
-#include <semaphore.h>
+#   define USE_SEMAPHORES 1
+#   include <semaphore.h>
 #else
-#define USE_PTHREADS 1
-#include <pthread.h>
+#   define USE_PTHREADS 1
 #endif
+#include <pthread.h>
 
 /* BIO type: source/sink */
 #define BIO_TYPE_FIFO (23|BIO_TYPE_SOURCE_SINK)
@@ -61,11 +61,14 @@ struct fifo_data {
 #ifdef USE_SEMAPHORES
     sem_t sem_read;                 // Number of items ready to be read
     sem_t sem_write;                // Number of free items in the FIFO
+    pthread_mutex_t mutex;          // Access lock
 #else
-    pthread_cond_t cond;            // Condition variable used to wait before writting/reading
+    pthread_cond_t cond_read;       // Condition variable used to wait before reading
+    pthread_cond_t cond_write;      // Condition variable used to wait before writing
     pthread_mutex_t mutex;          // Mutex used with the condition
     int nelem;                      // Number of items written in the FIFO
-    int waiting;                    // A thread is waiting on cond
+    int waiting_read;               // Number of threads waiting on cond
+    int waiting_write;
 #endif
     long int rcv_timeout_nsec;      // recv timeout, ns
     time_t rcv_timeout_sec;         // recv timeout, seconds
