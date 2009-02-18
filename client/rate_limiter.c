@@ -41,13 +41,22 @@
  * size: size of the bucket in bytes
  * rate: bucket's refill rate (kBytes/s)
  * overhead: add overhead to each packet (UDP header...)
+ * with_lock: protect tb_count with a mutex
  */
-void tb_init(struct tb_state * tb, size_t size, double rate, size_t overhead) {
+void tb_init(struct tb_state * tb, size_t size, double rate, size_t overhead, int with_lock) {
     tb->bucket_size = size;
     tb->bucket_available = tb->bucket_size;
     tb->bucket_rate = rate;
     tb->packet_overhead = overhead;
     gettimeofday(&tb->last_arrival_time, NULL);
+    tb->lock = with_lock;
+    if (with_lock)
+        mutexInit(&tb->mutex, NULL);
+}
+
+void tb_clean(struct tb_state * tb) {
+    if (tb->lock)
+        mutexDestroy(&tb->mutex);
 }
 
 /*
@@ -61,6 +70,10 @@ void tb_count(struct tb_state *tb, size_t packet_size) {
     struct timespec req_sleep, rem_sleep;
     double elapsed_ms, sleep_ms;
     int r;
+
+    if (tb->lock) {
+        mutexLock(&tb->mutex);
+    }
 
     packet_size += tb->packet_overhead;
 
@@ -81,6 +94,9 @@ void tb_count(struct tb_state *tb, size_t packet_size) {
     /* ok */
     if (packet_size <= tb->bucket_available) {
         tb->bucket_available -= packet_size;
+        if (tb->lock) {
+            mutexUnlock(&tb->mutex);
+        }
         return;
     }
 
@@ -112,4 +128,7 @@ void tb_count(struct tb_state *tb, size_t packet_size) {
     tb->bucket_available = (tb->bucket_available > tb->bucket_size) ? tb->bucket_size : tb->bucket_available;
 
     memcpy(&tb->last_arrival_time, &now, sizeof(tb->last_arrival_time));
+    if (tb->lock) {
+        mutexUnlock(&tb->mutex);
+    }
 }
