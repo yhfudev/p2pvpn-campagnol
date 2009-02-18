@@ -1,7 +1,7 @@
 /*
  * Semaphore wrapper functions
  *
- * Copyright (C) 2008 Florent Bondoux
+ * Copyright (C) 2008-2009 Florent Bondoux
  *
  * This file is part of Campagnol.
  *
@@ -32,8 +32,9 @@
 
 static inline void semInit(sem_t *sem, int pshared, unsigned int value);
 static inline void semDestroy(sem_t *sem);
-static inline void semWait(sem_t *sem);
+static inline int semWait(sem_t *sem);
 static inline int semTimedwait(sem_t *sem, const struct timespec *abs_timeout);
+static inline int semTrywait(sem_t *sem);
 static inline void semPost(sem_t *sem);
 static inline void semGetValue(sem_t *sem, int *sval);
 
@@ -55,7 +56,7 @@ void semDestroy(sem_t *sem) {
     }
 }
 
-void semWait(sem_t *sem) {
+int semWait(sem_t *sem) {
     ASSERT(sem);
 #ifdef HAVE_LINUX
     int r;
@@ -69,6 +70,7 @@ void semWait(sem_t *sem) {
         log_message("Error sem_wait(): %s", strerror(errno));
         exit(EXIT_FAILURE);
     }
+    return r;
 }
 
 int semTimedwait(sem_t *sem, const struct timespec *abs_timeout) {
@@ -83,6 +85,23 @@ int semTimedwait(sem_t *sem, const struct timespec *abs_timeout) {
 #endif
     if (r != 0 && errno != ETIMEDOUT) {
         log_message("Error sem_timedwait(): %s", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+    return r;
+}
+
+int semTrywait(sem_t *sem) {
+    ASSERT(sem);
+#ifdef HAVE_LINUX
+    int r;
+    // sem_wait is not restarted after a signal or STOP/CONT for linux <= 2.6.21
+    do r = sem_trywait(sem);
+    while (r != 0 && errno == EINTR);
+#else
+    int r = sem_trywait(sem);
+#endif
+    if (r != 0 && errno != EAGAIN) {
+        log_message("Error sem_trywait(): %s", strerror(errno));
         exit(EXIT_FAILURE);
     }
     return r;
