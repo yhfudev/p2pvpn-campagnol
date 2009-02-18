@@ -48,6 +48,7 @@ struct client {
     SSL *ssl;                       // SSL structure
     BIO *wbio;                      // BIO (I/O abstraction) used for outgoing packets
     BIO *rbio;                      // BIO for incoming packets
+    BIO *out_fifo;                  // FIFO BIO for outgoing packets
     SSL_CTX *ctx;                   // SSL context associated to the connection
     int is_dtls_client;             // DTLS client or server ?
     int thread_ssl_running;         // the thread from SSL_reading is running

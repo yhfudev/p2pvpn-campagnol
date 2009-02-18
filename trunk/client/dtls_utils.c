@@ -285,7 +285,7 @@ int createClientSSL(struct client *peer) {
     peer->rbio = BIO_new_fifo(config.FIFO_size, MESSAGE_MAX_LENGTH);
     if (peer->rbio == NULL) {
         ERR_print_errors_fp(stderr);
-        log_error("BIO_new(BIO_s_fifo())");
+        log_error("BIO_new_fifo");
         BIO_free_all(peer->wbio);
         SSL_free(peer->ssl);
         mutexUnlock(&ctx_lock);
@@ -295,6 +295,15 @@ int createClientSSL(struct client *peer) {
     recv_timeout.tv_sec = PEER_RECV_TIMEOUT_SEC;
     BIO_ctrl(peer->rbio, BIO_CTRL_FIFO_SET_RECV_TIMEOUT, 0, &recv_timeout);
     SSL_set_bio(peer->ssl, peer->rbio, peer->wbio);
+
+    peer->out_fifo = BIO_new_fifo(config.FIFO_size, MESSAGE_MAX_LENGTH);
+    if (peer->out_fifo == NULL) {
+        ERR_print_errors_fp(stderr);
+        log_error("BIO_new_fifo");
+        SSL_free(peer->ssl);
+        mutexUnlock(&ctx_lock);
+        return -1;
+    }
 
     if (peer->is_dtls_client) {
         SSL_set_connect_state(peer->ssl);

@@ -137,7 +137,7 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct
 
     /* initialize rate limiter */
     if (config.tb_connection_size != 0) {
-        tb_init(&peer->rate_limiter, config.tb_connection_size, (double) config.tb_connection_rate, 8);
+        tb_init(&peer->rate_limiter, config.tb_connection_size, (double) config.tb_connection_rate, 8, 0);
     }
 
     peer->is_dtls_client = is_dtls_client;
@@ -196,6 +196,7 @@ void remove_client(struct client *peer) {
     mutexDestroy(&peer->mutex);
     mutexDestroy(&peer->mutex_ref);
     SSL_free(peer->ssl);
+    BIO_free(peer->out_fifo);
 
     if (peer->next) peer->next->prev = peer->prev;
     if (peer->prev) {
