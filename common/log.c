@@ -58,7 +58,7 @@ void log_close(void) {
  * Log format/ap if log_enabled is true
  * Otherwise print the message to stdout if tostdout is true
  */
-inline void log_message_inner(int tostdout, const char *format, va_list ap) {
+static inline void log_message_inner(int tostdout, const char *format, va_list ap) {
     if (log_enabled) {
         vsyslog(LOG_NOTICE, format, ap);
     }
