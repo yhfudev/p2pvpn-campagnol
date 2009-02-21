@@ -350,9 +350,7 @@ static void * SSL_reading(void * args) {
         conditionSignal(&peer->cond_connected);
         decr_ref(peer);
         decr_ref(peer);
-        DTLS_MUTEXLOCK;
         ERR_remove_state(0);
-        DTLS_MUTEXUNLOCK;
         free(u.raw);
         return NULL;
     }
@@ -412,9 +410,7 @@ static void * SSL_reading(void * args) {
             CLIENT_MUTEXUNLOCK(peer);
             decr_ref(peer);
             decr_ref(peer);
-            DTLS_MUTEXLOCK;
             ERR_remove_state(0);
-            DTLS_MUTEXUNLOCK;
             free(u.raw);
             return NULL;
         }
@@ -733,9 +729,7 @@ static void * comm_socket(void * argument) {
     }
 
     free(u.raw);
-    DTLS_MUTEXLOCK; // avoid a potential double free bug in OpenSSL's internals
     ERR_remove_state(0);
-    DTLS_MUTEXUNLOCK;
     return NULL;
 }
 
@@ -899,9 +893,7 @@ static void * comm_tun(void * argument) {
     }
 
     free(u.raw);
-    DTLS_MUTEXLOCK; // avoid a potential double free bug in OpenSSL's internals
     ERR_remove_state(0);
-    DTLS_MUTEXUNLOCK;
     return NULL;
 }
 
