@@ -37,9 +37,4 @@ extern void cleanup_openssl_thread(void);
 
 extern int createClientSSL(struct client *peer);
 
-// mutex to protect the calls to ERR_remove_state
-extern pthread_mutex_t mutex_ssl_err;
-#define DTLS_MUTEXLOCK mutexLock(&mutex_ssl_err)
-#define DTLS_MUTEXUNLOCK mutexUnlock(&mutex_ssl_err)
-
 #endif /* DTLS_UTILS_H_ */
