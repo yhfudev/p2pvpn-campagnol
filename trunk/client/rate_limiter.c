@@ -31,9 +31,28 @@
 #include <errno.h>
 #include <time.h>
 #include <math.h>
+#include <unistd.h>
 
 #include "../common/log.h"
 #include "rate_limiter.h"
+
+#ifdef _POSIX_MONOTONIC_CLOCK
+#define SHAPER_CLOCK CLOCK_MONOTONIC
+#else
+#define SHAPER_CLOCK CLOCK_REALTIME
+#endif
+
+#ifndef timespecsub
+#   define timespecsub(a, b, result)                        \
+    do {                                                    \
+        (result)->tv_sec = (a)->tv_sec - (b)->tv_sec;       \
+        (result)->tv_nsec = (a)->tv_nsec - (b)->tv_nsec;    \
+        if ((result)->tv_nsec < 0) {                        \
+            --(result)->tv_sec;                             \
+            (result)->tv_nsec += 1000000000L;               \
+        }                                                   \
+    } while (0)
+#endif
 
 /*
  * initialize a token bucket
@@ -48,7 +67,7 @@ void tb_init(struct tb_state * tb, size_t size, double rate, size_t overhead, in
     tb->bucket_available = tb->bucket_size;
     tb->bucket_rate = rate;
     tb->packet_overhead = overhead;
-    gettimeofday(&tb->last_arrival_time, NULL);
+    clock_gettime(SHAPER_CLOCK, &tb->last_arrival_time);
     tb->lock = with_lock;
     if (with_lock)
         mutexInit(&tb->mutex, NULL);
@@ -66,7 +85,7 @@ void tb_clean(struct tb_state * tb) {
  * packet_size: size of the packet in bytes
  */
 void tb_count(struct tb_state *tb, size_t packet_size) {
-    struct timeval now, elapsed;
+    struct timespec now, elapsed;
     struct timespec req_sleep, rem_sleep;
     double elapsed_ms, sleep_ms;
     int r;
@@ -80,10 +99,10 @@ void tb_count(struct tb_state *tb, size_t packet_size) {
     ASSERT(packet_size <= tb->bucket_size);
 
     /* refill the bucket with the number of tokens added since the last call */
-    gettimeofday(&now, NULL);
+    clock_gettime(SHAPER_CLOCK, &now);
 
-    timersub(&now, &tb->last_arrival_time, &elapsed);
-    elapsed_ms = elapsed.tv_sec*1000 + (elapsed.tv_usec/1000.);
+    timespecsub(&now, &tb->last_arrival_time, &elapsed);
+    elapsed_ms = elapsed.tv_sec*1000 + (elapsed.tv_nsec/1000000.);
 
     tb->bucket_available += (size_t) round(elapsed_ms * tb->bucket_rate);
     tb->bucket_available = (tb->bucket_available > tb->bucket_size) ? tb->bucket_size : tb->bucket_available;
@@ -118,10 +137,10 @@ void tb_count(struct tb_state *tb, size_t packet_size) {
     }
 
     /* refill the bucket */
-    gettimeofday(&now, NULL);
+    clock_gettime(SHAPER_CLOCK, &now);
 
-    timersub(&now, &tb->last_arrival_time, &elapsed);
-    elapsed_ms = elapsed.tv_sec*1000 + (elapsed.tv_usec/1000.);
+    timespecsub(&now, &tb->last_arrival_time, &elapsed);
+    elapsed_ms = elapsed.tv_sec*1000 + (elapsed.tv_nsec/1000000.);
 
     tb->bucket_available += (size_t) round(elapsed_ms * tb->bucket_rate);
     tb->bucket_available = (tb->bucket_available < packet_size) ? 0 : (tb->bucket_available - packet_size);
