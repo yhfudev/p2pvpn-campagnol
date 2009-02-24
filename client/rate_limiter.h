@@ -24,14 +24,14 @@
 #define RATE_LIMITING_H_
 
 #include <stdlib.h>
-#include <sys/time.h>
+#include <time.h>
 #include "pthread_wrap.h"
 
 struct tb_state {
     size_t bucket_size;         // bucket size (byte)
     double bucket_rate;         // token arrival rate (kByte/s)
     size_t bucket_available;    // number of tokens (byte)
-    struct timeval last_arrival_time;
+    struct timespec last_arrival_time;
     size_t packet_overhead;     // add overhead to each counted packets
     pthread_mutex_t mutex;
     int lock;                   // lock the mutex befor counting
