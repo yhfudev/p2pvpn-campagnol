@@ -93,7 +93,7 @@ int fifo_allocate(BIO *bi, int len, int data_size) {
 
     bi->ptr = malloc(sizeof(struct fifo_data));
     if (bi->ptr == NULL) {
-        log_error("Cannot allocate a new client");
+        log_error(errno, "Cannot allocate a new client");
         return 0;
     }
     d = (struct fifo_data *) bi->ptr;
@@ -107,7 +107,7 @@ int fifo_allocate(BIO *bi, int len, int data_size) {
     d->fifo = (struct fifo_item *) malloc(d->size * sizeof(struct fifo_item));
     if (d->fifo == NULL) {
         free(bi->ptr);
-        log_error("Cannot allocate a new client");
+        log_error(errno, "Cannot allocate a new client");
         return 0;
     }
 
@@ -118,12 +118,12 @@ int fifo_allocate(BIO *bi, int len, int data_size) {
         }
     }
     if (i != d->size) {
+        log_error(errno, "Cannot allocate a new client");
         for (j = 0; j < i; j++) {
             free(d->fifo[j].data);
         }
         free(d->fifo);
         free(bi->ptr);
-        log_error("Cannot allocate a new client");
         return 0;
     }
 

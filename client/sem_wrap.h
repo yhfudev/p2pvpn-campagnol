@@ -42,8 +42,8 @@ void semInit(sem_t *sem, int pshared, unsigned int value) {
     ASSERT(sem);
     int r = sem_init(sem, pshared, value);
     if (r != 0) {
-        log_message("Error sem_init(): %s", strerror(errno));
-        exit(EXIT_FAILURE);
+        log_error(errno, "Error sem_init()");
+        abort();
     }
 }
 
@@ -51,8 +51,8 @@ void semDestroy(sem_t *sem) {
     ASSERT(sem);
     int r = sem_destroy(sem);
     if (r != 0) {
-        log_message("Error sem_destroy(): %s", strerror(errno));
-        exit(EXIT_FAILURE);
+        log_error(errno, "Error sem_destroy()");
+        abort();
     }
 }
 
@@ -67,8 +67,8 @@ int semWait(sem_t *sem) {
     int r = sem_wait(sem);
 #endif
     if (r != 0) {
-        log_message("Error sem_wait(): %s", strerror(errno));
-        exit(EXIT_FAILURE);
+        log_error(errno, "Error sem_wait()");
+        abort();
     }
     return r;
 }
@@ -84,8 +84,8 @@ int semTimedwait(sem_t *sem, const struct timespec *abs_timeout) {
     int r = sem_timedwait(sem, abs_timeout);
 #endif
     if (r != 0 && errno != ETIMEDOUT) {
-        log_message("Error sem_timedwait(): %s", strerror(errno));
-        exit(EXIT_FAILURE);
+        log_error(errno, "Error sem_timedwait()");
+        abort();
     }
     return r;
 }
@@ -101,8 +101,8 @@ int semTrywait(sem_t *sem) {
     int r = sem_trywait(sem);
 #endif
     if (r != 0 && errno != EAGAIN) {
-        log_message("Error sem_trywait(): %s", strerror(errno));
-        exit(EXIT_FAILURE);
+        log_error(errno, "Error sem_trywait()");
+        abort();
     }
     return r;
 }
@@ -111,8 +111,8 @@ void semPost(sem_t *sem) {
     ASSERT(sem);
     int r = sem_post(sem);
     if (r != 0) {
-        log_message("Error sem_post(): %s", strerror(errno));
-        exit(EXIT_FAILURE);
+        log_error(errno, "Error sem_post()");
+        abort();
     }
 }
 
@@ -121,8 +121,8 @@ void semGetValue(sem_t *sem, int *sval) {
     ASSERT(sval);
     int r = sem_getvalue(sem, sval);
     if (r != 0) {
-        log_message("Error sem_getvalue(): %s", strerror(errno));
-        exit(EXIT_FAILURE);
+        log_error(errno, "Error sem_getvalue()");
+        abort();
     }
 }
 

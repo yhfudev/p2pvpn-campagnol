@@ -49,7 +49,7 @@ int create_socket(void) {
     localaddr.sin_addr.s_addr = INADDR_ANY;
     if (config.serverport != 0) localaddr.sin_port=htons(config.serverport);
     if (bind(sockfd,(struct sockaddr *)&localaddr,sizeof(localaddr))<0) {
-        log_error("Error: binding socket to port");
+        log_error(errno, "Could not bind the socket to the port");
         log_message("port: %d", config.serverport);
         return -1;
     }

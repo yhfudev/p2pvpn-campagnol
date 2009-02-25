@@ -93,7 +93,7 @@ void daemonize(void) {
     printf("Going in background...\n");
     r = daemon(1, 0);
     if (r != 0) {
-        log_error("Unable to daemonize");
+        log_error(errno, "Unable to daemonize");
         exit(EXIT_FAILURE);
     }
 

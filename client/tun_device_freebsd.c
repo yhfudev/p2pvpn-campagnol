@@ -60,13 +60,21 @@ int init_tun(int istun) {
     /* Open TUN interface */
     if (config.verbose) printf("TUN interface initialization\n");
     if( (tunfd = open("/dev/tun", O_RDWR)) < 0 ) {
-         log_error("Could not open /dev/net/tun");
+         log_error(errno, "Could not open /dev/net/tun");
          return -1;
     }
 
     int i=0;
-    ioctl(tunfd, TUNSLMODE, &i);
-    ioctl(tunfd, TUNSIFHEAD, &i);
+    if ((ioctl(tunfd, TUNSLMODE, &i)) < 0) {
+        log_error(errno, "Error ioctl TUNSLMODE");
+        close(tunfd);
+        return -1;
+    }
+    if ((ioctl(tunfd, TUNSIFHEAD, &i)) < 0) {
+        log_error(errno, "Error ioctl TUNSIFHEAD");
+        close(tunfd);
+        return -1;
+    }
     fstat(tunfd, &buf);
 
     /* Inteface configuration */

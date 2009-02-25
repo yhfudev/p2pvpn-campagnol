@@ -117,7 +117,7 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct
     if (config.debug) printf("Adding new client %s\n", inet_ntoa(vpnIP));
     struct client *peer = malloc(sizeof(struct client));
     if (peer == NULL) {
-        log_error("Cannot allocate a new client (malloc)");
+        log_error(errno, "Cannot allocate a new client (malloc)");
         GLOBAL_MUTEXUNLOCK;
         return NULL;
     }
@@ -151,19 +151,19 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct
         mutexDestroy(&peer->mutex);
         conditionDestroy(&peer->cond_connected);
         free(peer);
-        log_error("Could not create the new client");
+        log_error(-1, "Could not create the new client");
         GLOBAL_MUTEXUNLOCK;
         return NULL;
     }
 
     slot = tsearch((void *) peer, &clients_vpn_root, compare_clients_vpn);
     if (slot == NULL) {
+        log_error(errno, "Cannot allocate a new client (tsearch)");
         mutexDestroy(&peer->mutex_ref);
         mutexDestroy(&peer->mutex);
         conditionDestroy(&peer->cond_connected);
         SSL_free(peer->ssl);
         free(peer);
-        log_error("Cannot allocate a new client (tsearch)");
         GLOBAL_MUTEXUNLOCK;
         return NULL;
     }

@@ -53,7 +53,7 @@ int create_socket(void) {
         memset(&ifr, 0, sizeof(ifr));
         strncpy(ifr.ifr_name, config.iface, IFNAMSIZ);
         if(setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, &ifr, sizeof(ifr))) {
-            log_error("Error: binding socket to interface");
+            log_error(errno, "Could not bind the socket to the interface");
             log_message("interface: %s", config.iface);
             return -1;
         }
@@ -65,7 +65,7 @@ int create_socket(void) {
     localaddr.sin_addr.s_addr=config.localIP.s_addr;
     if (config.localport != 0) localaddr.sin_port=htons(config.localport);
     if (bind(sockfd,(struct sockaddr *)&localaddr,sizeof(localaddr))<0) {
-        log_error("Error: binding socket to local IP address");
+        log_error(errno, "Could not bind the socket to the local IP address");
         log_message("address: %s:%d", inet_ntoa(config.localIP), config.localport);
         return -1;
     }

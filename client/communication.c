@@ -105,7 +105,7 @@ void handler_sigTimerPing(int sig) {
     /* send a PING message to the RDV server */
     init_smsg(&smsg, PING,0,0);
     int s = sendto(sockfd_global,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
-    if (s == -1) log_error("PING");
+    if (s == -1) log_error(errno, "PING");
 }
 
 /*
@@ -170,7 +170,7 @@ int register_rdv(int sockfd) {
         registeringTries++;
         if (config.debug) printf("Sending HELLO\n");
         if ((s=sendto(sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr))) == -1) {
-            log_error("sendto");
+            log_error(errno, "sendto");
         }
 
         /* fd_set used with the select call */
@@ -183,7 +183,7 @@ int register_rdv(int sockfd) {
             /* Got a message from the server */
             socklen_t len = sizeof(struct sockaddr_in);
             if ( (r = recvfrom(sockfd,&rmsg,sizeof(message_t),0,(struct sockaddr *)&config.serverAddr,&len)) == -1) {
-                log_error("recvfrom");
+                log_error(errno, "recvfrom");
             }
             switch (rmsg.type) {
                 case OK:
@@ -968,7 +968,7 @@ int start_vpn(int sockfd, int tunfd) {
     init_smsg(&smsg, BYE, config.vpnIP.s_addr, 0);
     if (config.debug) printf("Sending BYE\n");
     if (sendto(sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr)) == -1) {
-        log_error("sendto");
+        log_error(errno, "sendto");
     }
 
     // wait for all the SSL_reading thread to finish

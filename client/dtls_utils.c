@@ -104,19 +104,19 @@ static SSL_CTX * createContext(int is_client) {
     }
     if (ctx == NULL) {
         ERR_print_errors_fp(stderr);
-        log_error("SSL_CTX_new");
+        log_error(-1, "SSL_CTX_new");
         return NULL;
     }
     if (!SSL_CTX_use_certificate_chain_file(ctx, config.certificate_pem)) {
         ERR_print_errors_fp(stderr);
-        log_error("SSL_CTX_use_certificate_chain_file");
+        log_error(-1, "SSL_CTX_use_certificate_chain_file");
         log_message("%s", config.certificate_pem);
         SSL_CTX_free(ctx);
         return NULL;
     }
     if (!SSL_CTX_use_PrivateKey_file(ctx, config.key_pem, SSL_FILETYPE_PEM)) {
         ERR_print_errors_fp(stderr);
-        log_error("SSL_CTX_use_PrivateKey_file");
+        log_error(-1, "SSL_CTX_use_PrivateKey_file");
         SSL_CTX_free(ctx);
         return NULL;
     }
@@ -127,7 +127,7 @@ static SSL_CTX * createContext(int is_client) {
     }
     if (!SSL_CTX_load_verify_locations(ctx, config.verif_pem, config.verif_dir)) {
         ERR_print_errors_fp(stderr);
-        log_error("SSL_CTX_load_verify_locations");
+        log_error(-1, "SSL_CTX_load_verify_locations");
         SSL_CTX_free(ctx);
         return NULL;
     }
@@ -142,7 +142,7 @@ static SSL_CTX * createContext(int is_client) {
 
     // validate the key
     if (!SSL_CTX_check_private_key(ctx)) {
-        log_error("SSL_CTX_check_private_key");
+        log_error(-1, "SSL_CTX_check_private_key");
         SSL_CTX_free(ctx);
         return NULL;
     }
@@ -159,7 +159,7 @@ static SSL_CTX * createContext(int is_client) {
     /* Algorithms */
     if (config.cipher_list != NULL) {
         if (! SSL_CTX_set_cipher_list(ctx, config.cipher_list)){
-            log_error("SSL_CTX_set_cipher_list");
+            log_error(-1, "SSL_CTX_set_cipher_list");
             ERR_print_errors_fp(stderr);
             SSL_CTX_free(ctx);
             return NULL;
@@ -180,13 +180,13 @@ static SSL_CTX * createContext(int is_client) {
 int initDTLS() {
     campagnol_ctx_client = createContext(1);
     if (campagnol_ctx_client == NULL) {
-        log_error("Cannot allocate a new SSL context");
+        log_error(-1, "Cannot allocate a new SSL context");
         return -1;
     }
     campagnol_ctx_server = createContext(0);
     if (campagnol_ctx_client == NULL) {
         SSL_CTX_free(campagnol_ctx_client);
-        log_error("Cannot allocate a new SSL context");
+        log_error(-1, "Cannot allocate a new SSL context");
         return -1;
     }
     mutexInit(&ctx_lock, NULL);
@@ -208,7 +208,7 @@ int rebuildDTLS() {
         campagnol_ctx_client = tmp;
     }
     else {
-        log_error("Cannot allocate a new SSL context");
+        log_error(-1, "Cannot allocate a new SSL context");
         mutexUnlock(&ctx_lock);
         return -1;
     }
@@ -219,7 +219,7 @@ int rebuildDTLS() {
         campagnol_ctx_server = tmp;
     }
     else {
-        log_error("Cannot allocate a new SSL context");
+        log_error(-1, "Cannot allocate a new SSL context");
         mutexUnlock(&ctx_lock);
         return -1;
     }
@@ -247,14 +247,14 @@ int createClientSSL(struct client *peer) {
     peer->ssl = SSL_new(peer->ctx);
     if (peer->ssl == NULL) {
         ERR_print_errors_fp(stderr);
-        log_error("SSL_new");
+        log_error(-1, "SSL_new");
         mutexUnlock(&ctx_lock);
         return -1;
     }
     wbio_tmp = BIO_new_dgram(peer->sockfd, BIO_NOCLOSE);
     if (wbio_tmp == NULL) {
         ERR_print_errors_fp(stderr);
-        log_error("BIO_new_dgram");
+        log_error(-1, "BIO_new_dgram");
         SSL_free(peer->ssl);
         mutexUnlock(&ctx_lock);
         return -1;
@@ -266,7 +266,7 @@ int createClientSSL(struct client *peer) {
         peer->wbio = BIO_f_new_rate_limiter(global, local);
         if (peer->wbio == NULL) {
             ERR_print_errors_fp(stderr);
-            log_error("BIO_f_new_rate_limiter");
+            log_error(-1, "BIO_f_new_rate_limiter");
             BIO_free(wbio_tmp);
             SSL_free(peer->ssl);
             mutexUnlock(&ctx_lock);
@@ -281,7 +281,7 @@ int createClientSSL(struct client *peer) {
     peer->rbio = BIO_new_fifo(config.FIFO_size, MESSAGE_MAX_LENGTH);
     if (peer->rbio == NULL) {
         ERR_print_errors_fp(stderr);
-        log_error("BIO_new_fifo");
+        log_error(-1, "BIO_new_fifo");
         BIO_free_all(peer->wbio);
         SSL_free(peer->ssl);
         mutexUnlock(&ctx_lock);
@@ -295,7 +295,7 @@ int createClientSSL(struct client *peer) {
     peer->out_fifo = BIO_new_fifo(config.FIFO_size, MESSAGE_MAX_LENGTH);
     if (peer->out_fifo == NULL) {
         ERR_print_errors_fp(stderr);
-        log_error("BIO_new_fifo");
+        log_error(-1, "BIO_new_fifo");
         SSL_free(peer->ssl);
         mutexUnlock(&ctx_lock);
         return -1;

@@ -55,7 +55,7 @@ int init_tun(int istun) {
     /* Open TUN interface */
     if (config.verbose) printf("TUN interface initialization\n");
     if( (tunfd = open("/dev/net/tun", O_RDWR)) < 0 ) {
-         log_error("Could not open /dev/net/tun");
+         log_error(errno, "Could not open /dev/net/tun");
          return -1;
     }
 
@@ -68,13 +68,13 @@ int init_tun(int istun) {
     strncpy(ifr.ifr_name, (istun ? "tun%d" : "tap%d"), IFNAMSIZ);
 
     if ((ioctl(tunfd, TUNSETIFF, (void *) &ifr)) < 0) {
+        log_error(errno, "Error ioctl TUNSETIFF");
         close(tunfd);
-        log_error("Error: ioctl TUNSETIFF");
         return -1;
     }
     if ((ioctl(tunfd, TUNSETNOCSUM, 1)) < 0) {
+        log_error(errno, "Error ioctl TUNSETNOCSUM");
         close(tunfd);
-        log_error("Error: ioctl TUNSETNOCSUM");
         return -1;
     }
 

@@ -131,7 +131,7 @@ void tb_count(struct tb_state *tb, size_t packet_size) {
             memcpy(&req_sleep, &rem_sleep, sizeof(req_sleep));
         }
         else {
-            log_error("nanosleep");
+            log_error(errno, "nanosleep");
             break;
         }
     }

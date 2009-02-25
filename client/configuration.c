@@ -50,7 +50,7 @@ struct configuration config;
 void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
     struct ifaddrs *ifap = NULL, *ifap_first = NULL;
     if (getifaddrs(&ifap) != 0) {
-        log_error("getifaddrs");
+        log_error(errno, "getifaddrs");
         exit(EXIT_FAILURE);
     }
 
@@ -360,7 +360,6 @@ void parseConfFile(char *confFile) {
             len = strtol(search, &end, 10);
             if ((end-search) != strlen(search)) {// A character is not a figure
                 log_message("[%s] Parameter \""OPT_VPN_NETWORK"\": ill-formed netmask (1 or 2 figures)", confFile);
-                log_error("strtol:");
                 exit(EXIT_FAILURE);
             }
         }

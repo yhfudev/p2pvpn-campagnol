@@ -24,7 +24,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
 #include <syslog.h>
 #include <stdarg.h>
 #include <string.h>
@@ -56,25 +55,26 @@ void log_close(void) {
 
 /*
  * Log format/ap if log_enabled is true
- * Otherwise print the message to stdout if tostdout is true
+ * Otherwise print the message to out if not NULL
  */
-static inline void log_message_inner(int tostdout, const char *format, va_list ap) {
+static inline void log_message_inner(FILE *out, const char *format,
+        va_list ap) {
     if (log_enabled) {
         vsyslog(LOG_NOTICE, format, ap);
     }
-    else if (tostdout) {
-        vfprintf(stdout, format, ap);
-        fprintf(stdout, "\n");
+    else if (out) {
+        vfprintf(out, format, ap);
+        fprintf(out, "\n");
     }
 }
 
 /*
- * Log a message with systlog or print it to stdout
+ * Log a message with systlog or print it to out
  */
-void log_message(const char *format, ...) {
+void _log_message(FILE *out, const char *format, ...) {
     va_list ap;
     va_start(ap, format);
-    log_message_inner(1, format, ap);
+    log_message_inner(out, format, ap);
     va_end(ap);
 }
 
@@ -85,7 +85,7 @@ void log_message(const char *format, ...) {
 void log_message_verb(const char *format, ...) {
     va_list ap;
     va_start(ap, format);
-    log_message_inner(log_verbose, format, ap);
+    log_message_inner(log_verbose ? stdout : NULL, format, ap);
     va_end(ap);
 }
 
@@ -103,17 +103,21 @@ void log_message_syslog(const char *format, ...) {
 
 /*
  * Print the last error (strerrno) with syslog if log_enabled is true
- * Call perror otherwise
+ * or to stderr
  */
-void __log_error(const char *filename, unsigned int linenumber, const char *functionname, const char *s) {
-    if (log_enabled) {
-        if (s)
-            syslog(LOG_NOTICE, "%s:%u:%s: %s: %s", filename, linenumber, functionname, s, strerror(errno));
+void _log_error(const char *filename, unsigned int linenumber,
+        const char *functionname, int error_code, const char *s) {
+
+    if (s) {
+        if (error_code != -1)
+            _log_message(stderr, "%s:%u:%s: %s: %s", filename, linenumber, functionname, s, strerror(error_code));
         else
-            syslog(LOG_NOTICE, "%s:%u:%s: %s", filename, linenumber, functionname, strerror(errno));
+            _log_message(stderr, "%s:%u:%s: %s", filename, linenumber, functionname, s);
     }
     else {
-        fprintf(stderr, "%s:%u:%s: ", filename, linenumber, functionname);
-        perror(s);
+        if (error_code != -1)
+            _log_message(stderr, "%s:%u:%s: %s", filename, linenumber, functionname, strerror(error_code));
+        else
+            _log_message(stderr, "%s:%u:%s: Error", filename, linenumber, functionname);
     }
 }
