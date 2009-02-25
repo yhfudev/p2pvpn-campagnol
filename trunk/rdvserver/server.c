@@ -391,7 +391,7 @@ int send_message(unsigned char type, uint16_t port, struct in_addr ip1,
     }
     s = sendto(sockfd, &smsg, sizeof(smsg), 0, to, sizeof(*to));
     if (s == -1) {
-        log_error("sendto");
+        log_error(errno, "sendto");
         return -1;
     }
     return s;

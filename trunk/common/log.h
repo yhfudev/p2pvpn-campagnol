@@ -23,13 +23,18 @@
 #ifndef LOG_H_
 #define LOG_H_
 
+#include <stdio.h>
+
 extern void log_init(int enabled, int verbose, const char *name);
 extern void log_close(void);
-extern void log_message(const char *format, ...);
+extern void _log_message(FILE *out, const char *format, ...);
+#define log_message(format, ...) _log_message(stdout, format, ##__VA_ARGS__)
 extern void log_message_verb(const char *format, ...);
 extern void log_message_syslog(const char *format, ...);
-extern void __log_error(const char *filename, unsigned int linenumber, const char *functionname, const char *s);
-#define log_error(msg)      __log_error(__FILE__, __LINE__, __func__, msg)
+extern void _log_error(const char *filename, unsigned int linenumber,
+        const char *functionname, int error_code, const char *s);
+#define log_error(error_code,msg)\
+    _log_error(__FILE__, __LINE__, __func__, error_code, msg)
 
 /* log and exit(1) if __ptr == NULL
  * return __ptr otherwise
@@ -37,7 +42,7 @@ extern void __log_error(const char *filename, unsigned int linenumber, const cha
 #define CHECK_ALLOC_FATAL(__ptr)    ({\
     void *ptr = __ptr;  \
     if (ptr == NULL)  {\
-        log_error(NULL);    \
+        log_error(errno, NULL);    \
         exit(EXIT_FAILURE); \
     }   \
     ptr;    \
@@ -45,7 +50,8 @@ extern void __log_error(const char *filename, unsigned int linenumber, const cha
 
 
 /*
- * ASSERT: if campagnol run as a daemon, log the assertion error message with syslog
+ * ASSERT: if campagnol run as a daemon, log the assertion error message with
+ * syslog
  * otherwise, same as assert.
  */
 #ifdef ASSERT

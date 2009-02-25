@@ -55,7 +55,7 @@ char *tun_default_down[] = {NULL};
  * istun : use a TUN or TAP device
  */
 int init_tun(int istun) {
-    int tunfd;
+    int tunfd = 0;
     int i;
     char devicename[20];
     struct tuninfo infos;
@@ -68,11 +68,19 @@ int init_tun(int istun) {
         if ((tunfd = open(devicename, O_RDWR)) > 0)
             break;
     }
+    if (tunfd <= 0) {
+        log_error(-1, "Could not open a tun device");
+        return -1;
+    }
 
     infos.mtu = config.tun_mtu;
     infos.type = IFT_TUNNEL;
     infos.flags = IFF_POINTOPOINT;
-    ioctl(tunfd, TUNSIFINFO, &infos);
+    if ((ioctl(tunfd, TUNSIFINFO, &infos)) < 0) {
+        log_error(errno, "Error ioctl TUNSIFINFO");
+        close(tunfd);
+        return -1;
+    }
 
     /* Inteface configuration */
     if (config.verbose) printf("TUN interface configuration (tun%d MTU %d)\n", i, config.tun_mtu);

@@ -632,7 +632,7 @@ static int expand_token(char *token, int *quoted, int *continued) {
 void parser_read(const char *confFile, parser_context_t *parser) {
     FILE *conf = fopen(confFile, "r");
     if (conf == NULL) {
-        log_error(confFile);
+        log_error(errno, confFile);
         exit(EXIT_FAILURE);
     }
 

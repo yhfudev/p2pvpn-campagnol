@@ -87,7 +87,7 @@ struct client * add_client(int sockfd, time_t time, struct in_addr clientIP,
 
     struct client *peer = malloc(sizeof(struct client));
     if (peer == NULL) {
-        log_error("Cannot allocate a new client (malloc)");
+        log_error(errno, "Cannot allocate a new client (malloc)");
         return NULL;
     }
     peer->time = time;
@@ -104,15 +104,15 @@ struct client * add_client(int sockfd, time_t time, struct in_addr clientIP,
 
     slot1 = tsearch((void *) peer, &clients_address_root, compare_clients_addr);
     if (slot1 == NULL) {
+        log_error(errno, "Cannot allocate a new client (tsearch)");
         free(peer);
-        log_error("Cannot allocate a new client (tsearch)");
         return NULL;
     }
     slot2 = tsearch((void *) peer, &clients_vpn_root, compare_clients_vpn);
     if (slot2 == NULL) {
+        log_error(errno, "Cannot allocate a new client (tsearch)");
         tdelete(peer, &clients_address_root, compare_clients_addr);
         free(peer);
-        log_error("Cannot allocate a new client (tsearch)");
         return NULL;
     }
 

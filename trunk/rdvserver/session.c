@@ -55,7 +55,7 @@ struct session * add_session(struct client *peer1, struct client *peer2, time_t 
     void *slot;
     struct session *sess = malloc(sizeof(struct session));
     if (sess == NULL) {
-        log_error("Cannot allocate a new session (malloc)");
+        log_error(errno, "Cannot allocate a new session (malloc)");
         return NULL;
     }
 
@@ -65,8 +65,8 @@ struct session * add_session(struct client *peer1, struct client *peer2, time_t 
 
     slot = tsearch((void *) sess, &sessions_root, compare_sessions);
     if (slot == NULL) {
+        log_error(errno, "Cannot allocate a new session (tsearch)");
         free(sess);
-        log_error("Cannot allocate a new session (tsearch)");
         return NULL;
     }
 
