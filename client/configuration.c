@@ -1,7 +1,7 @@
 /*
  * Campagnol configuration
  *
- * Copyright (C) 2008 Florent Bondoux
+ * Copyright (C) 2008-2009 Florent Bondoux
  *
  * This file is part of Campagnol.
  *
@@ -40,6 +40,52 @@
 
 
 struct configuration config;
+
+/* set default values in config */
+void initConfig() {
+    config.verbose = 0;
+    config.daemonize = 0;
+    config.debug = 0;
+
+    memset(&config.localIP, 0, sizeof(config.localIP));
+    config.localport = 0;
+    memset(&config.serverAddr, 0, sizeof(config.serverAddr));
+    config.serverAddr.sin_family = AF_INET;
+    config.serverAddr.sin_port=htons(SERVER_PORT_DEFAULT);
+    memset(&config.vpnIP, 0, sizeof(config.localIP));
+    config.network = NULL;
+    config.send_local_addr = 1;
+    memset(&config.override_local_addr, 0, sizeof(config.override_local_addr));
+    config.tun_mtu = TUN_MTU_DEFAULT;
+    memset(&config.vpnBroadcastIP, 0, sizeof(config.vpnBroadcastIP));
+    config.iface = NULL;
+
+    config.certificate_pem = NULL;
+    config.key_pem = NULL;
+    config.verif_pem = NULL;
+    config.verif_dir = NULL;
+    config.verify_depth = 0;
+    config.cipher_list = NULL;
+    config.crl = NULL;
+
+    config.FIFO_size = 50;
+    config.tb_client_rate = 0.f;
+    config.tb_connection_rate = 0.f;
+    config.tb_client_size = 0;
+    config.tb_connection_size = 0;
+    config.timeout = 120;
+    config.max_clients = 100;
+    config.keepalive = 10;
+    config.exec_up = NULL;
+    config.exec_down = NULL;
+
+    config.pidfile = NULL;
+
+#ifdef HAVE_LINUX
+    config.txqueue = 0;
+    config.tun_one_queue = 0;
+#endif
+}
 
 #ifdef HAVE_IFADDRS_H
 /*
@@ -182,35 +228,6 @@ void parseConfFile(char *confFile) {
     unsigned int port_tmp;
 
     int localIP_set = 0;    // config.localIP is defined
-
-    /* set default values in config */
-    memset(&config.localIP, 0, sizeof(config.localIP));
-    config.localport = 0;
-    memset(&config.serverAddr, 0, sizeof(config.serverAddr));
-    config.serverAddr.sin_family = AF_INET;
-    config.serverAddr.sin_port=htons(SERVER_PORT_DEFAULT);
-    memset(&config.vpnIP, 0, sizeof(config.localIP));
-    config.send_local_addr = 1;
-    config.tun_mtu = TUN_MTU_DEFAULT;
-    config.crl = NULL;
-    config.FIFO_size = 50;
-    config.tb_client_rate = 0.f;
-    config.tb_connection_rate = 0.f;
-    config.tb_client_size = 0;
-    config.tb_connection_size = 0;
-    config.timeout = 120;
-    config.max_clients = 100;
-    config.network = NULL;
-    config.iface = NULL;
-    config.certificate_pem = NULL;
-    config.key_pem = NULL;
-    config.verif_pem = NULL;
-    config.verif_dir = NULL;
-    config.verify_depth = 0;
-    config.cipher_list = NULL;
-    config.keepalive = 10;
-    config.exec_up = NULL;
-    config.exec_down = NULL;
 
     // init config parser. no DEFAULT section, no empty value
     parser_init(&parser, 0, 0, 1);
@@ -442,6 +459,26 @@ void parseConfFile(char *confFile) {
         log_message("[%s:"OPT_FIFO":%d] Internal FIFO size is not valid: \"%s\"", confFile, nline, value);
         exit(EXIT_FAILURE);
     }
+
+#ifdef HAVE_LINUX
+    res = parser_getint(SECTION_CLIENT, OPT_TXQUEUE, &config.txqueue, &value, &nline, &parser);
+    if (res == 1) {
+        if (config.txqueue <= 0) {
+            log_message("[%s:"OPT_TXQUEUE":%d] TUN/TAP transmit queue length %d must be > 0", confFile, nline, config.txqueue);
+            exit(EXIT_FAILURE);
+        }
+    }
+    else if (res == 0) {
+        log_message("[%s:"OPT_TXQUEUE":%d] TUN/TAP transmit queue length is not valid: \"%s\"", confFile, nline, value);
+        exit(EXIT_FAILURE);
+    }
+
+    res = parser_getboolean(SECTION_CLIENT, OPT_TUN_ONE_QUEUE, &config.tun_one_queue, &value, &nline, &parser);
+    if (res == 0) {
+        log_message("[%s:"OPT_TUN_ONE_QUEUE":%d] Invalid value (use \"yes\" or \"no\"): \"%s\"", confFile, nline, value);
+        exit(EXIT_FAILURE);
+    }
+#endif
 
     res = parser_getfloat(SECTION_CLIENT, OPT_CLIENT_RATE, &config.tb_client_rate, &value, &nline, &parser);
     if (res == 1) {

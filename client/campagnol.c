@@ -71,9 +71,6 @@ void version(void) {
 int parse_args(int argc, char **argv, char **configFile) {
     int opt;
 
-    config.verbose = 0;
-    config.daemonize = 0;
-    config.debug = 0;
     struct option long_options[] = {
         {"verbose", 0, NULL, 'v'},
         {"daemon", 0, NULL, 'D'},
@@ -220,7 +217,8 @@ int main (int argc, char **argv) {
     int exit_status = EXIT_SUCCESS;
     int send_bye = 0;
 
-    config.pidfile = NULL;
+    initConfig();
+
     pa = parse_args(argc, argv, &configFile);
     if (pa == 1) {
         usage();

@@ -11,6 +11,7 @@ v 0.3.2:
 	Correct the bad handling of timed-out connections or failed hole
 	punching.
 	Finer locking granularity.
+	Linux: add options to set the TUN/TAP device TX queue.
 
 	rdv server:
 	Replace the java implementation by a new one in C.

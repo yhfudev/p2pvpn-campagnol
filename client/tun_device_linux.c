@@ -50,7 +50,7 @@ char *tun_default_down[] = {NULL};
  */
 int init_tun(int istun) {
     int tunfd;
-    struct ifreq ifr;                   // interface request used to open the TUN device
+    struct ifreq ifr;           // interface request used to open the TUN device
 
     /* Open TUN interface */
     if (config.verbose) printf("TUN interface initialization\n");
@@ -61,10 +61,17 @@ int init_tun(int istun) {
 
     memset(&ifr, 0, sizeof(ifr));
 
-    /** Flags:  IFF_TUN   - TUN device (no Ethernet headers)
-                IFF_TAP   - TAP device
-                IFF_NO_PI - Do not provide packet information */
-    ifr.ifr_flags = (istun ? IFF_TUN : IFF_TAP) |IFF_NO_PI ;
+    /* IFF_TUN       - TUN device (no Ethernet headers)
+       IFF_TAP       - TAP device
+       IFF_NO_PI     - Do not provide packet information
+       IFF_ONE_QUEUE - One-queue mode (workaround for old kernels). The driver
+                       will only use its internal queue.
+    */
+    ifr.ifr_flags = (istun ? IFF_TUN : IFF_TAP) | IFF_NO_PI;
+    if (config.tun_one_queue) {
+        ifr.ifr_flags |= IFF_ONE_QUEUE;
+    }
+
     strncpy(ifr.ifr_name, (istun ? "tun%d" : "tap%d"), IFNAMSIZ);
 
     if ((ioctl(tunfd, TUNSETIFF, (void *) &ifr)) < 0) {
@@ -76,6 +83,25 @@ int init_tun(int istun) {
         log_error(errno, "Error ioctl TUNSETNOCSUM");
         close(tunfd);
         return -1;
+    }
+
+    if (config.txqueue != 0 && config.txqueue != TUN_READQ_SIZE) {
+        /* The default queue length is 500 frames (TUN_READQ_SIZE) */
+        struct ifreq ifr_queue;
+        int ctl_sock;
+
+        if ((ctl_sock = socket(AF_INET, SOCK_DGRAM, 0)) >= 0) {
+            memset(&ifr_queue, 0, sizeof(ifr_queue));
+            strncpy(ifr_queue.ifr_name, ifr.ifr_name, IFNAMSIZ);
+            ifr_queue.ifr_qlen = config.txqueue;
+            if (ioctl(ctl_sock, SIOCSIFTXQLEN, (void *) &ifr_queue) < 0) {
+                log_error(errno, "ioctl SIOCGIFTXQLEN");
+            }
+            close(ctl_sock);
+        }
+        else {
+            log_error(errno, "open socket");
+        }
     }
 
     /* Inteface configuration */
