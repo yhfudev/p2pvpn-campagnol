@@ -1,7 +1,7 @@
 /*
  * Campagnol configuration
  *
- * Copyright (C) 2008 Florent Bondoux
+ * Copyright (C) 2008-2009 Florent Bondoux
  *
  * This file is part of Campagnol.
  *
@@ -27,6 +27,7 @@ struct configuration {
     int verbose;                                // verbose
     int debug;                                  // more verbose
     int daemonize;                              // daemonize the client
+
     struct in_addr localIP;                     // local IP address
     unsigned int localport;                     // local UDP port
     struct sockaddr_in serverAddr;              // rendezvous server inet address
@@ -39,6 +40,7 @@ struct configuration {
     int tun_mtu;                                // MTU of the tun device
     struct in_addr vpnBroadcastIP;              // "broadcast" IP, computed from vpnIP and network
     char *iface;                                // bind to a specific network interface
+
     char *certificate_pem;                      // PEM formated file containing the client certificate
     char *key_pem;                              // PEM formated file containing the client private key
     char *verif_pem;                            // PEM formated file containing the root certificates
@@ -47,6 +49,7 @@ struct configuration {
     char *cipher_list;                          // ciphers list for SSL_CTX_set_cipher_list
                                                 // see openssl ciphers man page
     char *crl;                                  // A CRL or NULL
+
     int FIFO_size;                              // Size of the FIFO list for the incoming packets
     float tb_client_rate;                       // Maximum outgoing rate for the client
     float tb_connection_rate;                   // Maximum outgoing rate for each connection
@@ -54,13 +57,19 @@ struct configuration {
     size_t tb_connection_size;                  // Bucket size for a connection
     int timeout;                                // wait timeout secs before closing a session for inactivity
     int max_clients;                            // maximum number of clients
-    char *pidfile;                              // PID file in daemon mode
     unsigned int keepalive;                     // seconds between keepalive messages;
+    char ** exec_up;                            // UP commands
+    char ** exec_down;                          // DOWN commands
 
-    char ** exec_up;
-    char ** exec_down;
+    char *pidfile;                              // PID file in daemon mode
+
+#ifdef HAVE_LINUX
+    int txqueue;                                // TX queue length for the TUN device (0 means default)
+    int tun_one_queue;                          // Single queue mode
+#endif
 };
 
+extern void initConfig(void);
 extern void parseConfFile(char *file);
 extern void freeConfig(void);
 
@@ -95,6 +104,10 @@ extern void freeConfig(void);
 #define OPT_CIPHERS         "cipher_list"
 
 #define OPT_FIFO            "fifo_size"
+#ifdef HAVE_LINUX
+#   define OPT_TXQUEUE         "txqueue"
+#   define OPT_TUN_ONE_QUEUE   "tun_one_queue"
+#endif
 #define OPT_CLIENT_RATE     "client_max_rate"
 #define OPT_CONNECTION_RATE "connection_max_rate"
 #define OPT_TIMEOUT         "timeout"

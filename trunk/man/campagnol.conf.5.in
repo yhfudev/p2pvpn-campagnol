@@ -161,11 +161,10 @@ total overhead of campagnol. This is described in the source file
 .TP
 .PARAMETER interface "[a network interface name]" "no interface binding"
 .IP
-If this parameter is defined, the UDP socket is bound to this interface
-(Linux only). This parameter is also used to find the local IP address to use
-if the 
+This parameter is also used to find the local IP address to use if the 
 .B local_host
-parameter is not used.
+parameter is not used. LINUX ONLY: if this parameter is defined, the UDP socket
+is also bound to this interface.
 .TP
 .PARAMETER use_local_addr "[yes/no]" "yes"
 .IP
@@ -284,8 +283,25 @@ explains the syntax for this parameter and how to determine a cipherlist.
 .TP 15n
 .PARAMETER fifo_size integer 50
 .IP
-The client uses one FIFO per connected peer. Each FIFO requires roughly N*2000
-bytes in memory.
+The internal queue length of Campagnol. The client uses one transmit and one
+receive queue.
+.TP
+.PARAMETER txqueue integer 500
+.IP
+LINUX ONLY - The length of the TX queue of the TUN/TAP device. If the parameter
+is not set, the default value of the driver is used. This sets the same value
+than the \fBtxqueuelen\fR parameter of ifconfig. Set this parameter to a smaller
+value if running with a slow ethernet connection or with severe rate limiting.
+.TP
+.PARAMETER tun_one_queue "[yes/no]" "no"
+.IP
+LINUX ONLY - Set the TUN/TAP driver in single queue mode. When running in single
+queue mode, the TUN/TAP driver drops the packets by itself when its internal
+queue is full instead of rescheduling the packets. The size of the internal
+queue is also set with the \fBtxqueue\fR parameter. This mode is required to
+work around a bug in pre-2.6.11 kernels. It may also help on slow hardware or
+with slow connection speed since it will de facto reduce the maximum transmit
+queue length.
 .TP
 .PARAMETER client_max_rate float "not enabled"
 .IP
