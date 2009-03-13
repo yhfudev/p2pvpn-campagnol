@@ -24,12 +24,6 @@
 #ifndef BSS_FIFO_H_
 #define BSS_FIFO_H_
 
-#ifdef HAVE_SEM_TIMEDWAIT
-#   define USE_SEMAPHORES 1
-#   include <semaphore.h>
-#else
-#   define USE_PTHREADS 1
-#endif
 #include <pthread.h>
 
 /* BIO type: source/sink */
@@ -55,21 +49,16 @@ extern BIO *BIO_new_fifo(int len, int data_size);
 /* Data structure used by the BIO */
 struct fifo_data {
     int size;                       // Size of the FIFO queue
+    int threshold;                  // Threshold to wake up the writing thread
     struct fifo_item *fifo;         // The FIFO's items
     unsigned int index_read;        // Read position
     unsigned int index_write;       // Write position
-#ifdef USE_SEMAPHORES
-    sem_t sem_read;                 // Number of items ready to be read
-    sem_t sem_write;                // Number of free items in the FIFO
-    pthread_mutex_t mutex;          // Access lock
-#else
     pthread_cond_t cond_read;       // Condition variable used to wait before reading
     pthread_cond_t cond_write;      // Condition variable used to wait before writing
     pthread_mutex_t mutex;          // Mutex used with the condition
     int nelem;                      // Number of items written in the FIFO
     int waiting_read;               // Number of threads waiting on cond
     int waiting_write;
-#endif
     long int rcv_timeout_nsec;      // recv timeout, ns
     time_t rcv_timeout_sec;         // recv timeout, seconds
     int rcv_timer_exp;              // Timeout during fifo_read

@@ -34,9 +34,6 @@
 
 #include "../common/log.h"
 #include "bss_fifo.h"
-#ifdef USE_SEMAPHORES
-#   include "sem_wrap.h"
-#endif
 #include "pthread_wrap.h"
 
 /*
@@ -100,6 +97,7 @@ int fifo_allocate(BIO *bi, int len, int data_size) {
     d->index_read = 0;
     d->index_write = 0;
     d->size = len;
+    d->threshold = len/10;
     d->rcv_timer_exp = 0;
     d->rcv_timeout_nsec = 0;
     d->rcv_timeout_sec = 0;
@@ -127,18 +125,12 @@ int fifo_allocate(BIO *bi, int len, int data_size) {
         return 0;
     }
 
-#ifdef USE_SEMAPHORES
-    semInit(&d->sem_read, 0, 0);
-    semInit(&d->sem_write, 0, d->size);
-    mutexInit(&d->mutex, NULL);
-#else
     conditionInit(&d->cond_read, NULL);
     conditionInit(&d->cond_write, NULL);
     mutexInit(&d->mutex, NULL);
     d->nelem = 0;
     d->waiting_read = 0;
     d->waiting_write = 0;
-#endif
 
     bi->init = 1;
 
@@ -172,15 +164,9 @@ static int fifo_free(BIO *bi) {
                 free(d->fifo[i].data);
             }
             free(d->fifo);
-#ifdef USE_SEMAPHORES
-            mutexDestroy(&d->mutex);
-            semDestroy(&d->sem_read);
-            semDestroy(&d->sem_write);
-#else
             mutexDestroy(&d->mutex);
             conditionDestroy(&d->cond_read);
             conditionDestroy(&d->cond_write);
-#endif
             free(d);
             bi->ptr = NULL;
         }
@@ -210,18 +196,6 @@ static int fifo_read(BIO *b, char *out, int outl) {
 
     d = (struct fifo_data *) b->ptr;
 
-#ifdef USE_SEMAPHORES
-    r = semTrywait(&d->sem_read);
-    if (r == -1) {
-        if (d->rcv_timeout_sec || d->rcv_timeout_nsec) {
-            set_timeout(&timeout, d->rcv_timeout_sec, d->rcv_timeout_nsec);
-            r = semTimedwait(&d->sem_read, &timeout);
-        }
-        else {
-            r = semWait(&d->sem_read);
-        }
-    }
-#else
     mutexLock(&d->mutex);
     while (d->nelem == 0) {
         d->waiting_read++;
@@ -238,7 +212,6 @@ static int fifo_read(BIO *b, char *out, int outl) {
         }
         d->waiting_read--;
     }
-#endif
 
 
     BIO_clear_retry_flags(b);
@@ -248,9 +221,6 @@ static int fifo_read(BIO *b, char *out, int outl) {
         d->rcv_timer_exp = 1;
     }
     else {
-#ifdef USE_SEMAPHORES
-        mutexLock(&d->mutex);
-#endif
         item = &d->fifo[d->index_read];
         len = item->size;
         ret = (outl >= len) ? len : outl; // is "out" big enough to store the packet
@@ -258,19 +228,12 @@ static int fifo_read(BIO *b, char *out, int outl) {
             memcpy(out, item->data, ret); // copy the data into "out" and update the queue
         }
         (d->index_read == d->size - 1) ? d->index_read = 0 : d->index_read++;
-#ifdef USE_SEMAPHORES
-        mutexUnlock(&d->mutex);
-        semPost(&d->sem_write);
-#else
         d->nelem--;
-        if (d->waiting_write) {
+        if (d->waiting_write && (d->size - d->nelem) >= d->threshold) {
             conditionSignal(&d->cond_write);
         }
-#endif
     }
-#ifdef USE_PTHREADS
     mutexUnlock(&d->mutex);
-#endif
     return ret;
 }
 
@@ -288,33 +251,24 @@ static int fifo_write(BIO *b, const char *in, int inl) {
     }
 
     d = (struct fifo_data *) b->ptr;
-#ifdef USE_SEMAPHORES
-    semWait(&d->sem_write);
-    mutexLock(&d->mutex);
-#else
     mutexLock(&d->mutex);
     while (d->nelem == d->size) {
         d->waiting_write++;
         conditionWait(&d->cond_write, &d->mutex);
         d->waiting_write--;
     }
-#endif
+
     BIO_clear_retry_flags(b);
     item = &d->fifo[d->index_write];
     item->size = inl;
     memcpy(item->data, in, inl);
     (d->index_write == d->size - 1) ? d->index_write = 0 : d->index_write++;
     ret = inl;
-#ifdef USE_SEMAPHORES
-    mutexUnlock(&d->mutex);
-    semPost(&d->sem_read);
-#else
     d->nelem++;
     if (d->waiting_read) {
         conditionSignal(&d->cond_read);
     }
     mutexUnlock(&d->mutex);
-#endif
     return ret;
 }
 
@@ -332,24 +286,12 @@ static long fifo_ctrl(BIO *b, int cmd, long num, void *ptr) {
         case BIO_CTRL_RESET:
             d->index_read = 0;
             d->index_write = 0;
-#ifdef USE_SEMAPHORES
-            semDestroy(&d->sem_read);
-            semDestroy(&d->sem_write);
-            semInit(&d->sem_read, 0, 0);
-            semInit(&d->sem_write, 0, d->size);
-#else
             d->nelem = 0;
-#endif
             break;
         case BIO_CTRL_EOF:
-#ifdef USE_SEMAPHORES
-            semGetValue(&d->sem_read, &v);
-            ret = (long) (v == 0);
-#else
             mutexLock(&d->mutex);
             ret = (long) (d->nelem == 0);
             mutexUnlock(&d->mutex);
-#endif
             break;
         case BIO_CTRL_GET_CLOSE:
             ret = (long) b->shutdown;
@@ -363,18 +305,13 @@ static long fifo_ctrl(BIO *b, int cmd, long num, void *ptr) {
             break;
         case BIO_CTRL_PENDING:
             ret = 0;
-#ifdef USE_SEMAPHORES
-            mutexLock(&d->mutex);
-            semGetValue(&d->sem_read, &v);
-#else
             mutexLock(&d->mutex);
             v = d->nelem;
-#endif
             for (i = d->index_read; i < d->index_read + v; i++) {
                 item = &d->fifo[((i < d->size) ? i : i - d->size)];
                 ret += item->size;
             }
-            mutexUnlock(&d->mutex); // both USE_SEMAPHORES and USE_PTHREADS
+            mutexUnlock(&d->mutex);
             break;
         case BIO_CTRL_DUP:
         case BIO_CTRL_FLUSH:
