@@ -93,12 +93,10 @@ AC_TYPE_SSIZE_T
 
 # Checks for library functions.
 # getline and tdestroy are missing on FreeBSD and OpenBSD
-# sem_timedwait is missing on OpenBSD
 AC_CONFIG_LIBOBJ_DIR([lib])
 AS_IF([test "x$build_client" != "xno"],[
   LIBS=$CLIENT_LIBS
   AC_REPLACE_FUNCS([getline tdestroy])
-  AC_CHECK_FUNCS([sem_timedwait])
   LIBS=$OLD_LIBS
 ])
 
