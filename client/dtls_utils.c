@@ -319,7 +319,7 @@ int createClientSSL(struct client *peer) {
 }
 
 /* locking callback function for openssl */
-void openssl_locking_function(int mode, int n, const char *file, int line) {
+void openssl_locking_function(int mode, int n, const char *file __attribute__((unused)), int line __attribute__((unused))) {
     if (mode & CRYPTO_LOCK) {
         mutexLock(&crypto_mutexes[n]);
     }

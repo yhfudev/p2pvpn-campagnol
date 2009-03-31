@@ -166,7 +166,7 @@ void daemonize(void) {
 }
 
 /* thread used to cath and handle signals */
-void * sig_handler(void * arg) {
+void * sig_handler(void * arg __attribute__((unused))) {
     sigset_t mask;
     int sig;
     struct itimerval timer_ping;
@@ -252,7 +252,7 @@ int main (int argc, char **argv) {
                     inet_ntoa(config.override_local_addr.sin_addr),
                     ntohs(config.override_local_addr.sin_port));
         }
-        if (config.localport != 0) printf("  Using local port: %d\n", config.localport);
+        if (config.localport != 0) printf("  Using local port: %u\n", config.localport);
         printf("  RDV server IP address: %s\n", inet_ntoa (config.serverAddr.sin_addr));
         printf("  RDV server port: %d\n", ntohs(config.serverAddr.sin_port));
         printf("  VPN IP addres: %s\n", inet_ntoa(config.vpnIP));
@@ -268,7 +268,7 @@ int main (int argc, char **argv) {
         if (config.tb_client_rate > 0) printf("  Outgoing traffic: %.3f kb/s\n", config.tb_client_rate);
         if (config.tb_connection_rate > 0) printf("  Outgoing traffic per connection: %.3f kb/s\n", config.tb_connection_rate);
         printf("  Timeout: %d sec.\n", config.timeout);
-        printf("  Keepalive: %d sec.\n", config.keepalive);
+        printf("  Keepalive: %u sec.\n", config.keepalive);
         printf("  Maximum number of connections: %d\n\n", config.max_clients);
     }
 
