@@ -33,7 +33,7 @@
  * return a newly allocated string
  */
 static char *int_to_str(int i) {
-    size_t out_len = 5;
+    int out_len = 5;
     int r;
     char *out = CHECK_ALLOC_FATAL(malloc(out_len));
 

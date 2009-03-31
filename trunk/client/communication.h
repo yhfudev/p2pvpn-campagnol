@@ -110,7 +110,7 @@
  *
  */
 #define TUN_MTU_DEFAULT 1419
-#define MESSAGE_MAX_LENGTH (config.tun_mtu+200)
+#define MESSAGE_MAX_LENGTH (unsigned int) (config.tun_mtu+200)
 /*
  * Number of punch messages
  */

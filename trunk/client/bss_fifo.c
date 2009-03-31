@@ -85,7 +85,7 @@ BIO *BIO_new_fifo(int len, int data_size) {
  * data_size: packet size
  */
 int fifo_allocate(BIO *bi, int len, int data_size) {
-    int i, j;
+    unsigned int i, j;
     struct fifo_data * d;
 
     bi->ptr = malloc(sizeof(struct fifo_data));
@@ -154,7 +154,7 @@ static int fifo_new(BIO *bi) {
  */
 static int fifo_free(BIO *bi) {
     struct fifo_data *d;
-    int i;
+    unsigned int i;
     if (bi == NULL)
         return 0; // we have to check
     if (bi->shutdown) {
@@ -277,7 +277,8 @@ static int fifo_write(BIO *b, const char *in, int inl) {
  */
 static long fifo_ctrl(BIO *b, int cmd, long num, void *ptr) {
     long ret = 1;
-    int i, v;
+    unsigned int i;
+    int v;
     struct fifo_item *item;
 
     struct fifo_data * d = (struct fifo_data *) b->ptr;

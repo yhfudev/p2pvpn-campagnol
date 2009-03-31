@@ -212,7 +212,8 @@ int get_ipv4_broadcast(uint32_t vpnip, int len, uint32_t *broadcast) {
  */
 static int get_up_down_index;
 static char ** get_up_down_dest;
-void get_up_down(const char *section, const char *key, const char *value, int nline) {
+void get_up_down(const char *section __attribute__((unused)), const char *key __attribute__((unused)), const char *value,
+        int nline __attribute__((unused))) {
     get_up_down_dest[get_up_down_index] = CHECK_ALLOC_FATAL(strdup(value));
     get_up_down_index++;
 }
@@ -375,7 +376,7 @@ void parseConfFile(char *confFile) {
             }
             /* read the netmask */
             len = strtol(search, &end, 10);
-            if ((end-search) != strlen(search)) {// A character is not a figure
+            if ((unsigned int) (end-search) != strlen(search)) {// A character is not a figure
                 log_message("[%s] Parameter \""OPT_VPN_NETWORK"\": ill-formed netmask (1 or 2 figures)", confFile);
                 exit(EXIT_FAILURE);
             }

@@ -48,15 +48,15 @@ extern BIO *BIO_new_fifo(int len, int data_size);
 
 /* Data structure used by the BIO */
 struct fifo_data {
-    int size;                       // Size of the FIFO queue
-    int threshold;                  // Threshold to wake up the writing thread
+    unsigned int size;              // Size of the FIFO queue
+    unsigned int threshold;         // Threshold to wake up the writing thread
     struct fifo_item *fifo;         // The FIFO's items
     unsigned int index_read;        // Read position
     unsigned int index_write;       // Write position
     pthread_cond_t cond_read;       // Condition variable used to wait before reading
     pthread_cond_t cond_write;      // Condition variable used to wait before writing
     pthread_mutex_t mutex;          // Mutex used with the condition
-    int nelem;                      // Number of items written in the FIFO
+    unsigned int nelem;             // Number of items written in the FIFO
     int waiting_read;               // Number of threads waiting on cond
     int waiting_write;
     long int rcv_timeout_nsec;      // recv timeout, ns

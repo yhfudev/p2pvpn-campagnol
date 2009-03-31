@@ -226,7 +226,7 @@ static char *parser_substitution(const char *section, const char *value,
                     len += (end - src + 1);
                     new_value = realloc(new_value, len);
                     dst = new_value + len_written;
-                    for (i = 0; i < (end - src); i++) {
+                    for (i = 0; i < (unsigned int) (end - src); i++) {
                         *dst = src[i];
                         len_written++;
                         dst++;
@@ -699,7 +699,9 @@ void parser_read(const char *confFile, parser_context_t *parser) {
             while (*(token_end - 1) == ' ' || *(token_end - 1) == '\t')
                 token_end--;
             *token_end = '\0';
-            if (section_length < (token_end - token + 1)) {
+            ASSERT(token_end > token);
+
+            if (section_length < (unsigned int) (token_end - token + 1)) {
                 section_length = token_end - token + 1;
                 free(section);
                 section = malloc(section_length);
@@ -738,7 +740,9 @@ void parser_read(const char *confFile, parser_context_t *parser) {
             token_end--;
         // copy name:
         *token_end = '\0';
-        if (name_length < (token_end - token + 1)) {
+        ASSERT(token_end > token);
+
+        if (name_length < (unsigned int) (token_end - token + 1)) {
             name_length = token_end - token + 1;
             free(name);
             name = malloc(name_length);
@@ -774,7 +778,8 @@ void parser_read(const char *confFile, parser_context_t *parser) {
             r++;
 
         // copy what we have into value
-        if (value_length < r + 1) {
+        ASSERT(r > 0);
+        if (value_length < (unsigned int) (r + 1)) {
             value_length = r + 1;
             free(value);
             value = malloc(value_length);
@@ -840,7 +845,7 @@ void parser_read(const char *confFile, parser_context_t *parser) {
             // append the line to value
             if (r_continued != 0) {
                 r += r_continued;
-                if (value_length < r + 1) {
+                if (value_length < (unsigned int) (r + 1)) {
                     value_length = r + 1;
                     value = realloc(value, value_length);
                 }
@@ -880,7 +885,7 @@ void parser_read(const char *confFile, parser_context_t *parser) {
  * escape # ; \ " \n \t \r
  */
 static void parser_write_option(const void *nodep, const VISIT which,
-        const int depth) {
+        const int depth __attribute__((unused))) {
     item_value_t *item;
     char *c;
     if (which == postorder || which == leaf) {
@@ -914,7 +919,7 @@ static void parser_write_option(const void *nodep, const VISIT which,
 
 /* internal, write a complete section into parser->dump_file */
 static void parser_write_section(const void *nodep, const VISIT which,
-        const int depth) {
+        const int depth __attribute__((unused))) {
     item_section_t *item;
     switch (which) {
         case postorder:
@@ -936,7 +941,7 @@ void parser_write(FILE *file, parser_context_t *parser) {
 }
 
 static void parser_forall_option(const void *nodep, const VISIT which,
-        const int depth) {
+        const int depth __attribute__((unused))) {
     item_value_t *item;
     char *v;
     switch (which) {
@@ -953,7 +958,7 @@ static void parser_forall_option(const void *nodep, const VISIT which,
 }
 
 static void parser_forall_sec(const void *nodep, const VISIT which,
-        const int depth) {
+        const int depth __attribute__((unused))) {
     item_section_t *item;
     switch (which) {
         case postorder:

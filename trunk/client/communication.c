@@ -100,7 +100,7 @@ static inline void init_timeout(struct timeval *timeout) {
  * send a PING message
  */
 static int sockfd_global;
-void handler_sigTimerPing(int sig) {
+void handler_sigTimerPing(int sig __attribute__((unused))) {
     message_t smsg;
     /* send a PING message to the RDV server */
     init_smsg(&smsg, PING,0,0);
@@ -262,7 +262,7 @@ static void *punch(void *arg) {
 /*
  * Create a thread executing "punch"
  */
-static void start_punch(struct client *peer, int sockfd) {
+static void start_punch(struct client *peer) {
     incr_ref(peer);
     createDetachedThread(punch, (void *)peer);
 }
@@ -493,7 +493,7 @@ static void * comm_socket(void * argument) {
     int sockfd = args->sockfd;
     int tunfd = args->tunfd;
 
-    int r, s;
+    ssize_t r, s;
     int r_select;
     fd_set fd_select;                           // for the select call
     struct timeval timeout;                     // timeout used with select
@@ -550,7 +550,7 @@ static void * comm_socket(void * argument) {
                             client_update_time(peer,timestamp);
                             CLIENT_MUTEXUNLOCK(peer);
                             /* and start punching */
-                            start_punch(peer, sockfd);
+                            start_punch(peer);
                             decr_ref(peer);
                         }
                         break;
@@ -565,14 +565,14 @@ static void * comm_socket(void * argument) {
                                 break;
                             }
                             /* start punching */
-                            start_punch(peer, sockfd);
+                            start_punch(peer);
                             decr_ref(peer);
                         }
                         else {
                             CLIENT_MUTEXLOCK(peer);
                             if (peer->state == ESTABLISHED) {
                                 CLIENT_MUTEXUNLOCK(peer);
-                                start_punch(peer, sockfd);
+                                start_punch(peer);
                                 decr_ref(peer);
                             }
                             else {
@@ -598,9 +598,9 @@ static void * comm_socket(void * argument) {
             }
             /* Message from another peer */
             else {
-                if (config.debug) printf("<  Received a UDP packet: size %d from %s\n", r, inet_ntoa(unknownaddr.sin_addr));
+                if (config.debug) printf("<  Received a UDP packet: size %zd from %s\n", r, inet_ntoa(unknownaddr.sin_addr));
                 /* check the first byte to find the message type */
-                if (r >= sizeof(dtlsheader_t) &&
+                if (r >= (int) sizeof(dtlsheader_t) &&
                         (u.dtlsheader->contentType == DTLS_APPLICATION_DATA
                         || u.dtlsheader->contentType == DTLS_HANDSHAKE
                         || u.dtlsheader->contentType == DTLS_ALERT
