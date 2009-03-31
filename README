@@ -124,7 +124,13 @@ In order to compile Campagnol you need:
   * OpenSSL library version >= 0.9.8g (0.9.8j recommended)
                                       http://www.openssl.org/
   * the Universal TUN/TAP driver      http://vtun.sourceforge.net/tun
-  * autoconf >= 2.61
+
+  If there is no ./configure script in the source tree (you checked out the
+  sources via subversion), you will need:
+    * autoconf >= 2.61
+    * automake 1.10
+  To prepare the source tree and create the ./configure script, run:
+  $ autoreconf -if
 
 You first need to use the 'configure' script. 
 $ ./configure --help
