@@ -294,6 +294,7 @@ static void *SSL_writing(void *args) {
         }
     }
     free(packet);
+    SSL_REMOVE_ERROR_STATE;
     decr_ref(peer);
     return NULL;
 }
@@ -350,7 +351,7 @@ static void * SSL_reading(void * args) {
         conditionSignal(&peer->cond_connected);
         decr_ref(peer);
         decr_ref(peer);
-        ERR_remove_state(0);
+        SSL_REMOVE_ERROR_STATE;
         free(u.raw);
         return NULL;
     }
@@ -410,7 +411,7 @@ static void * SSL_reading(void * args) {
             CLIENT_MUTEXUNLOCK(peer);
             decr_ref(peer);
             decr_ref(peer);
-            ERR_remove_state(0);
+            SSL_REMOVE_ERROR_STATE;
             free(u.raw);
             return NULL;
         }
@@ -737,7 +738,7 @@ static void * comm_socket(void * argument) {
     }
 
     free(u.raw);
-    ERR_remove_state(0);
+    SSL_REMOVE_ERROR_STATE;
     return NULL;
 }
 
@@ -903,7 +904,7 @@ static void * comm_tun(void * argument) {
     }
 
     free(u.raw);
-    ERR_remove_state(0);
+    SSL_REMOVE_ERROR_STATE;
     return NULL;
 }
 

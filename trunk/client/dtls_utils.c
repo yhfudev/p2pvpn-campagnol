@@ -155,7 +155,11 @@ static SSL_CTX * createContext(int is_client) {
     SSL_CTX_set_read_ahead(ctx, 1);
 
     /* No zlib compression */
+#ifdef SSL_OP_NO_COMPRESSION
+    SSL_CTX_set_options(ctx, SSL_OP_NO_COMPRESSION);
+#else
     ctx->comp_methods = NULL;
+#endif
     /* Algorithms */
     if (config.cipher_list != NULL) {
         if (! SSL_CTX_set_cipher_list(ctx, config.cipher_list)){
@@ -328,13 +332,16 @@ void openssl_locking_function(int mode, int n, const char *file __attribute__((u
     }
 }
 
-/* if_function for openssl threading support */
+#ifndef HAVE_CRYPTO_THREADID_CURRENT
+/* id_function for openssl threading support
+ * openssl >= 1.0.0 has a default implementation */
 unsigned long openssl_id_function(void) {
     /* linux: pthread_t is a unsigned long int, ok
      * freebsd/openbsd: pthread_t is a pointer, ok
      */
     return (unsigned long) pthread_self();
 }
+#endif
 
 /* setup callback functions for openssl threading support */
 void setup_openssl_thread() {
@@ -345,7 +352,9 @@ void setup_openssl_thread() {
     for (i=0; i<n; i++) {
         mutexInit(&crypto_mutexes[i], NULL);
     }
+#ifndef HAVE_CRYPTO_THREADID_CURRENT
     CRYPTO_set_id_callback(&openssl_id_function);
+#endif
     CRYPTO_set_locking_callback(&openssl_locking_function);
 }
 
@@ -354,7 +363,9 @@ void cleanup_openssl_thread() {
     int i, n;
     n = CRYPTO_num_locks();
 
+#ifndef HAVE_CRYPTO_THREADID_CURRENT
     CRYPTO_set_id_callback(NULL);
+#endif
     CRYPTO_set_locking_callback(NULL);
 
     for (i=0; i<n; i++) {

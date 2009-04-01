@@ -344,7 +344,7 @@ int main (int argc, char **argv) {
     // free the strings stored in config
     freeConfig();
     // thread error state. must be called by each thread
-    ERR_remove_state(0);
+    SSL_REMOVE_ERROR_STATE;
     cleanup_openssl_thread();
     // engine
     ENGINE_cleanup();
