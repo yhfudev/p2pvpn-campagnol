@@ -37,8 +37,18 @@
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
+
+#define OPENSSL_NO_DEPRECATED
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+
+
+#ifdef HAVE_CRYPTO_THREADID_CURRENT
+/* new THREADID API, ERR_remove_state is deprecated */
+#   define SSL_REMOVE_ERROR_STATE ERR_remove_thread_state(NULL)
+#else
+#   define SSL_REMOVE_ERROR_STATE ERR_remove_state(0)
+#endif
 
 
 /*
