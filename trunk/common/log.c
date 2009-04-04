@@ -1,7 +1,7 @@
 /*
  * Small log functions
  *
- * Copyright (C) 2008 Florent Bondoux
+ * Copyright (C) 2008-2009 Florent Bondoux
  *
  * This file is part of Campagnol.
  *
@@ -107,17 +107,41 @@ void log_message_syslog(const char *format, ...) {
  */
 void _log_error(const char *filename, unsigned int linenumber,
         const char *functionname, int error_code, const char *s) {
+    char *error_str = NULL;
+
+    if (error_code != -1) {
+#ifdef HAVE_STRERROR_R
+        char error_buf[512];
+
+        /* sterror is available in two versions: POSIX or GNU */
+#ifdef STRERROR_R_CHAR_P /* GNU */
+        error_str = strerror_r(error_code, error_buf, 512);
+#else /* POSIX */
+        if (strerror_r(error_code, error_buf, 512) != 0) {
+            perror("strerror_r");
+            strncpy(error_buf, "Could not get the error message", 512);
+        }
+        error_str = error_buf;
+#endif /* STRERROR_R_CHAR_P */
+#else /* HAVE_STRERROR_R */
+        error_str = strerror(error_code);
+#endif /* HAVE_STRERROR_R */
+    }
 
     if (s) {
         if (error_code != -1)
-            _log_message(stderr, "%s:%u:%s: %s: %s", filename, linenumber, functionname, s, strerror(error_code));
+            _log_message(stderr, "%s:%u:%s: %s: %s", filename, linenumber,
+                    functionname, s, error_str);
         else
-            _log_message(stderr, "%s:%u:%s: %s", filename, linenumber, functionname, s);
+            _log_message(stderr, "%s:%u:%s: %s", filename, linenumber,
+                    functionname, s);
     }
     else {
         if (error_code != -1)
-            _log_message(stderr, "%s:%u:%s: %s", filename, linenumber, functionname, strerror(error_code));
+            _log_message(stderr, "%s:%u:%s: %s", filename, linenumber,
+                    functionname, error_str);
         else
-            _log_message(stderr, "%s:%u:%s: Error", filename, linenumber, functionname);
+            _log_message(stderr, "%s:%u:%s: Error", filename, linenumber,
+                    functionname);
     }
 }

@@ -91,6 +91,9 @@ AC_TYPE_UINT32_T
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
 
+# Checks for particular functions
+AC_FUNC_STRERROR_R
+
 # Checks for library functions.
 # getline and tdestroy are missing on FreeBSD and OpenBSD
 AC_CONFIG_LIBOBJ_DIR([lib])
