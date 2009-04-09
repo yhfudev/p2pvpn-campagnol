@@ -101,6 +101,7 @@ int fifo_allocate(BIO *bi, int len, int data_size) {
     d->rcv_timer_exp = 0;
     d->rcv_timeout_nsec = 0;
     d->rcv_timeout_sec = 0;
+    d->droptail = 0;
 
     d->fifo = (struct fifo_item *) malloc(d->size * sizeof(struct fifo_item));
     if (d->fifo == NULL) {
@@ -252,6 +253,10 @@ static int fifo_write(BIO *b, const char *in, int inl) {
 
     d = (struct fifo_data *) b->ptr;
     mutexLock(&d->mutex);
+    if (d->nelem == d->size && d->droptail) {
+        mutexUnlock(&d->mutex);
+        return inl;
+    }
     while (d->nelem == d->size) {
         d->waiting_write++;
         conditionWait(&d->cond_write, &d->mutex);
@@ -333,6 +338,16 @@ static long fifo_ctrl(BIO *b, int cmd, long num, void *ptr) {
             }
             else
                 ret = 0;
+            break;
+        case BIO_CTRL_FIFO_SET_DROPTAIL:
+            mutexLock(&d->mutex);
+            d->droptail = (int) num;
+            mutexUnlock(&d->mutex);
+            break;
+        case BIO_CTRL_FIFO_GET_DROPTAIL:
+            mutexLock(&d->mutex);
+            ret = d->droptail;
+            mutexUnlock(&d->mutex);
             break;
         case BIO_CTRL_PUSH:
         case BIO_CTRL_POP:
