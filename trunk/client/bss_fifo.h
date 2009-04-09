@@ -25,6 +25,7 @@
 #define BSS_FIFO_H_
 
 #include <pthread.h>
+#include <openssl/bio.h>
 
 /* BIO type: source/sink */
 #define BIO_TYPE_FIFO (23|BIO_TYPE_SOURCE_SINK)
@@ -42,6 +43,10 @@
 /* last operation timed out ?*/
 #define BIO_CTRL_FIFO_GET_RECV_TIMER_EXP    BIO_CTRL_DGRAM_GET_RECV_TIMER_EXP
 #define BIO_CTRL_FIFO_GET_SEND_TIMER_EXP    BIO_CTRL_DGRAM_GET_SEND_TIMER_EXP
+
+/* discard packets when the FIFO is full instead of waiting */
+#define BIO_CTRL_FIFO_SET_DROPTAIL          100
+#define BIO_CTRL_FIFO_GET_DROPTAIL          101
 
 /* Create a new BIO */
 extern BIO *BIO_new_fifo(int len, int data_size);
@@ -62,6 +67,7 @@ struct fifo_data {
     long int rcv_timeout_nsec;      // recv timeout, ns
     time_t rcv_timeout_sec;         // recv timeout, seconds
     int rcv_timer_exp;              // Timeout during fifo_read
+    int droptail;                   // Drop new packets when the fifo is full
 };
 
 /* An item in the queue */
