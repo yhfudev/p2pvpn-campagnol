@@ -304,6 +304,10 @@ int createClientSSL(struct client *peer) {
         mutexUnlock(&ctx_lock);
         return -1;
     }
+    /* The FIFO for the outgoing SSL stream is created with a drop tail policy
+     * until the DTLS session is opened and we start transmitting VPN packets
+     */
+    BIO_ctrl(peer->out_fifo, BIO_CTRL_FIFO_SET_DROPTAIL, 1, NULL);
 
     if (peer->is_dtls_client) {
         SSL_set_connect_state(peer->ssl);

@@ -27,7 +27,7 @@
 #include "rate_limiter.h"
 
 /* clients states */
-enum client_type {PUNCHING, WAITING, ESTABLISHED, TIMEOUT, CLOSED};
+enum client_type {NEW, PUNCHING, LINKED, ESTABLISHED, CLOSED};
 
 /* default receive timeout */
 #define PEER_RECV_TIMEMOUT_NSEC 500000000L
@@ -51,8 +51,8 @@ struct client {
     BIO *out_fifo;                  // FIFO BIO for outgoing packets
     SSL_CTX *ctx;                   // SSL context associated to the connection
     int is_dtls_client;             // DTLS client or server ?
-    int thread_ssl_running;         // the thread from SSL_reading is running
-    int send_shutdown;              // Send a shutdown message after SSL_read returns 0
+    int shutdown;                   // Set to 1 by end_peer_handling
+    int rdv_answer;                 // The answer from the RDV (ANS_CONNECTION or REJ_CONNECTION)
     struct tb_state rate_limiter;   // Rate limiter for this client
 
     pthread_mutex_t mutex;          // local mutex;
