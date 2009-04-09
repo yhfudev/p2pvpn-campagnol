@@ -133,17 +133,16 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct
     peer->sockfd = sockfd;
     conditionInit(&peer->cond_connected, NULL);
     mutexInit(&peer->mutex, NULL);
-    peer->send_shutdown = 0;
+    peer->shutdown = 0;
+    peer->is_dtls_client = is_dtls_client;
+    mutexInit(&(peer->mutex_ref), NULL);
+    peer->ref_count = 2;
 
     /* initialize rate limiter */
     if (config.tb_connection_size != 0) {
         tb_init(&peer->rate_limiter, config.tb_connection_size, (double) config.tb_connection_rate, 8, 1);
     }
 
-    peer->is_dtls_client = is_dtls_client;
-    peer->thread_ssl_running = 0;
-    mutexInit(&(peer->mutex_ref), NULL);
-    peer->ref_count = 2;
 
     r = createClientSSL(peer);
     if (r != 0) {

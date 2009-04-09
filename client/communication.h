@@ -134,10 +134,12 @@ message_t;
 
 /* DTLS header */
 typedef struct {
-    unsigned char contentType;          // same as struct message's type (unsigned char)
-    unsigned char protocolVersionMaj;
-    unsigned char protocolVersionMin;
-} dtlsheader_t;
+    unsigned char contentType; // same as struct message's type (unsigned char)
+    uint16_t version;
+    uint16_t epoch;
+    uint64_t seq_number:48;
+    uint16_t length;
+} __attribute__((packed)) dtlsheader_t;
 
 /*
  * Union used to store a VPN packet

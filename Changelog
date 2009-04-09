@@ -1,3 +1,12 @@
+	client:
+
+	* bss_fifo: add a drop-tail mode in addition to the default blocking
+	write.
+	* communication, dtls_utils, peer: New design. Connections are now
+	handled by a new thread from creation to shutdown. This is less tricky
+	but cost the creation of a new thread as soon as a connection is
+	asked.
+
 v 0.3.2:
 	client:
 	Read the DTLS data (key and certificates) only once at startup.
