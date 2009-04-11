@@ -112,6 +112,7 @@ int fifo_allocate(BIO *bi, int len, int data_size) {
 
     for (i = 0; i < d->size; i++) {
         d->fifo[i].data = malloc(data_size);
+        d->fifo[i].data_size = data_size;
         if (d->fifo[i].data == NULL) {
             break;
         }
@@ -265,6 +266,17 @@ static int fifo_write(BIO *b, const char *in, int inl) {
 
     BIO_clear_retry_flags(b);
     item = &d->fifo[d->index_write];
+    if (inl > item->data_size) {
+        void * new = malloc(inl);
+        if (new) {
+            free(item->data);
+            item->data = new;
+            item->data_size = inl;
+        }
+        else {
+            inl = item->data_size;
+        }
+    }
     item->size = inl;
     memcpy(item->data, in, inl);
     (d->index_write == d->size - 1) ? d->index_write = 0 : d->index_write++;

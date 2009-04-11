@@ -8,6 +8,7 @@
 	asked.
 	* configure.ac: Update the required version of OpenSSL to >=0.9.8j in
 	order to have a decent DTLS implementation.
+	* MTU: Allow the receiving of packets larger than the VPN MTU.
 
 v 0.3.2:
 	client:

@@ -299,7 +299,8 @@ static void * peer_handling(void * args) {
     struct timespec timeout_connect;            // timeout
     time_t timestamp, last_time = 0;
 
-    u.raw = CHECK_ALLOC_FATAL(malloc(MESSAGE_MAX_LENGTH));
+    size_t u_len = 1<<16;
+    u.raw = CHECK_ALLOC_FATAL(malloc(u_len));
 
 
     while (1) {
@@ -394,7 +395,7 @@ static void * peer_handling(void * args) {
             /* And do the reading stuff */
             while (!end_reading_loop) {
                 /* Read and uncrypt a message, send it on the TUN device */
-                r = SSL_read(peer->ssl, u.raw, MESSAGE_MAX_LENGTH);
+                r = SSL_read(peer->ssl, u.raw, u_len);
                 timestamp = time(NULL);
                 if (BIO_should_read(peer->rbio)) { // timeout on SSL_read
                     // check whether the connection is active and send keepalive messages
@@ -574,7 +575,8 @@ static void * comm_socket(void * argument) {
     socklen_t len = sizeof(struct sockaddr_in);
     struct client *peer;
 
-    u.raw = CHECK_ALLOC_FATAL(malloc(MESSAGE_MAX_LENGTH));
+    size_t u_len = 1<<16;
+    u.raw = CHECK_ALLOC_FATAL(malloc(u_len));
 
     while (!end_campagnol) {
         /* select call initialisation */
@@ -586,7 +588,7 @@ static void * comm_socket(void * argument) {
 
         /* MESSAGE READ FROM THE SOCKET */
         if (r_select > 0) {
-            r = recvfrom(sockfd,u.raw,MESSAGE_MAX_LENGTH,0,(struct sockaddr *)&unknownaddr,&len);
+            r = recvfrom(sockfd,u.raw,u_len,0,(struct sockaddr *)&unknownaddr,&len);
             /* from the RDV server ? */
             if (config.serverAddr.sin_addr.s_addr == unknownaddr.sin_addr.s_addr
                 && config.serverAddr.sin_port == unknownaddr.sin_port) {

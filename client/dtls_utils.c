@@ -317,7 +317,6 @@ int createClientSSL(struct client *peer) {
     }
 
     /* Don't try to discover the MTU
-     * Don't want that OpenSSL fragments our packets
      */
     SSL_set_options(peer->ssl, SSL_OP_NO_QUERY_MTU);
     peer->ssl->d1->mtu = MESSAGE_MAX_LENGTH;
