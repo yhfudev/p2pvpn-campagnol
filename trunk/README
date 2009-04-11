@@ -121,7 +121,8 @@ Compilation
 -----------
 
 In order to compile Campagnol you need:
-  * OpenSSL library version >= 0.9.8g (0.9.8j recommended)
+  * OpenSSL library version >= 0.9.8j (last 0.9.8* available recommended,
+                                       1.0.0beta should also work)
                                       http://www.openssl.org/
   * the Universal TUN/TAP driver      http://vtun.sourceforge.net/tun
 
