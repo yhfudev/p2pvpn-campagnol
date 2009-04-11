@@ -6,6 +6,8 @@
 	handled by a new thread from creation to shutdown. This is less tricky
 	but cost the creation of a new thread as soon as a connection is
 	asked.
+	* configure.ac: Update the required version of OpenSSL to >=0.9.8j in
+	order to have a decent DTLS implementation.
 
 v 0.3.2:
 	client:
