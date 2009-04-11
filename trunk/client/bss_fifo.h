@@ -73,6 +73,7 @@ struct fifo_data {
 /* An item in the queue */
 struct fifo_item {
     int size;                       // Size of the packet
+    int data_size;                  // Size of data
     char *data;                     // Contains the data
 };
 
