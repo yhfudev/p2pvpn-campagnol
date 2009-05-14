@@ -188,7 +188,7 @@ int initDTLS() {
         return -1;
     }
     campagnol_ctx_server = createContext(0);
-    if (campagnol_ctx_client == NULL) {
+    if (campagnol_ctx_server == NULL) {
         SSL_CTX_free(campagnol_ctx_client);
         log_error(-1, "Cannot allocate a new SSL context");
         return -1;

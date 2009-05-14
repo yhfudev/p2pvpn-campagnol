@@ -48,20 +48,15 @@ static int compare_clients_vpn(const void *itema, const void *itemb) {
 
 /*
  * mutex used to manipulate 'clients'
- * It needs to be recursive since decr_ref may lock it
  */
 pthread_mutex_t mutex_clients;
-pthread_mutexattr_t attrs_mutex_clients;
 
 void mutex_clients_init(void) {
-    mutexattrInit(&attrs_mutex_clients);
-    mutexattrSettype(&attrs_mutex_clients, PTHREAD_MUTEX_RECURSIVE);
-    mutexInit(&mutex_clients, &attrs_mutex_clients);
+    mutexInit(&mutex_clients, NULL);
 }
 
 void mutex_clients_destroy(void) {
     mutexDestroy(&mutex_clients);
-    mutexattrDestroy(&attrs_mutex_clients);
 }
 
 /*
