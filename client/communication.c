@@ -417,7 +417,7 @@ static void * peer_handling(void * args) {
                             CLIENT_MUTEXUNLOCK(peer);
                             r = SSL_shutdown(peer->ssl);
                             while (r == 0 && peer->ssl->s3->alert_dispatch) {
-                                /* data are still being writtent out,
+                                /* data are still being written out,
                                  * wait and retry */
                                 usleep(10000);
                                 /* clear some flags before retrying */
@@ -450,7 +450,7 @@ static void * peer_handling(void * args) {
                                 log_message_verb("Closing DTLS connection with peer %s", inet_ntoa(peer->vpnIP));
                                 r = SSL_shutdown(peer->ssl);
                                 while (r == 0 && peer->ssl->s3->alert_dispatch) {
-                                    /* data are still being writtent out,
+                                    /* data are still being written out,
                                      * wait and retry */
                                     usleep(10000);
                                     /* clear some flags before retrying */
@@ -831,12 +831,12 @@ int start_vpn(int sockfd, int tunfd) {
         return -1;
     }
 
-    pthread_t th_socket, th_tun;
+    pthread_t th_socket;
     th_socket = createThread(comm_socket, args);
-    th_tun = createThread(comm_tun, args);
+
+    comm_tun(args);
 
     joinThread(th_socket, NULL);
-    joinThread(th_tun, NULL);
 
     free(args);
 
