@@ -8,5 +8,5 @@ campagnol_rdv_SOURCES = campagnol_rdv.c rdv.h \
 	server.c server.h
 
 campagnol_rdv_CPPFLAGS = -DSYSCONFDIR="\"$(sysconfdir)\"" -DLOCALSTATEDIR="\"$(localstatedir)\""
-campagnol_rdv_CFLAGS = -Wall -Wstrict-prototypes
+campagnol_rdv_CFLAGS = @COMMON_CFLAGS@
 campagnol_rdv_LDADD = ../common/libcommon.a @RDV_LIBS@
