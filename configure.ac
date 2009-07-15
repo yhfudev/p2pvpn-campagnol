@@ -5,12 +5,25 @@ AM_MAINTAINER_MODE
 AC_CONFIG_SRCDIR([client/campagnol.c])
 AC_CONFIG_HEADERS([config.h])
 
+AC_ARG_ENABLE([warnings],[AS_HELP_STRING([--enable-warnings],[enable additional warnings during the compilation])],
+[add_warnings=$enableval],[add_warnings=no]
+)
 AC_ARG_ENABLE([client],[AS_HELP_STRING([--disable-client],[do not build the client])],
 [build_client=$enableval],[build_client=yes]
 )
 AC_ARG_ENABLE([server],[AS_HELP_STRING([--disable-server],[do not build the RDV server])],
 [build_server=$enableval],[build_server=yes]
 )
+
+# Common CFLAGS
+COMMON_CFLAGS="-Wall -Wextra -Wstrict-prototypes"
+AS_IF(
+  [test "x$add_warnings" = "xyes"],
+  [
+    COMMON_CFLAGS="$COMMON_CFLAGS -Wshadow -Wformat=2 -Wmissing-prototypes -Wmissing-declarations -Wmissing-format-attribute -Wwrite-strings -Wcast-qual -Wpointer-arith -fdiagnostics-show-option"
+  ]
+)
+
 AM_CONDITIONAL([BUILD_CLIENT], [test "x$build_client" != "xno"])
 AM_CONDITIONAL([BUILD_SERVER], [test "x$build_server" != "xno"])
 
@@ -20,6 +33,14 @@ AS_IF([test "x$build_client" = "xno" -a "x$build_server" = "xno"],[
 
 
 AC_USE_SYSTEM_EXTENSIONS
+
+#Filter CFLAGS
+SAFE_CFLAGS=""
+for flag in $COMMON_CFLAGS; do
+  CHECK_CC_FLAG([$flag],[SAFE_CFLAGS="$SAFE_CFLAGS $flag"],[])
+done
+COMMON_CFLAGS="$SAFE_CFLAGS"
+AC_SUBST(COMMON_CFLAGS)
 
 # Checks host type
 AC_CANONICAL_HOST
