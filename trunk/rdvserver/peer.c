@@ -42,8 +42,8 @@ static void *clients_vpn_root = NULL;
 
 /* comparison routine for the first tree */
 static int compare_clients_addr(const void *itema, const void *itemb) {
-    struct client *peer1 = (struct client *) itema;
-    struct client *peer2 = (struct client *) itemb;
+    const struct client *peer1 = (const struct client *) itema;
+    const struct client *peer2 = (const struct client *) itemb;
     if (peer1->clientaddr.sin_addr.s_addr < peer2->clientaddr.sin_addr.s_addr)
         return -1;
     if (peer1->clientaddr.sin_addr.s_addr == peer2->clientaddr.sin_addr.s_addr) {
@@ -59,8 +59,8 @@ static int compare_clients_addr(const void *itema, const void *itemb) {
 
 /* comparison routine for clients_vpn_root */
 static int compare_clients_vpn(const void *itema, const void *itemb) {
-    struct client *peer1 = (struct client *) itema;
-    struct client *peer2 = (struct client *) itemb;
+    const struct client *peer1 = (const struct client *) itema;
+    const struct client *peer2 = (const struct client *) itemb;
     if (peer1->vpnIP.s_addr < peer2->vpnIP.s_addr)
         return -1;
     if (peer1->vpnIP.s_addr == peer2->vpnIP.s_addr)
@@ -71,7 +71,7 @@ static int compare_clients_vpn(const void *itema, const void *itemb) {
 /*
  * Add a client to the list/trees
  */
-struct client * add_client(int sockfd, time_t time, struct in_addr clientIP,
+struct client * add_client(int sockfd, time_t t, struct in_addr clientIP,
         uint16_t clientPort, struct in_addr vpnIP, struct in_addr localIP,
         uint16_t localPort) {
     int r;
@@ -90,7 +90,7 @@ struct client * add_client(int sockfd, time_t time, struct in_addr clientIP,
         log_error(errno, "Cannot allocate a new client (malloc)");
         return NULL;
     }
-    peer->time = time;
+    peer->time = t;
     memset(&(peer->clientaddr), 0, sizeof(peer->clientaddr));
     memset(&(peer->localaddr), 0, sizeof(peer->localaddr));
     peer->clientaddr.sin_family = AF_INET;

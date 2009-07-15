@@ -36,12 +36,12 @@
 
 static char *device;
 
-char *tun_default_up[] = {
+const char *tun_default_up[] = {
         "ifconfig %D %V mtu %M up",
         "ip route replace %N via %V || route add -net %N gw %V",
         NULL
 };
-char *tun_default_down[] = {NULL};
+const char *tun_default_down[] = {NULL};
 
 /*
  * Open a new TUN virtual interface

@@ -53,10 +53,11 @@ static char *int_to_str(int i) {
 /* Replace the special variables %D %V ... in s
  * return a newly allocated string
  */
-static char *replace_args(char *s, char *device) {
+static char *replace_args(const char *s, char *device) {
     char * out;
     size_t len, len_written = 0;
-    char *src, *dst;
+    const char *src;
+    char *dst;
     char *tmp;
     size_t tmp_len;
     char buf[3];
@@ -77,7 +78,8 @@ static char *replace_args(char *s, char *device) {
                 tmp = NULL;
                 switch(*(src+1)) {
                     case '%':
-                        tmp = "%";
+                        must_free_tmp = 1;
+                        tmp = CHECK_ALLOC_FATAL(strdup("%"));
                         break;
                     case 'D': // device
                         tmp = device;
@@ -138,9 +140,9 @@ static char *replace_args(char *s, char *device) {
 
 /* execute the commands in progs or if default_progs if progs is NULL
  */
-static void exec_internal(char **progs, char ** default_progs, char *device) {
+static void exec_internal(char **progs, const char ** default_progs, char *device) {
     int r;
-    char **programs = progs != NULL ? progs : default_progs;
+    const char **programs = progs != NULL ? (const char **) progs : default_progs;
     char *cmd;
     if (programs != NULL) {
         while (*programs) {

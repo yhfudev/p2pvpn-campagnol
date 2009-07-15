@@ -48,7 +48,7 @@ volatile sig_atomic_t reload = 0;
 static char* pidfile = NULL;
 
 
-void usage(void) {
+static void usage(void) {
     fprintf(stderr, "Usage: campagnol [OPTION]... [configuration_file]\n\n");
     fprintf(stderr, "Options\n");
     fprintf(stderr, " -d, --debug             debug mode\n");
@@ -61,14 +61,14 @@ void usage(void) {
     exit(EXIT_FAILURE);
 }
 
-void version(void) {
+static void version(void) {
     fprintf(stderr, "Campagnol VPN | Client | Version %s\n", VERSION);
     fprintf(stderr, "Copyright (c) 2007 Antoine Vianey\n");
     fprintf(stderr, "              2008-2009 Florent Bondoux\n");
     exit(EXIT_SUCCESS);
 }
 
-int parse_args(int argc, char **argv, char **configFile) {
+static int parse_args(int argc, char **argv, const char **configFile) {
     int opt;
 
     struct option long_options[] = {
@@ -151,7 +151,7 @@ static void create_pidfile(void) {
     atexit(remove_pidfile);
 }
 
-void daemonize(void) {
+static void daemonize(void) {
     int r;
 
     printf("Going in background...\n");
@@ -166,7 +166,7 @@ void daemonize(void) {
 }
 
 /* thread used to cath and handle signals */
-void * sig_handler(void * arg __attribute__((unused))) {
+static void * sig_handler(void * arg __attribute__((unused))) {
     sigset_t mask;
     int sig;
     struct itimerval timer_ping;
@@ -211,7 +211,7 @@ void * sig_handler(void * arg __attribute__((unused))) {
 
 
 int main (int argc, char **argv) {
-    char *configFile = NULL;
+    const char *configFile = NULL;
     int sockfd = 0, tunfd = 0;
     int pa;
     int exit_status = EXIT_SUCCESS;
@@ -238,7 +238,7 @@ int main (int argc, char **argv) {
     parseConfFile(configFile);
 
     if (config.daemonize) {
-        char *pidtmp = (config.pidfile != NULL) ? config.pidfile : DEFAULT_PID_FILE;
+        const char *pidtmp = (config.pidfile != NULL) ? config.pidfile : DEFAULT_PID_FILE;
         pidfile = strdup(pidtmp);
         create_pidfile();
     }

@@ -70,7 +70,7 @@ struct configuration {
 };
 
 extern void initConfig(void);
-extern void parseConfFile(char *file);
+extern void parseConfFile(const char *file);
 extern void freeConfig(void);
 
 /* names of sections and options */

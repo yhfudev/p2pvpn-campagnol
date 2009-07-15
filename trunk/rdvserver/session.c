@@ -34,8 +34,8 @@ static void *sessions_root = NULL;
 
 /* comparison function for the tree */
 static int compare_sessions(const void *itema, const void *itemb) {
-    struct session *sess1 = (struct session *)itema;
-    struct session *sess2 = (struct session *)itemb;
+    const struct session *sess1 = (const struct session *)itema;
+    const struct session *sess2 = (const struct session *)itemb;
     if (sess1->peer1 < sess2->peer1) {
         return -1;
     }
@@ -51,7 +51,7 @@ static int compare_sessions(const void *itema, const void *itemb) {
     return 1;
 }
 
-struct session * add_session(struct client *peer1, struct client *peer2, time_t time) {
+struct session * add_session(struct client *peer1, struct client *peer2, time_t t) {
     void *slot;
     struct session *sess = malloc(sizeof(struct session));
     if (sess == NULL) {
@@ -59,7 +59,7 @@ struct session * add_session(struct client *peer1, struct client *peer2, time_t 
         return NULL;
     }
 
-    sess->time = time;
+    sess->time = t;
     sess->peer1 = peer1;
     sess->peer2 = peer2;
 

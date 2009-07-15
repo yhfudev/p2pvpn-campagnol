@@ -41,8 +41,8 @@ static void *clients_vpn_root = NULL;
 
 /* comparison routine for clients_vpn_root */
 static int compare_clients_vpn(const void *itema, const void *itemb) {
-    struct client *peer1 = (struct client *) itema;
-    struct client *peer2 = (struct client *) itemb;
+    const struct client *peer1 = (const struct client *) itema;
+    const struct client *peer2 = (const struct client *) itemb;
     return memcmp(&peer1->vpnIP, &peer2->vpnIP, sizeof(peer1->vpnIP));
 }
 
@@ -95,7 +95,7 @@ void decr_ref(struct client *peer) {
  * just call decr_ref to remove the last reference from "clients":
  * This will remove the client from the linked list and free it's memory
  */
-struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct in_addr clientIP, uint16_t clientPort, struct in_addr vpnIP, int is_dtls_client) {
+struct client * add_client(int sockfd, int tunfd, int state, time_t t, struct in_addr clientIP, uint16_t clientPort, struct in_addr vpnIP, int is_dtls_client) {
     int r;
     void *slot;
 
@@ -116,8 +116,8 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t time, struct
         GLOBAL_MUTEXUNLOCK;
         return NULL;
     }
-    peer->time = time;
-    peer->last_keepalive = time;
+    peer->time = t;
+    peer->last_keepalive = t;
     memset(&(peer->clientaddr), 0, sizeof(peer->clientaddr));
     peer->clientaddr.sin_family = AF_INET;
     peer->clientaddr.sin_addr = clientIP;
