@@ -93,7 +93,7 @@ void initConfig() {
  * If iface != NULL, get the IP associated with the given interface
  * Otherwise search the IP of the first non loopback interface
  */
-void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
+static void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
     struct ifaddrs *ifap = NULL, *ifap_first = NULL;
     if (getifaddrs(&ifap) != 0) {
         log_error(errno, "getifaddrs");
@@ -131,7 +131,7 @@ void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
  * see http://groups.google.com/group/comp.os.linux.development.apps/msg/10f14dda86ee351a
  */
 #define IFRSIZE   ((int)(size * sizeof (struct ifreq)))
-void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
+static void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
     struct ifconf ifc;
     struct ifreq *ifr, ifreq_flags;
     int sockfd, size = 1;
@@ -147,7 +147,7 @@ void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
         ifc.ifc_req = CHECK_ALLOC_FATAL(realloc(ifc.ifc_req, IFRSIZE));
         ifc.ifc_len = IFRSIZE;
         if (ioctl(sockfd, SIOCGIFCONF, &ifc)) {
-            log_error("ioctl SIOCGIFCONF");
+            log_error(errno, "ioctl SIOCGIFCONF");
             exit(EXIT_FAILURE);
         }
     } while  (IFRSIZE <= ifc.ifc_len);
@@ -161,7 +161,7 @@ void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
 
         strncpy(ifreq_flags.ifr_name,  ifr->ifr_name, IFNAMSIZ);
         if (ioctl(sockfd, SIOCGIFFLAGS, &ifreq_flags)) {
-            log_error("ioctl SIOCGIFFLAGS");
+            log_error(errno, "ioctl SIOCGIFFLAGS");
             exit(EXIT_FAILURE);
         }
         if (ifreq_flags.ifr_flags & IFF_LOOPBACK) {
@@ -187,7 +187,7 @@ void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
  *
  * vpnIP and broadcast are in network byte order
  */
-int get_ipv4_broadcast(uint32_t vpnip, int len, uint32_t *broadcast) {
+static int get_ipv4_broadcast(uint32_t vpnip, int len, uint32_t *broadcast) {
     uint32_t netmask;
     if ( len<0 || len > 32 ) {// validity of len
         return -1;
@@ -212,7 +212,8 @@ int get_ipv4_broadcast(uint32_t vpnip, int len, uint32_t *broadcast) {
  */
 static int get_up_down_index;
 static char ** get_up_down_dest;
-void get_up_down(const char *section __attribute__((unused)), const char *key __attribute__((unused)), const char *value,
+static void get_up_down(const char *section __attribute__((unused)),
+        const char *key __attribute__((unused)), const char *value,
         int nline __attribute__((unused))) {
     get_up_down_dest[get_up_down_index] = CHECK_ALLOC_FATAL(strdup(value));
     get_up_down_index++;
@@ -221,7 +222,7 @@ void get_up_down(const char *section __attribute__((unused)), const char *key __
 /*
  * Main parsing function
  */
-void parseConfFile(char *confFile) {
+void parseConfFile(const char *confFile) {
     parser_context_t parser;
     char *value;
     int res;

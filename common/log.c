@@ -57,8 +57,8 @@ void log_close(void) {
  * Log format/ap if log_enabled is true
  * Otherwise print the message to out if not NULL
  */
-static inline void log_message_inner(FILE *out, const char *format,
-        va_list ap) {
+__attribute__((format(printf,2,0))) static inline void log_message_inner(
+        FILE *out, const char *format, va_list ap) {
     if (log_enabled) {
         vsyslog(LOG_NOTICE, format, ap);
     }

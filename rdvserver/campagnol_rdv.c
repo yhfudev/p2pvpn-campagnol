@@ -35,7 +35,7 @@ static char* pidfile = NULL;
 
 volatile sig_atomic_t end_server = 0;
 
-void usage(void) {
+static void usage(void) {
     fprintf(stderr, "Usage: campagnol_rdv [OPTION]...\n\n");
     fprintf(stderr, "Options\n");
     fprintf(stderr, " -D, --daemon            fork in background\n");
@@ -49,7 +49,7 @@ void usage(void) {
     exit(EXIT_FAILURE);
 }
 
-void version(void) {
+static void version(void) {
     fprintf(stderr, "Campagnol VPN | Server | Version %s\n", VERSION);
     fprintf(stderr, "Copyright (c) 2007 Antoine Vianey\n");
     fprintf(stderr, "              2008-2009 Florent Bondoux\n");
@@ -87,7 +87,7 @@ static void create_pidfile(void) {
     atexit(remove_pidfile);
 }
 
-void daemonize(void) {
+static void daemonize(void) {
     int r;
 
     printf("Going in background...\n");
@@ -101,7 +101,7 @@ void daemonize(void) {
     config.debug = 0;
 }
 
-void sig_handler(int sig) {
+static void sig_handler(int sig) {
     switch (sig) {
         case SIGINT:
         case SIGTERM:
@@ -114,7 +114,7 @@ void sig_handler(int sig) {
     }
 }
 
-int parse_args(int argc, char **argv) {
+static int parse_args(int argc, char **argv) {
     int opt;
 
     config.verbose = 0;
@@ -204,7 +204,7 @@ int main(int argc, char **argv) {
     log_init(config.daemonize, config.verbose, "campagnol_rdv");
 
     if (config.daemonize) {
-        char *pidtmp = (config.pidfile != NULL) ? config.pidfile : DEFAULT_PID_FILE;
+        const char *pidtmp = (config.pidfile != NULL) ? config.pidfile : DEFAULT_PID_FILE;
         pidfile = strdup(pidtmp);
         create_pidfile();
     }

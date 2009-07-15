@@ -42,19 +42,19 @@
 
 static char *device;
 
-char *tun_default_up[] = {
+const char *tun_default_up[] = {
         "ifconfig %D inet %V %V up",
         "route add -net %N %V",
         NULL
 };
-char *tun_default_down[] = {NULL};
+const char *tun_default_down[] = {NULL};
 
 /*
  * Open a new TUN virtual interface
  * Bind it to config.vpnIP
  * istun : use a TUN or TAP device
  */
-int init_tun(int istun) {
+int init_tun(int istun __attribute__((unused))) {
     int tunfd = 0;
     int i;
     char devicename[20];

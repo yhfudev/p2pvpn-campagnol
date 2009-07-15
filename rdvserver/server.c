@@ -52,7 +52,7 @@ static inline void send_FWD(struct client *client,
 
 void clean_dead_clients(void);
 
-char * type_to_string(unsigned char type) {
+static const char * type_to_string(unsigned char type) {
     switch (type) {
         case HELLO:
             return "HELLO";
@@ -99,8 +99,9 @@ char * type_to_string(unsigned char type) {
     }
 }
 
-void dump_message(message_t *msg) {
-    char *type, *tmp_ip;
+static void dump_message(message_t *msg) {
+    const char *type;
+    char *tmp_ip;
     puts("-----------------------------------------------------");
     switch (msg->type) {
         case HELLO:
@@ -156,7 +157,7 @@ void dump_message(message_t *msg) {
     free(tmp_ip);
 }
 
-void handle_packet(message_t *rmsg, struct sockaddr_in *unknownaddr, int sockfd) {
+static void handle_packet(message_t *rmsg, struct sockaddr_in *unknownaddr, int sockfd) {
     struct client *peer, *peer_tmp;
     struct session *sess_tmp, *rev_sess_tmp;
     int send_local_ip;

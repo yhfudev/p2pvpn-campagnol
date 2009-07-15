@@ -38,12 +38,12 @@
 #include "tun_device.h"
 #include "../common/log.h"
 
-char *tun_default_up[] = {
+const char *tun_default_up[] = {
         "ifconfig %D inet %V %V mtu %M up",
         "route add -net %N %V",
         NULL
 };
-char *tun_default_down[] = {
+const char *tun_default_down[] = {
         "ifconfig %D destroy",
         NULL
 };
@@ -53,7 +53,7 @@ char *tun_default_down[] = {
  * Bind it to config.vpnIP
  * istun : use a TUN or TAP device
  */
-int init_tun(int istun) {
+int init_tun(int istun __attribute__((unused))) {
     int tunfd;
     struct stat buf;
 

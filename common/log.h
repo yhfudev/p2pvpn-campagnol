@@ -1,7 +1,7 @@
 /*
  * Small log functions
  *
- * Copyright (C) 2008 Florent Bondoux
+ * Copyright (C) 2008-2009 Florent Bondoux
  *
  * This file is part of Campagnol.
  *
@@ -27,10 +27,13 @@
 
 extern void log_init(int enabled, int verbose, const char *name);
 extern void log_close(void);
-extern void _log_message(FILE *out, const char *format, ...);
+extern __attribute__((format(printf,2,3))) void _log_message(FILE *out,
+        const char *format, ...);
 #define log_message(format, ...) _log_message(stdout, format, ##__VA_ARGS__)
-extern void log_message_verb(const char *format, ...);
-extern void log_message_syslog(const char *format, ...);
+extern __attribute__((format(printf,1,2))) void log_message_verb(
+        const char *format, ...);
+extern __attribute__((format(printf,1,2))) void log_message_syslog(
+        const char *format, ...);
 extern void _log_error(const char *filename, unsigned int linenumber,
         const char *functionname, int error_code, const char *s);
 #define log_error(error_code,msg)\

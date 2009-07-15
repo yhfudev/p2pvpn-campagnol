@@ -43,7 +43,7 @@ static pthread_mutex_t *crypto_mutexes = NULL;
  * A transparent callback would return preverify_ok
  * Log error messages and accept an old CRL.
  */
-int verify_callback(int ok, X509_STORE_CTX *ctx) {
+static int verify_callback(int ok, X509_STORE_CTX *ctx) {
     char buf[256];
     X509 *err_cert;
     int err, depth;
@@ -81,7 +81,7 @@ int verify_callback(int ok, X509_STORE_CTX *ctx) {
  * callback function for SSL_*_set_info_callback
  * The callback is called whenever the state of the TLS connection changes.
  */
-void ctx_info_callback(const SSL *ssl, int where, int ret) {
+static void ctx_info_callback(const SSL *ssl, int where, int ret) {
     if (where & SSL_CB_ALERT) {
         log_message("DTLS alert: %s: %s | %s",
                 SSL_alert_type_string_long(ret),
@@ -326,7 +326,7 @@ int createClientSSL(struct client *peer) {
 }
 
 /* locking callback function for openssl */
-void openssl_locking_function(int mode, int n, const char *file __attribute__((unused)), int line __attribute__((unused))) {
+static void openssl_locking_function(int mode, int n, const char *file __attribute__((unused)), int line __attribute__((unused))) {
     if (mode & CRYPTO_LOCK) {
         mutexLock(&crypto_mutexes[n]);
     }
@@ -338,7 +338,7 @@ void openssl_locking_function(int mode, int n, const char *file __attribute__((u
 #ifndef HAVE_CRYPTO_THREADID_CURRENT
 /* id_function for openssl threading support
  * openssl >= 1.0.0 has a default implementation */
-unsigned long openssl_id_function(void) {
+static unsigned long openssl_id_function(void) {
     /* linux: pthread_t is a unsigned long int, ok
      * freebsd/openbsd: pthread_t is a pointer, ok
      */

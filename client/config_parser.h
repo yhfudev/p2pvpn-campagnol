@@ -78,6 +78,7 @@ struct parser_context {
     int allow_empty_value; // allow option with empty value
     int allow_value_expansions; // Resolve expansions foo = ${bar}text
 
+    char *parser_error_string;
     void *data; // tree
     FILE *dump_file; // tmp value
     parser_action_t forall_function; // tmp value
@@ -86,6 +87,9 @@ typedef struct parser_context parser_context_t;
 
 #define __ITEM_COMMON \
     char *name
+
+#define __CONST_ITEM_COMMON\
+    const char *name
 
 struct item_section {
     __ITEM_COMMON;
@@ -109,6 +113,11 @@ struct item_common {
     __ITEM_COMMON;
 };
 typedef struct item_common item_common_t;
+
+struct const_item_common {
+    __CONST_ITEM_COMMON;
+};
+typedef struct const_item_common const_item_common_t;
 
 /* Initialize a parser_context_t structure */
 extern void parser_init(parser_context_t *parser, int allow_default_section,

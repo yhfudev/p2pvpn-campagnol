@@ -29,8 +29,8 @@ extern int close_tun(int fd);
 
 extern void exec_up(char *device);
 extern void exec_down(char *device);
-extern char *tun_default_up[];
-extern char *tun_default_down[];
+extern const char *tun_default_up[];
+extern const char *tun_default_down[];
 
 #if defined (HAVE_FREEBSD) || defined (HAVE_LINUX)
 #   define read_tun(fd,buf,count) read(fd,buf,count)

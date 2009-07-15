@@ -35,7 +35,7 @@ struct session {
 
 extern struct session *sessions;
 
-extern struct session * add_session(struct client *peer1, struct client *peer2, time_t time);
+extern struct session * add_session(struct client *peer1, struct client *peer2, time_t t);
 extern void remove_session(struct session *s);
 extern struct session * get_session(struct client *peer1, struct client *peer2);
 extern void remove_sessions_with_client(struct client *peer);

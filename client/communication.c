@@ -401,7 +401,7 @@ static void * peer_handling(void * args) {
                     // check whether the connection is active and send keepalive messages
                     if (timestamp != last_time) {
                         CLIENT_MUTEXLOCK(peer);
-                        if (timestamp - peer->last_keepalive > config.keepalive) {
+                        if (timestamp - peer->last_keepalive > (time_t) config.keepalive) {
                             init_smsg(&smsg, PUNCH_KEEP_ALIVE, 0, 0);
                             sendto(peer->sockfd ,&smsg, sizeof(smsg), 0, (struct sockaddr *)&(peer->clientaddr), sizeof(peer->clientaddr));
                             peer->last_keepalive = timestamp;

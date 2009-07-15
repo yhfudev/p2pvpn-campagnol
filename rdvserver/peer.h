@@ -48,7 +48,7 @@ struct client {
 extern struct client *clients;
 extern int n_clients;
 
-extern struct client * add_client(int sockfd, time_t time,
+extern struct client * add_client(int sockfd, time_t t,
         struct in_addr clientIP, uint16_t clientPort, struct in_addr vpnIP,
         struct in_addr localIP, uint16_t localPort);
 extern void remove_client(struct client *peer);
