@@ -9,6 +9,11 @@
 	* configure.ac: Update the required version of OpenSSL to >=0.9.8j in
 	order to have a decent DTLS implementation.
 	* MTU: Allow the receiving of packets larger than the VPN MTU.
+	* configure.ac: Add some optional warnings (with --enable-warnings)
+	and a macro to check the CFLAGS.
+	* communication: Fix some potential packet loss when the client
+	re-registers with the RDV. The connection with the RDV server is now
+	handled in a dedicated thread.
 
 v 0.3.2:
 	client:

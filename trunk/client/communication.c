@@ -94,97 +94,6 @@ static uint16_t compute_csum(uint16_t *addr, size_t count){
     return (uint16_t) ~sum;
 }
 
-/*
- * Perform the registration of the client to the RDV server
- * sockfd: UDP socket
- *
- * TODO: this should not read the messages directly from the socket because of
- *       RECONNECT
- */
-int register_rdv(int sockfd) {
-    message_t smsg, rmsg;
-    struct timeval timeout;
-    struct sockaddr_in tmp_addr;
-    socklen_t tmp_addr_len;
-
-    int s,r;
-    int notRegistered = 1;
-    int registeringTries = 0;
-    fd_set fd_select;
-
-    /* Create a HELLO message */
-    log_message_verb("Registering with the RDV server...");
-    if (config.send_local_addr == 1) {
-        init_smsg(&smsg, HELLO, config.vpnIP.s_addr, config.localIP.s_addr);
-        // get the local port
-        tmp_addr_len = sizeof(tmp_addr);
-        getsockname(sockfd, (struct sockaddr *) &tmp_addr, &tmp_addr_len);
-        smsg.port = tmp_addr.sin_port;
-    }
-    else if (config.send_local_addr == 2) {
-        init_smsg(&smsg, HELLO, config.vpnIP.s_addr, config.override_local_addr.sin_addr.s_addr);
-        smsg.port = config.override_local_addr.sin_port;
-    }
-    else {
-        init_smsg(&smsg, HELLO, config.vpnIP.s_addr, 0);
-    }
-
-    while (notRegistered && registeringTries<MAX_REGISTERING_TRIES && !end_campagnol) {
-        /* sending HELLO to the server */
-        registeringTries++;
-        if (config.debug) printf("Sending HELLO\n");
-        if ((s=sendto(sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr))) == -1) {
-            log_error(errno, "sendto");
-        }
-
-        /* fd_set used with the select call */
-        FD_ZERO(&fd_select);
-        FD_SET(sockfd, &fd_select);
-        init_timeout(&timeout);
-        select(sockfd+1, &fd_select, NULL, NULL, &timeout);
-
-        if (FD_ISSET(sockfd, &fd_select)!=0 && !end_campagnol) {
-            /* Got a message from the server */
-            socklen_t len = sizeof(struct sockaddr_in);
-            if ( (r = recvfrom(sockfd,&rmsg,sizeof(message_t),0,(struct sockaddr *)&config.serverAddr,&len)) == -1) {
-                log_error(errno, "recvfrom");
-            }
-            switch (rmsg.type) {
-                case OK:
-                    /* Registration OK */
-                    log_message_verb("Registration complete");
-                    notRegistered = 0;
-                    break;
-                case NOK:
-                    /* The RDV server rejected the client */
-                    log_message("The RDV server rejected the client");
-                    sleep(1);
-                    break;
-                default:
-                    log_message("The RDV server replied with something strange... (message code is %d)", rmsg.type);
-                    break;
-            }
-        }
-    }
-
-    /* Registration failed. The server may be down */
-    if (notRegistered) {
-        log_message_verb("The connection with the RDV server failed");
-        return -1;
-    }
-
-    /* set a timer for the ping messages */
-    struct itimerval timer_ping;
-    timer_ping.it_interval.tv_sec = TIMER_PING_SEC;
-    timer_ping.it_interval.tv_usec = TIMER_PING_USEC;
-    timer_ping.it_value.tv_sec = TIMER_PING_SEC;
-    timer_ping.it_value.tv_usec = TIMER_PING_USEC;
-    sockfd_global = sockfd;
-    setitimer(ITIMER_REAL, &timer_ping, NULL);
-
-    return 0;
-}
-
 
 /*
  * Function sending the punch messages for UDP hole punching
@@ -556,6 +465,148 @@ static inline void end_peer_handling(struct client *peer, int islocked) {
     BIO_write(peer->rbio, &peer, 0);
 }
 
+/*
+ * Perform the registration of the client to the RDV server
+ * args: rdv_args structure with the FIFO and the socket descriptor
+ */
+static int register_rdv(struct rdv_args *args) {
+    message_t smsg, rmsg;
+    struct sockaddr_in tmp_addr;
+    socklen_t tmp_addr_len;
+
+    int s, r;
+    int registered = 0;
+    int registeringTries = 0;
+
+    /* Create a HELLO message */
+    log_message_verb("Registering with the RDV server...");
+    if (config.send_local_addr == 1) {
+        init_smsg(&smsg, HELLO, config.vpnIP.s_addr, config.localIP.s_addr);
+        // get the local port
+        tmp_addr_len = sizeof(tmp_addr);
+        getsockname(args->sockfd, (struct sockaddr *) &tmp_addr, &tmp_addr_len);
+        smsg.port = tmp_addr.sin_port;
+    }
+    else if (config.send_local_addr == 2) {
+        init_smsg(&smsg, HELLO, config.vpnIP.s_addr,
+                config.override_local_addr.sin_addr.s_addr);
+        smsg.port = config.override_local_addr.sin_port;
+    }
+    else {
+        init_smsg(&smsg, HELLO, config.vpnIP.s_addr, 0);
+    }
+
+    while (!registered && registeringTries < MAX_REGISTERING_TRIES
+            && !end_campagnol) {
+        /* sending HELLO to the server */
+        registeringTries++;
+        if (config.debug)
+            printf("Sending HELLO\n");
+        if ((s = sendto(args->sockfd, &smsg, sizeof(smsg), 0,
+                (struct sockaddr *) &config.serverAddr,
+                sizeof(config.serverAddr))) == -1) {
+            log_error(errno, "sendto");
+        }
+
+        r = BIO_read(args->fifo, &rmsg, sizeof(rmsg));
+
+        if (r == sizeof(rmsg)) {
+            switch (rmsg.type) {
+                case OK:
+                    /* Registration OK */
+                    log_message_verb("Registration complete");
+                    registered = 1;
+                    break;
+                case NOK:
+                    /* The RDV server rejected the client */
+                    log_message("The RDV server rejected the client");
+                    sleep(1);
+                    break;
+                default:
+                    log_message("The RDV server replied with something strange... (message code is %d)", rmsg.type);
+                    break;
+            }
+        }
+    }
+
+    /* Registration failed. The server may be down */
+    if (!registered) {
+        log_message_verb("The connection with the RDV server failed");
+    }
+
+    return registered;
+}
+
+/*
+ * This thread handle the connection with the RDV server. It doesn't do the
+ * initial registration.
+ *
+ * arg: (struct rdv_args *)
+ */
+static void *rdv_handling(void *arg) {
+    struct rdv_args *args = (struct rdv_args *) arg;
+    message_t rmsg;
+    struct client *peer;
+    int r;
+
+    while (!end_campagnol) {
+        r = BIO_read(args->fifo, &rmsg, sizeof(message_t));
+        if (r > 0) {
+            /* which type */
+            switch (rmsg.type) {
+                case REJ_CONNECTION:
+                    peer = get_client_VPN(&rmsg.ip1);
+                    if (peer != NULL) {
+                        CLIENT_MUTEXLOCK(peer);
+                        peer->rdv_answer = REJ_CONNECTION;
+                        CLIENT_MUTEXUNLOCK(peer);
+                        conditionSignal(&peer->cond_connected);
+                        decr_ref(peer);
+                    }
+                    break;
+                case ANS_CONNECTION:
+                    peer = get_client_VPN(&rmsg.ip2);
+                    if (peer != NULL) {
+                        CLIENT_MUTEXLOCK(peer);
+                        peer->rdv_answer = ANS_CONNECTION;
+                        peer->clientaddr.sin_addr = rmsg.ip1;
+                        peer->clientaddr.sin_port = rmsg.port;
+                        CLIENT_MUTEXUNLOCK(peer);
+                        conditionSignal(&peer->cond_connected);
+                        decr_ref(peer);
+                    }
+                    break;
+                case FWD_CONNECTION:
+                    peer = get_client_VPN(&rmsg.ip2);
+                    if (peer == NULL) {
+                        /* Unknown client, add a new structure */
+                        peer = add_client(args->sockfd, args->tunfd, PUNCHING,
+                                time(NULL), rmsg.ip1, rmsg.port, rmsg.ip2, 0);
+                        if (peer == NULL) {
+                            /* max number of clients */
+                            break;
+                        }
+                        /* start punching */
+                        start_peer_handling(peer);
+                        decr_ref(peer);
+                    }
+                    else {
+                        decr_ref(peer);
+                    }
+                    break;
+                case RECONNECT:
+                    register_rdv(args);
+                    break;
+                case PONG:
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    return NULL;
+}
 
 /*
  * Manage the incoming messages from the UDP socket
@@ -564,7 +615,6 @@ static inline void end_peer_handling(struct client *peer, int islocked) {
 static void * comm_socket(void * argument) {
     struct comm_args * args = argument;
     int sockfd = args->sockfd;
-    int tunfd = args->tunfd;
 
     ssize_t r;
     int r_select;
@@ -592,55 +642,8 @@ static void * comm_socket(void * argument) {
             /* from the RDV server ? */
             if (config.serverAddr.sin_addr.s_addr == unknownaddr.sin_addr.s_addr
                 && config.serverAddr.sin_port == unknownaddr.sin_port) {
-                /* which type */
-                switch (u.message->type) {
-                    case REJ_CONNECTION:
-                        peer = get_client_VPN(&(u.message->ip1));
-                        if (peer != NULL) {
-                            CLIENT_MUTEXLOCK(peer);
-                            peer->rdv_answer = REJ_CONNECTION;
-                            CLIENT_MUTEXUNLOCK(peer);
-                            conditionSignal(&peer->cond_connected);
-                            decr_ref(peer);
-                        }
-                        break;
-                    case ANS_CONNECTION:
-                        peer = get_client_VPN(&(u.message->ip2));
-                        if (peer != NULL) {
-                            CLIENT_MUTEXLOCK(peer);
-                            peer->rdv_answer = ANS_CONNECTION;
-                            peer->clientaddr.sin_addr = u.message->ip1;
-                            peer->clientaddr.sin_port = u.message->port;
-                            CLIENT_MUTEXUNLOCK(peer);
-                            conditionSignal(&peer->cond_connected);
-                            decr_ref(peer);
-                        }
-                        break;
-                    case FWD_CONNECTION:
-                        peer = get_client_VPN(&(u.message->ip2));
-                        if (peer == NULL) {
-                            /* Unknown client, add a new structure */
-                            peer = add_client(sockfd, tunfd, PUNCHING, time(NULL), u.message->ip1, u.message->port, u.message->ip2, 0);
-                            if (peer == NULL) {
-                                /* max number of clients */
-                                break;
-                            }
-                            /* start punching */
-                            start_peer_handling(peer);
-                            decr_ref(peer);
-                        }
-                        else {
-                            decr_ref(peer);
-                        }
-                        break;
-                    case RECONNECT:
-                        register_rdv(sockfd);
-                        break;
-                    case PONG:
-                        break;
-                    default:
-                        break;
-                }
+                if (r == sizeof(message_t))
+                    BIO_write(args->rdvargs->fifo, u.raw, r);
             }
             /* Message from another peer */
             else {
@@ -817,9 +820,22 @@ static void * comm_tun(void * argument) {
  */
 int start_vpn(int sockfd, int tunfd) {
     message_t smsg;
-    struct comm_args *args = (struct comm_args*) CHECK_ALLOC_FATAL(malloc(sizeof(struct comm_args)));
-    args->sockfd = sockfd;
-    args->tunfd = tunfd;
+    struct comm_args args;
+    struct rdv_args rdvargs;
+    int registered;
+    pthread_t th_socket, th_rdv;
+    struct itimerval timer_ping;
+    struct timespec timeout;
+
+    args.sockfd = sockfd;
+    args.tunfd = tunfd;
+    rdvargs.sockfd = sockfd;
+    rdvargs.tunfd = tunfd;
+    rdvargs.fifo = BIO_new_fifo(10, sizeof(message_t));
+    timeout.tv_sec = SELECT_DELAY_SEC;
+    timeout.tv_nsec = SELECT_DELAY_USEC * 1000;
+    BIO_ctrl(rdvargs.fifo, BIO_CTRL_FIFO_SET_RECV_TIMEOUT, 0, &timeout);
+    args.rdvargs = &rdvargs;
 
     /* initialize the global rate limiter */
     if (config.tb_client_size != 0) {
@@ -831,14 +847,32 @@ int start_vpn(int sockfd, int tunfd) {
         return -1;
     }
 
-    pthread_t th_socket;
-    th_socket = createThread(comm_socket, args);
+    th_socket = createThread(comm_socket, &args);
 
-    comm_tun(args);
+    registered = register_rdv(&rdvargs);
+
+    if (registered) {
+        /* set a timer for the ping messages */
+        timer_ping.it_interval.tv_sec = TIMER_PING_SEC;
+        timer_ping.it_interval.tv_usec = TIMER_PING_USEC;
+        timer_ping.it_value.tv_sec = TIMER_PING_SEC;
+        timer_ping.it_value.tv_usec = TIMER_PING_USEC;
+        sockfd_global = sockfd;
+        setitimer(ITIMER_REAL, &timer_ping, NULL);
+
+        /* start the RDV handler and do some work */
+        th_rdv = createThread(rdv_handling, &rdvargs);
+        comm_tun(&args);
+
+        joinThread(th_rdv, NULL);
+    }
+    else {
+        end_campagnol = 1;
+    }
 
     joinThread(th_socket, NULL);
 
-    free(args);
+    BIO_free(rdvargs.fifo);
 
     GLOBAL_MUTEXLOCK;
     struct client *peer, *next;
