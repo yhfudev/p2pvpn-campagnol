@@ -2,7 +2,7 @@
  * Campagnol main code
  *
  * Copyright (C) 2007 Antoine Vianey
- *               2008 Florent Bondoux
+ *               2008-2009 Florent Bondoux
  *
  * This file is part of Campagnol.
  *
@@ -151,6 +151,13 @@ typedef union {
     unsigned char *raw;
 } packet_t;
 
+/* arguments for the rdv handling thread */
+struct rdv_args {
+    BIO *fifo;
+    int sockfd;
+    int tunfd;
+};
+
 /* arguments for the punch thread */
 struct punch_arg {
     struct client *peer;
@@ -161,9 +168,9 @@ struct punch_arg {
 struct comm_args {
     int sockfd;
     int tunfd;
+    struct rdv_args *rdvargs;
 };
 
-extern int register_rdv(int sockfd);
 extern int start_vpn(int sockfd, int tunfd);
 
 /* the handler for SIGALRM */

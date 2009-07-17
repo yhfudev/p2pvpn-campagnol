@@ -299,14 +299,6 @@ int main (int argc, char **argv) {
             end_campagnol = 0;
         }
 
-        /* The UDP socket is configured
-         * Now, register to the rendezvous server
-         */
-        if (register_rdv(sockfd) == -1) {
-            exit_status = EXIT_FAILURE;
-            goto clean_end;
-        }
-
         log_message("Starting VPN");
 
         if (start_vpn(sockfd, tunfd) == -1) {
