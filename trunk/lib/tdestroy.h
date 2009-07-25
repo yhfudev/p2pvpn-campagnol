@@ -23,6 +23,7 @@
 #ifndef TDESTROY_H_
 #define TDESTROY_H_
 
-extern void campagnol_tdestroy(void *root, void (*free_node)(void *nodep), int (*compar)(const void *, const void *));
+extern void campagnol_tdestroy(void *root, void(*free_node)(void *nodep),
+        int(*compar)(const void *, const void *));
 
 #endif /* TDESTROY_H_ */

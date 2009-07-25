@@ -26,7 +26,9 @@
 #include <assert.h>
 #include <sys/types.h>
 
-ssize_t campagnol_getline(char **lineptr, size_t *n, FILE *stream) {
+#include "getline.h"
+
+ssize_t getline(char **lineptr, size_t *n, FILE *stream) {
     assert(lineptr);
     assert(n);
     assert(stream);
@@ -50,7 +52,7 @@ ssize_t campagnol_getline(char **lineptr, size_t *n, FILE *stream) {
         }
         // not enough space for next char + final \0
         if (pos + 2 > *n) {
-            new_lineptr = (char *) realloc(*lineptr, *n+120);
+            new_lineptr = (char *) realloc(*lineptr, *n + 120);
             if (new_lineptr == NULL) {
                 return -1;
             }
@@ -66,7 +68,8 @@ ssize_t campagnol_getline(char **lineptr, size_t *n, FILE *stream) {
         }
     }
 
-    if (pos == 0) return -1;
+    if (pos == 0)
+        return -1;
 
     (*lineptr)[pos] = '\0';
     return pos;

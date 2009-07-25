@@ -26,7 +26,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-extern ssize_t campagnol_getline(char **lineptr, size_t *n, FILE *stream);
-#define getline campagnol_getline
+extern ssize_t getline(char **lineptr, size_t *n, FILE *stream);
 
 #endif /* GETLINE_H_ */
