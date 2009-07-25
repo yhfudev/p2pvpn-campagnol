@@ -24,14 +24,17 @@
 #include <stdlib.h>
 #include <search.h>
 
+#include "tdestroy.h"
+
 /* POSIX doesn't let us know about the node structure
  * so we simply use tdelete.
  * It's not efficient and we have to know the comparison routine
  */
-void campagnol_tdestroy(void *root, void (*free_node)(void *nodep), int (*compar)(const void *, const void *)) {
+void campagnol_tdestroy(void *root, void(*free_node)(void *nodep),
+        int(*compar)(const void *, const void *)) {
     void *node;
     while (root != NULL) {
-        node = *(void **)root;
+        node = *(void **) root;
         tdelete(node, &root, compar);
         free_node(node);
     }
