@@ -32,7 +32,7 @@
 #include <unistd.h>
 #include <pthread.h>
 
-#include "../common/log.h"
+#include "log.h"
 #include "bss_fifo.h"
 #include "pthread_wrap.h"
 

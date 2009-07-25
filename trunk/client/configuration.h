@@ -81,8 +81,6 @@ extern void freeConfig(void);
 #define SECTION_UP          "UP"
 #define SECTION_DOWN        "DOWN"
 
-#define SECTION_DEFAULT     "DEFAULT"
-
 #define OPT_LOCAL_HOST      "local_host"
 #define OPT_LOCAL_PORT      "local_port"
 #define OPT_SERVER_HOST     "server_host"

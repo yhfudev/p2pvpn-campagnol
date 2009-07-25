@@ -26,7 +26,7 @@
  */
 #include "campagnol.h"
 #include "configuration.h"
-#include "config_parser.h"
+#include "../common/config_parser.h"
 #include "communication.h"
 #include "../common/log.h"
 
@@ -235,7 +235,7 @@ void parseConfFile(const char *confFile) {
     parser_init(&parser, 0, 0, 1);
 
     // parse the file
-    parser_read(confFile, &parser);
+    parser_read(confFile, &parser, config.debug);
 
     /* now get, check and save each value */
 

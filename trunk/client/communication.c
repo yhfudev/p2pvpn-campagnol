@@ -31,13 +31,13 @@
 #include <signal.h>
 
 #include "communication.h"
-#include "pthread_wrap.h"
+#include "../common/pthread_wrap.h"
 #include "net_socket.h"
 #include "peer.h"
 #include "dtls_utils.h"
 #include "tun_device.h"
 #include "../common/log.h"
-#include "bss_fifo.h"
+#include "../common/bss_fifo.h"
 
 struct tb_state global_rate_limiter;
 

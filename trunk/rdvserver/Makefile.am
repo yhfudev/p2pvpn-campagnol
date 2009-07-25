@@ -1,5 +1,3 @@
-AUTOMAKE_OPTIONS = subdir-objects
-
 bin_PROGRAMS = campagnol_rdv
 campagnol_rdv_SOURCES = campagnol_rdv.c rdv.h \
 	net_socket.c net_socket.h \

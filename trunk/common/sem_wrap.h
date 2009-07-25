@@ -28,7 +28,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
-#include "../common/log.h"
+#include "log.h"
 
 static inline void semInit(sem_t *sem, int pshared, unsigned int value);
 static inline void semDestroy(sem_t *sem);

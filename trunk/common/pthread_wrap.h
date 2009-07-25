@@ -1,7 +1,7 @@
 /*
  * Pthread wrapper functions
  *
- * Copyright (C) 2008 Florent Bondoux
+ * Copyright (C) 2008-2009 Florent Bondoux
  *
  * This file is part of Campagnol.
  *
@@ -33,7 +33,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
-#include "../common/log.h"
+#include "log.h"
 
 static inline void mutexInit(pthread_mutex_t *mutex, pthread_mutexattr_t *attrs);
 static inline void mutexDestroy(pthread_mutex_t *mutex);

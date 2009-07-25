@@ -118,11 +118,7 @@ AC_FUNC_STRERROR_R
 # Checks for library functions.
 # getline and tdestroy are missing on FreeBSD and OpenBSD
 AC_CONFIG_LIBOBJ_DIR([lib])
-AS_IF([test "x$build_client" != "xno"],[
-  LIBS=$CLIENT_LIBS
-  AC_REPLACE_FUNCS([getline tdestroy])
-  LIBS=$OLD_LIBS
-])
+AC_REPLACE_FUNCS([getline tdestroy])
 
 AC_CONFIG_FILES([Makefile common/Makefile client/Makefile rdvserver/Makefile man/Makefile samples/Makefile])
 AC_OUTPUT
