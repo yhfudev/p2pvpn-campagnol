@@ -1,7 +1,7 @@
 /*
  * rate limiter
  *
- * Copyright (C) 2008 Florent Bondoux
+ * Copyright (C) 2008-2009 Florent Bondoux
  *
  * This file is part of Campagnol.
  *
@@ -25,7 +25,7 @@
 
 #include <stdlib.h>
 #include <time.h>
-#include "pthread_wrap.h"
+#include "../common/pthread_wrap.h"
 
 struct tb_state {
     size_t bucket_size;         // bucket size (byte)

@@ -27,7 +27,7 @@
 #include "campagnol.h"
 #include "peer.h"
 #include "dtls_utils.h"
-#include "pthread_wrap.h"
+#include "../common/pthread_wrap.h"
 #include "../common/log.h"
 
 #include <arpa/inet.h>

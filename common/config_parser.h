@@ -67,7 +67,6 @@
 #ifndef CONFIG_PARSER_H_
 #define CONFIG_PARSER_H_
 
-#include "configuration.h"
 #include <stdio.h>
 
 typedef void (*parser_action_t)(const char*, const char*, const char*, int);
@@ -119,6 +118,8 @@ struct const_item_common {
 };
 typedef struct const_item_common const_item_common_t;
 
+#define SECTION_DEFAULT     "DEFAULT"
+
 /* Initialize a parser_context_t structure */
 extern void parser_init(parser_context_t *parser, int allow_default_section,
         int allow_empty_value, int allow_value_expansions);
@@ -127,7 +128,7 @@ extern void parser_free(parser_context_t *parser);
 
 
 /* Parse the file */
-extern void parser_read(const char *file, parser_context_t *parser);
+extern void parser_read(const char *file, parser_context_t *parser, int debug);
 /* Set a default option. Create the section if it doesn't exist */
 extern void parser_set(const char *section, const char *option,
         const char *value, int nline, parser_context_t *parser);

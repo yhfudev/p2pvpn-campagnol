@@ -26,7 +26,7 @@
 #define DTLS_UTILS_H_
 
 #include "peer.h"
-#include "pthread_wrap.h"
+#include "../common/pthread_wrap.h"
 
 extern int initDTLS(void);
 extern void clearDTLS(void);

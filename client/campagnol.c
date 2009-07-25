@@ -41,7 +41,7 @@
 #include "configuration.h"
 #include "dtls_utils.h"
 #include "../common/log.h"
-#include "pthread_wrap.h"
+#include "../common/pthread_wrap.h"
 
 volatile sig_atomic_t end_campagnol = 0;
 volatile sig_atomic_t reload = 0;

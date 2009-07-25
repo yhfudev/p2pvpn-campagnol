@@ -20,7 +20,11 @@
  *
  */
 
-#include "campagnol.h"
+#include "config.h"
+
+#include <stdlib.h>
+#include <errno.h>
+
 #include "config_parser.h"
 #include "../common/log.h"
 
@@ -633,7 +637,7 @@ static int expand_token(char *token, int *quoted, int *continued) {
 }
 
 /* Parse a file */
-void parser_read(const char *confFile, parser_context_t *parser) {
+void parser_read(const char *confFile, parser_context_t *parser, int debug) {
     FILE *conf = fopen(confFile, "r");
     if (conf == NULL) {
         log_error(errno, confFile);
@@ -865,7 +869,7 @@ void parser_read(const char *confFile, parser_context_t *parser) {
             continue;
         }
 
-        if (config.debug) {
+        if (debug) {
             printf("[%s:%d] [%s] '%s' = '%s'\n", confFile, nline, section,
                     name, value);
         }

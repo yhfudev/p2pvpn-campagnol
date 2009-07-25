@@ -25,10 +25,10 @@
 #include "campagnol.h"
 #include "dtls_utils.h"
 #include "../common/log.h"
-#include "bss_fifo.h"
+#include "../common/bss_fifo.h"
 #include "bf_rate_limiter.h"
 #include "communication.h"
-#include "pthread_wrap.h"
+#include "../common/pthread_wrap.h"
 
 /* SSL contexts */
 static SSL_CTX *campagnol_ctx_client;
