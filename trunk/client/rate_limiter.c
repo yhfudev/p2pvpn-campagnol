@@ -88,7 +88,6 @@ void tb_count(struct tb_state *tb, size_t packet_size) {
     struct timespec now, elapsed;
     struct timespec req_sleep, rem_sleep;
     double elapsed_ms, sleep_ms;
-    int r;
 
     if (tb->lock) {
         mutexLock(&tb->mutex);
@@ -126,7 +125,7 @@ void tb_count(struct tb_state *tb, size_t packet_size) {
     req_sleep.tv_sec = (time_t) floor(sleep_ms/1000.);
     req_sleep.tv_nsec = (long int) ((sleep_ms - 1000 * req_sleep.tv_sec) * 1000000L);
 
-    while ((r = nanosleep(&req_sleep, &rem_sleep)) != 0 ) {
+    while (nanosleep(&req_sleep, &rem_sleep) != 0 ) {
         if (errno == EINTR) {
             memcpy(&req_sleep, &rem_sleep, sizeof(req_sleep));
         }

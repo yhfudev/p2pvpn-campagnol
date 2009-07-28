@@ -533,7 +533,7 @@ void parseConfFile(const char *confFile) {
     res = parser_getuint(SECTION_CLIENT, OPT_KEEPALIVE, &config.keepalive, &value, &nline, &parser);
     if (res == 1) {
         if (config.keepalive < 1) {
-            log_message("[%s:"OPT_KEEPALIVE":%d] Keepalive interval %d must be >=1", confFile, nline, config.keepalive);
+            log_message("[%s:"OPT_KEEPALIVE":%d] Keepalive interval %u must be >=1", confFile, nline, config.keepalive);
             exit(EXIT_FAILURE);
         }
     }
