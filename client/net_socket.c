@@ -66,7 +66,7 @@ int create_socket(void) {
     if (config.localport != 0) localaddr.sin_port=htons(config.localport);
     if (bind(sockfd,(struct sockaddr *)&localaddr,sizeof(localaddr))<0) {
         log_error(errno, "Could not bind the socket to the local IP address");
-        log_message("address: %s:%d", inet_ntoa(config.localIP), config.localport);
+        log_message("address: %s:%u", inet_ntoa(config.localIP), config.localport);
         return -1;
     }
     if (config.verbose) printf("Socket opened\n");

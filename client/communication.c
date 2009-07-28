@@ -199,7 +199,7 @@ static void end_SSL_writing(struct client *peer) {
  * args: the connected peer (struct client *)
  */
 static void * peer_handling(void * args) {
-    int r, s;
+    int r;
     int err;
     packet_t u; // union used to receive the messages
     message_t smsg;
@@ -321,7 +321,7 @@ static void * peer_handling(void * args) {
                             if (config.debug) printf("timeout: %s\n", inet_ntoa(peer->vpnIP));
                             log_message_verb("Closing DTLS connection with peer %s", inet_ntoa(peer->vpnIP));
                             init_smsg(&smsg, CLOSE_CONNECTION, peer->vpnIP.s_addr, 0);
-                            s = sendto(peer->sockfd, &smsg, sizeof(smsg), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
+                            sendto(peer->sockfd, &smsg, sizeof(smsg), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
                             CHANGE_STATE(peer, CLOSED);
                             CLIENT_MUTEXUNLOCK(peer);
                             r = SSL_shutdown(peer->ssl);
@@ -474,7 +474,7 @@ static int register_rdv(struct rdv_args *args) {
     struct sockaddr_in tmp_addr;
     socklen_t tmp_addr_len;
 
-    int s, r;
+    int r;
     int registered = 0;
     int registeringTries = 0;
 
@@ -502,9 +502,9 @@ static int register_rdv(struct rdv_args *args) {
         registeringTries++;
         if (config.debug)
             printf("Sending HELLO\n");
-        if ((s = sendto(args->sockfd, &smsg, sizeof(smsg), 0,
+        if (sendto(args->sockfd, &smsg, sizeof(smsg), 0,
                 (struct sockaddr *) &config.serverAddr,
-                sizeof(config.serverAddr))) == -1) {
+                sizeof(config.serverAddr)) == -1) {
             log_error(errno, "sendto");
         }
 

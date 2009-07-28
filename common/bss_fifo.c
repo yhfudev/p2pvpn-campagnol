@@ -44,7 +44,7 @@ static int fifo_read(BIO *h, char *buf, int size);
 static long fifo_ctrl(BIO *h, int cmd, long arg1, void *arg2);
 static int fifo_new(BIO *h);
 static int fifo_free(BIO *data);
-int fifo_allocate(BIO *bi, int len, int data_size);
+static int fifo_allocate(BIO *bi, int len, int data_size);
 
 /* BIO_METHOD structure describing the BIO */
 static BIO_METHOD fifo_method = { BIO_TYPE_FIFO, // type

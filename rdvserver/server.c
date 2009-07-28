@@ -50,7 +50,7 @@ static inline void send_ANS(struct client *client,
 static inline void send_FWD(struct client *client,
         struct client *requested_client, int send_local, int sockfd);
 
-void clean_dead_clients(void);
+static void clean_dead_clients(void);
 
 static const char * type_to_string(unsigned char type) {
     switch (type) {

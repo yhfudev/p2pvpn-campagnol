@@ -15,15 +15,6 @@ AC_ARG_ENABLE([server],[AS_HELP_STRING([--disable-server],[do not build the RDV 
 [build_server=$enableval],[build_server=yes]
 )
 
-# Common CFLAGS
-COMMON_CFLAGS="-Wall -Wextra -Wstrict-prototypes"
-AS_IF(
-  [test "x$add_warnings" = "xyes"],
-  [
-    COMMON_CFLAGS="$COMMON_CFLAGS -Wshadow -Wformat=2 -Wmissing-prototypes -Wmissing-declarations -Wmissing-format-attribute -Wwrite-strings -Wcast-qual -Wpointer-arith -fdiagnostics-show-option"
-  ]
-)
-
 AM_CONDITIONAL([BUILD_CLIENT], [test "x$build_client" != "xno"])
 AM_CONDITIONAL([BUILD_SERVER], [test "x$build_server" != "xno"])
 
@@ -33,6 +24,24 @@ AS_IF([test "x$build_client" = "xno" -a "x$build_server" = "xno"],[
 
 
 AC_USE_SYSTEM_EXTENSIONS
+
+case "$CC" in
+	*icc*)
+		COMMON_CFLAGS="-Wcheck -wd810"
+		EXTRA_CFLAGS="-Wall -wd981"
+		;;
+	*)
+		COMMON_CFLAGS="-Wall -Wextra -Wstrict-prototypes"
+		EXTRA_CFLAGS="-Wshadow -Wformat=2 -Wmissing-prototypes -Wmissing-declarations -Wmissing-format-attribute -Wwrite-strings -Wcast-qual -Wpointer-arith -fdiagnostics-show-option"
+		;;
+esac
+
+AS_IF(
+  [test "x$add_warnings" = "xyes"],
+  [
+    COMMON_CFLAGS="$COMMON_CFLAGS $EXTRA_CFLAGS"
+  ]
+)
 
 #Filter CFLAGS
 SAFE_CFLAGS=""
