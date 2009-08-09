@@ -51,7 +51,11 @@ int create_socket(void) {
     if (config.iface != NULL) {
         struct ifreq ifr;
         memset(&ifr, 0, sizeof(ifr));
-        strncpy(ifr.ifr_name, config.iface, IFNAMSIZ);
+        if (strlen(config.iface) + 1 > IFNAMSIZ) {
+            log_message("The interface name '%s' is too long", config.iface);
+            return -1;
+        }
+        strcpy(ifr.ifr_name, config.iface);
         if(setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, &ifr, sizeof(ifr))) {
             log_error(errno, "Could not bind the socket to the interface");
             log_message("interface: %s", config.iface);

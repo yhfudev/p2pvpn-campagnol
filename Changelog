@@ -14,6 +14,7 @@
 	* communication: Fix some potential packet loss when the client
 	re-registers with the RDV. The connection with the RDV server is now
 	handled in a dedicated thread.
+	* net_socket.c: Check the length of the interface name.
 
 v 0.3.2:
 	client:
