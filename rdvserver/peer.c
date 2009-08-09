@@ -117,8 +117,8 @@ struct client * add_client(int sockfd, time_t t, struct in_addr clientIP,
     }
 
     if (config.verbose) {
-        peer->vpnIP_string = strdup(inet_ntoa(vpnIP));
-        peer->clientaddr_string = (char *) malloc(32);
+        peer->vpnIP_string = CHECK_ALLOC_FATAL(strdup(inet_ntoa(vpnIP)));
+        peer->clientaddr_string = CHECK_ALLOC_FATAL(malloc(32));
         if (peer->clientaddr_string != NULL) {
             r = snprintf(peer->clientaddr_string, 32, "%s/%d", inet_ntoa(clientIP), ntohs(clientPort));
             if (r >= 32) {

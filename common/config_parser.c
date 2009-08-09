@@ -40,7 +40,7 @@
 #   define tdestroy(root,free_node) campagnol_tdestroy(root,free_node,parser_compare)
 #endif
 
-/* internal comparison function (strncmp) */
+/* internal comparison function (strcmp) */
 static int parser_compare(const void *itema, const void *itemb) {
     return strcmp(((const item_common_t *) itema)->name,
             ((const item_common_t *) itemb)->name);
@@ -59,7 +59,7 @@ void parser_set(const char *section, const char *option, const char *value,
 
     // get or create section
     tmp_item.name = section;
-    tmp = tsearch(&tmp_item, &parser->data, parser_compare);
+    tmp = CHECK_ALLOC_FATAL(tsearch(&tmp_item, &parser->data, parser_compare));
     if (*(void **) tmp == &tmp_item) {
         item_section = (item_section_t *) CHECK_ALLOC_FATAL(malloc(sizeof(item_section_t)));
         *(void **) tmp = item_section;
@@ -74,7 +74,7 @@ void parser_set(const char *section, const char *option, const char *value,
 
     // get or create option
     tmp_item.name = option;
-    tmp = tsearch(&tmp_item, &item_section->values_tree, parser_compare);
+    tmp = CHECK_ALLOC_FATAL(tsearch(&tmp_item, &item_section->values_tree, parser_compare));
     if (*(void **) tmp == &tmp_item) {
         item_value = (item_value_t *) CHECK_ALLOC_FATAL(malloc(sizeof(item_value_t)));
         *(void **) tmp = item_value;
@@ -103,7 +103,7 @@ void parser_add_section(const char *section, parser_context_t *parser) {
     const_item_common_t tmp_section;
 
     tmp_section.name = section;
-    tmp = tsearch(&tmp_section, &parser->data, parser_compare);
+    tmp = CHECK_ALLOC_FATAL(tsearch(&tmp_section, &parser->data, parser_compare));
     if (*(void **) tmp == &tmp_section) {
         item_section = (item_section_t *) CHECK_ALLOC_FATAL(malloc(sizeof(item_section_t)));
         *(void **) tmp = item_section;
@@ -203,7 +203,7 @@ static char *parser_substitution(const char *section, const char *value,
     // Now create the exanded value into new_value
 
     len_written = 0; // number of chars already written
-    new_value = malloc(len);
+    new_value = CHECK_ALLOC_FATAL(malloc(len));
     dst = new_value; // dst pointer
     *dst = '\0';
     src = value;
@@ -219,7 +219,7 @@ static char *parser_substitution(const char *section, const char *value,
                 v = parser_get(section, src + 2, NULL, parser);
                 if (v != NULL) { // replace ${...} by it's value after a realloc
                     len += strlen(v);
-                    new_value = realloc(new_value, len);
+                    new_value = CHECK_ALLOC_FATAL(realloc(new_value, len));
                     dst = new_value + len_written;
                     for (i = 0; i < strlen(v); i++) {
                         dst[i] = v[i];
@@ -230,7 +230,7 @@ static char *parser_substitution(const char *section, const char *value,
                 }
                 else { // leave the ${...} in place
                     len += (end - src + 1);
-                    new_value = realloc(new_value, len);
+                    new_value = CHECK_ALLOC_FATAL(realloc(new_value, len));
                     dst = new_value + len_written;
                     for (i = 0; i < (unsigned int) (end - src); i++) {
                         *dst = src[i];
@@ -712,8 +712,9 @@ void parser_read(const char *confFile, parser_context_t *parser, int debug) {
             if (section_length < (unsigned int) (token_end - token + 1)) {
                 section_length = token_end - token + 1;
                 free(section);
-                section = malloc(section_length);
+                section = CHECK_ALLOC_FATAL(malloc(section_length));
             }
+            ASSERT(section_length >= strlen(token) + 1);
             strcpy(section, token);
 
             parser_add_section(section, parser);
@@ -753,8 +754,9 @@ void parser_read(const char *confFile, parser_context_t *parser, int debug) {
         if (name_length < (unsigned int) (token_end - token + 1)) {
             name_length = token_end - token + 1;
             free(name);
-            name = malloc(name_length);
+            name = CHECK_ALLOC_FATAL(malloc(name_length));
         }
+        ASSERT(name_length >= strlen(token) + 1);
         strcpy(name, token);
 
         // get the value
@@ -791,8 +793,9 @@ void parser_read(const char *confFile, parser_context_t *parser, int debug) {
         if (value_length < (unsigned int) (r + 1)) {
             value_length = r + 1;
             free(value);
-            value = malloc(value_length);
+            value = CHECK_ALLOC_FATAL(malloc(value_length));
         }
+        ASSERT(value_length >= strlen(token) + 1 + (quoted && !continued));
         strcpy(value, token);
 
         // append \n if necessary
@@ -856,8 +859,9 @@ void parser_read(const char *confFile, parser_context_t *parser, int debug) {
                 r += r_continued;
                 if (value_length < (unsigned int) (r + 1)) {
                     value_length = r + 1;
-                    value = realloc(value, value_length);
+                    value = CHECK_ALLOC_FATAL(realloc(value, value_length));
                 }
+                ASSERT(value_length >= strlen(token) + 1 + (quoted && !continued));
                 strcat(value, token);
                 if (quoted && !continued)
                     strcat(value, "\n");
@@ -874,6 +878,7 @@ void parser_read(const char *confFile, parser_context_t *parser, int debug) {
                     name, value);
         }
 
+        ASSERT(strlen(value) == (size_t) r);
         parser_set(section, name, value, nline, parser);
     }
 

@@ -239,7 +239,7 @@ int main (int argc, char **argv) {
 
     if (config.daemonize) {
         const char *pidtmp = (config.pidfile != NULL) ? config.pidfile : DEFAULT_PID_FILE;
-        pidfile = strdup(pidtmp);
+        pidfile = CHECK_ALLOC_FATAL(strdup(pidtmp));
         create_pidfile();
     }
 

@@ -151,7 +151,7 @@ static void dump_message(message_t *msg) {
             break;
     }
 
-    tmp_ip = strdup(inet_ntoa(msg->ip1));
+    tmp_ip = CHECK_ALLOC_FATAL(strdup(inet_ntoa(msg->ip1)));
     printf("| %5s | %5d | %15s | %15s |\n", type, ntohs(msg->port), tmp_ip, inet_ntoa(msg->ip2));
     puts("-----------------------------------------------------");
     free(tmp_ip);
