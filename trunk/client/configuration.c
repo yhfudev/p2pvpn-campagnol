@@ -584,7 +584,7 @@ void parseConfFile(const char *confFile) {
      */
     n = parser_section_count(SECTION_UP, &parser);
     if (n >= 0) {
-        config.exec_up = malloc(sizeof(char *) * (n+1));
+        config.exec_up = CHECK_ALLOC_FATAL(malloc(sizeof(char *) * (n+1)));
         config.exec_up[n] = NULL;
         get_up_down_index = 0;
         get_up_down_dest = config.exec_up;
@@ -593,7 +593,7 @@ void parseConfFile(const char *confFile) {
 
     n = parser_section_count(SECTION_DOWN, &parser);
     if (n >= 0) {
-        config.exec_down = malloc(sizeof(char *) * (n+1));
+        config.exec_down = CHECK_ALLOC_FATAL(malloc(sizeof(char *) * (n+1)));
         config.exec_down[n] = NULL;
         get_up_down_index = 0;
         get_up_down_dest = config.exec_down;
