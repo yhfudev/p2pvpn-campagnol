@@ -15,6 +15,7 @@
 	re-registers with the RDV. The connection with the RDV server is now
 	handled in a dedicated thread.
 	* net_socket.c: Check the length of the interface name.
+	* ca_wrap.sh: Add a command to list the generated certificates.
 
 v 0.3.2:
 	client:
