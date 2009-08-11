@@ -40,33 +40,56 @@ static pthread_mutex_t *crypto_mutexes = NULL;
 
 /*
  * Callback function for certificate validation
- * A transparent callback would return preverify_ok
+ * A transparent callback would return ok
  * Log error messages and accept an old CRL.
  */
 static int verify_callback(int ok, X509_STORE_CTX *ctx) {
-    char buf[256];
+    const char *buf;
     X509 *err_cert;
     int err, depth;
     err_cert = X509_STORE_CTX_get_current_cert(ctx);
     err = X509_STORE_CTX_get_error(ctx);
     depth = X509_STORE_CTX_get_error_depth(ctx);
+    BIO *bio_buf = NULL;
 
-    X509_NAME_oneline(X509_get_subject_name(err_cert), buf, sizeof buf);
     if (!ok) {
-        log_message("Error while verifying a certificate at depth=%d: %s",
-                depth, buf);
+        bio_buf = BIO_new(BIO_s_mem());
+        if (bio_buf) {
+            X509_NAME_print_ex(bio_buf, X509_get_subject_name(err_cert), 0,
+                    XN_FLAG_ONELINE);
+            BIO_write(bio_buf, "", 1);
+            BIO_get_mem_data(bio_buf, &buf);
+        }
+        else {
+            buf = "";
+        }
+
+        log_message("Error while verifying a certificate at depth=%d",
+                depth);
+        log_message("Subject: %s", buf);
         log_message("Verify error (%d): %s", err,
                 X509_verify_cert_error_string(err));
         if (depth > config.verify_depth) {
             log_message("%s", X509_verify_cert_error_string(
-                    X509_V_ERR_CERT_CHAIN_TOO_LONG));
+                            X509_V_ERR_CERT_CHAIN_TOO_LONG));
         }
+
+        BIO_free(bio_buf);
 
         switch (ctx->error) {
             case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT:
-                X509_NAME_oneline(X509_get_issuer_name(ctx->current_cert), buf,
-                        sizeof buf);
-                log_message("issuer= %s\n", buf);
+                bio_buf = BIO_new(BIO_s_mem());
+                if (bio_buf) {
+                    X509_NAME_print_ex(bio_buf, X509_get_issuer_name(
+                            ctx->current_cert), 0, XN_FLAG_ONELINE);
+                    BIO_write(bio_buf, "", 1);
+                    BIO_get_mem_data(bio_buf, &buf);
+                }
+                else {
+                    buf = "";
+                }
+                log_message("Issuer: %s", buf);
+                BIO_free(bio_buf);
                 break;
             case X509_V_ERR_CRL_HAS_EXPIRED:
                 log_message("Warning: the CRL has expired. Ignoring.");
@@ -120,7 +143,8 @@ static SSL_CTX * createContext(int is_client) {
         SSL_CTX_free(ctx);
         return NULL;
     }
-    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT , verify_callback);
+    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+            verify_callback);
 
     if (config.verify_depth > 0) {
         SSL_CTX_set_verify_depth(ctx, config.verify_depth);
@@ -135,7 +159,8 @@ static SSL_CTX * createContext(int is_client) {
     // add CRL
     if (config.crl) {
         X509_STORE *x509 = SSL_CTX_get_cert_store(ctx);
-        X509_LOOKUP *file_lookup = X509_STORE_add_lookup(x509, X509_LOOKUP_file());
+        X509_LOOKUP *file_lookup = X509_STORE_add_lookup(x509,
+                X509_LOOKUP_file());
         X509_load_crl_file(file_lookup, config.crl, X509_FILETYPE_PEM);
         X509_STORE_set_flags(x509, X509_V_FLAG_CRL_CHECK);
     }
@@ -162,7 +187,7 @@ static SSL_CTX * createContext(int is_client) {
 #endif
     /* Algorithms */
     if (config.cipher_list != NULL) {
-        if (! SSL_CTX_set_cipher_list(ctx, config.cipher_list)){
+        if (!SSL_CTX_set_cipher_list(ctx, config.cipher_list)) {
             log_error(-1, "SSL_CTX_set_cipher_list");
             ERR_print_errors_fp(stderr);
             SSL_CTX_free(ctx);
@@ -171,7 +196,8 @@ static SSL_CTX * createContext(int is_client) {
     }
 
     if (!is_client) {
-        SSL_CTX_set_client_CA_list(ctx, SSL_load_client_CA_file(config.verif_pem));
+        SSL_CTX_set_client_CA_list(ctx, SSL_load_client_CA_file(
+                config.verif_pem));
     }
 
     return ctx;
@@ -265,8 +291,10 @@ int createClientSSL(struct client *peer) {
     }
     /* create a BIO for the rate limiter if required */
     if (config.tb_client_size != 0 || config.tb_connection_size != 0) {
-        struct tb_state *global = (config.tb_client_size != 0) ? &global_rate_limiter : NULL;
-        struct tb_state *local = (config.tb_connection_size != 0) ? &peer->rate_limiter : NULL;
+        struct tb_state *global =
+                (config.tb_client_size != 0) ? &global_rate_limiter : NULL;
+        struct tb_state *local =
+                (config.tb_connection_size != 0) ? &peer->rate_limiter : NULL;
         peer->wbio = BIO_f_new_rate_limiter(global, local);
         if (peer->wbio == NULL) {
             ERR_print_errors_fp(stderr);
@@ -326,7 +354,8 @@ int createClientSSL(struct client *peer) {
 }
 
 /* locking callback function for openssl */
-static void openssl_locking_function(int mode, int n, const char *file __attribute__((unused)), int line __attribute__((unused))) {
+static void openssl_locking_function(int mode, int n, const char *file __attribute__((unused)),
+        int line __attribute__((unused))) {
     if (mode & CRYPTO_LOCK) {
         mutexLock(&crypto_mutexes[n]);
     }
@@ -352,7 +381,7 @@ void setup_openssl_thread() {
     n = CRYPTO_num_locks();
 
     crypto_mutexes = CHECK_ALLOC_FATAL(malloc(sizeof(pthread_mutex_t)*n));
-    for (i=0; i<n; i++) {
+    for (i = 0; i < n; i++) {
         mutexInit(&crypto_mutexes[i], NULL);
     }
 #ifndef HAVE_CRYPTO_THREADID_CURRENT
@@ -371,7 +400,7 @@ void cleanup_openssl_thread() {
 #endif
     CRYPTO_set_locking_callback(NULL);
 
-    for (i=0; i<n; i++) {
+    for (i = 0; i < n; i++) {
         mutexDestroy(&crypto_mutexes[i]);
     }
     free(crypto_mutexes);
