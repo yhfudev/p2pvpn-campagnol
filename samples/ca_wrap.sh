@@ -308,10 +308,20 @@ revoke_crt() {
 	check_all || return $?
 	echo "* Revoking the certificate in ${1}/certificate.pem"
 	
-	openssl ca -revoke "${ABS_TOP_DIR}/$1/certificate.pem" \
+	${OPENSSL} ca -revoke "${ABS_TOP_DIR}/$1/certificate.pem" \
 		-config "${ABS_TOP_DIR}/${SSL_CONF}"
 	
 	return $?
+}
+
+# print the list of the generated certificates
+print_certs() {
+	check_all || return $?
+	for crt in "${ABS_TOP_DIR}/${CA_CERTS}/"*.pem ; do
+		echo "* ${TOP_DIR}/${CA_CERTS}/$(basename ${crt})"
+		${OPENSSL} x509 -serial -subject -dates -fingerprint -noout -in "$crt"
+		echo
+	done
 }
 
 print_help() {
@@ -319,11 +329,12 @@ print_help() {
 "Usage: ca_wrap.sh command [arg]...
 
 Commands:
-  * gen_conf                create the basic CA direcroties and files
+  * gen_conf                create the basic CA directories and files
   * gen_ca                  generate the CA key and certificate
   * gen_cert <dirname>      generate a new client key and signed certificate
                             into \"dirname\"
   * gen_crl                 generate a CRL into \"crl.pem\"
+  * print_certs             print out the generated certificates
   * print_crl               print out the CRL
   * revoke_crt <dirname>    revoke the certificate stored in \"dirname\"
 "
@@ -345,6 +356,9 @@ case ${1} in
 		;;
 	gen_crl)
 		gen_crl
+		;;
+	print_certs)
+		print_certs
 		;;
 	print_crl)
 		print_crl
