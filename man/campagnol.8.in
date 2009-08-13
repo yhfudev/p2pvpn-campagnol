@@ -5,7 +5,7 @@
 campagnol - Decentralized VPN over UDP tunneling
 .SH SYNOPSIS
 .B campagnol
-.RB [ \-dDhvV ]
+.RB [ \-dDhmvV ]
 .RB [ "-p \fIpidfile\fR" ]
 .RI [ configuration_file ]
 .SH DESCRIPTION
@@ -44,6 +44,9 @@ or in another file defined with
 .TP
 .BR "\-h" ", " "--help"
 print help, then exit
+.TP
+.BR "\-m" ", " "--mlock"
+lock the process's pages into RAM by calling the mlockall system call
 .TP
 .BR "\-p" ", " "--pidfile" "=\fIpidfile\fR"
 write the pid into

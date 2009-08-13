@@ -1,5 +1,5 @@
+v 0.3.3
 	client:
-
 	* bss_fifo: add a drop-tail mode in addition to the default blocking
 	write.
 	* communication, dtls_utils, peer: New design. Connections are now
@@ -16,6 +16,7 @@
 	handled in a dedicated thread.
 	* net_socket.c: Check the length of the interface name.
 	* ca_wrap.sh: Add a command to list the generated certificates.
+	* campagnol.c: Add a command line option to mlock the process.
 
 v 0.3.2:
 	client:
