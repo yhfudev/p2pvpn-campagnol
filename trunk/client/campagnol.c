@@ -33,6 +33,7 @@
 #include <getopt.h>
 #include <openssl/conf.h>
 #include <openssl/engine.h>
+#include <sys/mman.h>
 
 
 #include "tun_device.h"
@@ -54,6 +55,7 @@ static void usage(void) {
     fprintf(stderr, " -d, --debug             debug mode\n");
     fprintf(stderr, " -D, --daemon            fork in background\n");
     fprintf(stderr, " -h, --help              this help message\n");
+    fprintf(stderr, " -m, --mlock             lock the memory into RAM\n");
     fprintf(stderr, " -p, --pidfile=FILE      write the pid into this file when running in background\n");
     fprintf(stderr, " -v, --verbose           verbose mode\n");
     fprintf(stderr, " -V, --version           show version information and exit\n\n");
@@ -77,10 +79,11 @@ static int parse_args(int argc, char **argv, const char **configFile) {
         {"debug", 0, NULL, 'd'},
         {"version", 0, NULL, 'V'},
         {"help", 0, NULL, 'h'},
+        {"mlock", 0, NULL, 'm'},
         {"pidfile", 1, NULL, 'p'},
         {0, 0, 0, 0}
     };
-    while ((opt = getopt_long(argc, argv, "vVdDhp:", long_options, NULL)) >= 0) {
+    while ((opt = getopt_long(argc, argv, "vVdDhmp:", long_options, NULL)) >= 0) {
         switch(opt) {
             case 'v':
                 config.verbose = 1;
@@ -91,6 +94,12 @@ static int parse_args(int argc, char **argv, const char **configFile) {
             case 'd' :
                 config.debug = 1;
                 config.verbose = 1;
+                break;
+            case 'm' :
+                if (mlockall(MCL_CURRENT | MCL_FUTURE) == -1) {
+                    log_error(errno, "Unable to lock the memory");
+                    exit(EXIT_FAILURE);
+                }
                 break;
             case 'p' :
                 config.pidfile = CHECK_ALLOC_FATAL(strdup(optarg));
