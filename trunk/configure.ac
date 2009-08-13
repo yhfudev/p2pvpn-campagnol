@@ -1,6 +1,6 @@
 AC_PREREQ([2.61])
-AC_INIT([campagnol],[0.3.2],[florent.bondoux@resel.fr])
-AM_INIT_AUTOMAKE([-Wall foreign])
+AC_INIT([campagnol],[0.3.3],[florent.bondoux@resel.fr])
+AM_INIT_AUTOMAKE([-Wall foreign dist-bzip2])
 AM_MAINTAINER_MODE
 AC_CONFIG_SRCDIR([client/campagnol.c])
 AC_CONFIG_HEADERS([config.h])
@@ -129,5 +129,5 @@ AC_FUNC_STRERROR_R
 AC_CONFIG_LIBOBJ_DIR([lib])
 AC_REPLACE_FUNCS([getline tdestroy])
 
-AC_CONFIG_FILES([Makefile common/Makefile client/Makefile rdvserver/Makefile man/Makefile samples/Makefile])
+AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
