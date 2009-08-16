@@ -42,7 +42,7 @@ struct configuration {
     int debug;                                  // more verbose
     int daemonize;                              // daemonize the server
     int dump;                                   // dump packets
-    int serverport;                             // RDV server port
+    uint16_t serverport;                             // RDV server port
     int max_clients;                            // maximum number of clients
     char *pidfile;                              // PID file in daemon mode
 };

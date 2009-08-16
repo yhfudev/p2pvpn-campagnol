@@ -25,6 +25,7 @@
 #include <getopt.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <stdint.h>
 
 #include "../common/log.h"
 #include "net_socket.h"
@@ -116,6 +117,7 @@ static void sig_handler(int sig) {
 
 static int parse_args(int argc, char **argv) {
     int opt;
+    int i;
 
     config.verbose = 0;
     config.daemonize = 0;
@@ -159,10 +161,11 @@ static int parse_args(int argc, char **argv) {
                 }
                 break;
             case 'p' :
-                config.serverport = atoi(optarg);
-                if (config.serverport <= 0) {
+                i = atoi(optarg);
+                if (i <= 0 || i > UINT16_MAX) {
                     return 1;
                 }
+                config.serverport = (uint16_t) i;
                 break;
             case 'P' :
                 config.pidfile = CHECK_ALLOC_FATAL(strdup(optarg));

@@ -29,7 +29,7 @@ struct configuration {
     int daemonize;                              // daemonize the client
 
     struct in_addr localIP;                     // local IP address
-    unsigned int localport;                     // local UDP port
+    uint16_t localport;                         // local UDP port
     struct sockaddr_in serverAddr;              // rendezvous server inet address
     struct in_addr vpnIP;                       // VPN IP address
     char *network;                              // VPN subnetwork
