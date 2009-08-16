@@ -126,7 +126,6 @@ extern void parser_init(parser_context_t *parser, int allow_default_section,
 /* Remove all the data associated with this context */
 extern void parser_free(parser_context_t *parser);
 
-
 /* Parse the file */
 extern void parser_read(const char *file, parser_context_t *parser, int debug);
 /* Set a default option. Create the section if it doesn't exist */
@@ -135,26 +134,27 @@ extern void parser_set(const char *section, const char *option,
 /* return the value of [section] option or NULL if it doesn't exist */
 extern char *parser_get(const char *section, const char *option, int *nline,
         parser_context_t *parser);
-/* return the value of [section] option as an integer into "value".
- * return 1: success  0: error */
+/* return the value of [section] option as a long integer into "value".
+ * return 1: success  0: error  -1: option does not exist*/
+extern int parser_getlong(const char *section, const char *option,
+        long int *value, char **raw, int *nline, parser_context_t *parser);
+/* return the value of [section] option as an unsigned long int into "value".
+ * return 1: success  0: error  -1: option does not exist*/
+extern int parser_getulong(const char *section, const char *option,
+        unsigned long int *value, char **raw, int *nline,
+        parser_context_t *parser);
 extern int parser_getint(const char *section, const char *option, int *value,
         char **raw, int *nline, parser_context_t *parser);
-/* return the value of [section] option as an unsigned integer into "value".
- * return 1: success  0: error */
 extern int parser_getuint(const char *section, const char *option,
         unsigned int *value, char **raw, int *nline, parser_context_t *parser);
-/* return the value of [section] option as a float into "value".
- * return 1: success  0: error */
-extern int parser_getfloat(const char *section, const char *option, float *value,
-        char **raw, int *nline, parser_context_t *parser);
-/* return the value of [section] option as boolean into "value".
- * return 1: success  0: error
- * valid values are "yes", "on", "1", "true", "no", "off", "0", "false"
- * and are case insensitive
- */
+extern int
+        parser_getushort(const char *section, const char *option,
+                unsigned short *value, char **raw, int *nline,
+                parser_context_t *parser);
+extern int parser_getfloat(const char *section, const char *option,
+        float *value, char **raw, int *nline, parser_context_t *parser);
 extern int parser_getboolean(const char *section, const char *option,
         int *value, char **raw, int *nline, parser_context_t *parser);
-
 
 /* Add a new section. Do nothing if the section exists */
 extern void parser_add_section(const char *section, parser_context_t *parser);
@@ -170,8 +170,7 @@ extern void parser_remove_option(const char *section, const char *option,
         parser_context_t *parser);
 /* Remove a complete section */
 extern void
-        parser_remove_section(const char *section, parser_context_t *parser);
-
+parser_remove_section(const char *section, parser_context_t *parser);
 
 /* Write this configuration into file. */
 extern void parser_write(FILE *file, parser_context_t *parser);
@@ -179,6 +178,7 @@ extern void parser_write(FILE *file, parser_context_t *parser);
 /* Execute action(section, option, value) for all options in the parser. */
 extern void parser_forall(parser_action_t, parser_context_t *parser);
 /* execute f on each option of the given section */
-extern void parser_forall_section(const char *section, parser_action_t f, parser_context_t *parser);
+extern void parser_forall_section(const char *section, parser_action_t f,
+        parser_context_t *parser);
 
 #endif /* CONFIG_PARSER_H_ */

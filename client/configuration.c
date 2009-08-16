@@ -227,7 +227,7 @@ void parseConfFile(const char *confFile) {
     char *value;
     int res;
     int nline, n;
-    unsigned int port_tmp;
+    uint16_t port_tmp;
 
     int localIP_set = 0;    // config.localIP is defined
 
@@ -275,7 +275,7 @@ void parseConfFile(const char *confFile) {
         exit(EXIT_FAILURE);
     }
 
-    res = parser_getuint(SECTION_NETWORK, OPT_SERVER_PORT, &port_tmp, &value, &nline, &parser);
+    res = parser_getushort(SECTION_NETWORK, OPT_SERVER_PORT, &port_tmp, &value, &nline, &parser);
     if (res == 1) {
         config.serverAddr.sin_port = htons(port_tmp);
     }
@@ -284,7 +284,7 @@ void parseConfFile(const char *confFile) {
         exit(EXIT_FAILURE);
     }
 
-    res = parser_getuint(SECTION_NETWORK, OPT_LOCAL_PORT, &config.localport, &value, &nline, &parser);
+    res = parser_getushort(SECTION_NETWORK, OPT_LOCAL_PORT, &config.localport, &value, &nline, &parser);
     if (res == 0) {
         log_message("[%s:"OPT_LOCAL_PORT":%d] Local UDP port is not valid: \"%s\"", confFile, nline, value);
         exit(EXIT_FAILURE);

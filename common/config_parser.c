@@ -24,6 +24,7 @@
 
 #include <stdlib.h>
 #include <errno.h>
+#include <limits.h>
 
 #include "config_parser.h"
 #include "../common/log.h"
@@ -324,13 +325,13 @@ char *parser_get(const char *section, const char *option, int *nline,
     return parser_get_expanded(item_value);
 }
 
-/* Parse [section] option into value as an integer
+/* Parse [section] option into value as a long integer
  * if nline is not NULL, copy the line number into nline
  * if raw is not NULL, copy the string value pointer into *raw
  * Return 1 in case of success, 0 if the option is not an integer, -1 if the
  * option is not defined
  */
-int parser_getint(const char *section, const char *option, int *value,
+int parser_getlong(const char *section, const char *option, long int *value,
         char **raw, int *nline, parser_context_t *parser) {
     char *v = parser_get(section, option, nline, parser);
     if (v == NULL) {
@@ -341,7 +342,48 @@ int parser_getint(const char *section, const char *option, int *value,
         *raw = v;
     }
 
-    return sscanf(v, "%d", value);
+    return sscanf(v, "%ld", value);
+}
+
+/* Parse [section] option into value as an unsigned long integer
+ * if nline is not NULL, copy the line number into nline
+ * if raw is not NULL, copy the string value pointer into *raw
+ * Return 1 in case of success, 0 if the option is not an integer, -1 if the
+ * option is not defined
+ */
+int parser_getulong(const char *section, const char *option,
+        unsigned long int *value, char **raw, int *nline, parser_context_t *parser) {
+    char *v = parser_get(section, option, nline, parser);
+    if (v == NULL) {
+        return -1;
+    }
+
+    if (raw != NULL) {
+        *raw = v;
+    }
+
+    return sscanf(v, "%lu", value);
+}
+
+/* Parse [section] option into value as an integer
+ * if nline is not NULL, copy the line number into nline
+ * if raw is not NULL, copy the string value pointer into *raw
+ * Return 1 in case of success, 0 if the option is not an integer, -1 if the
+ * option is not defined
+ */
+int parser_getint(const char *section, const char *option, int *value,
+        char **raw, int *nline, parser_context_t *parser) {
+    long int tmp;
+    int r;
+    r = parser_getlong(section, option, &tmp, raw, nline, parser);
+    if (r == 1) {
+        if (tmp <= INT_MAX && tmp >= INT_MIN) {
+            *value = (int) tmp;
+        }
+        else
+            return 0;
+    }
+    return r;
 }
 
 /* Parse [section] option into value as an unsigned integer
@@ -352,16 +394,38 @@ int parser_getint(const char *section, const char *option, int *value,
  */
 int parser_getuint(const char *section, const char *option,
         unsigned int *value, char **raw, int *nline, parser_context_t *parser) {
-    char *v = parser_get(section, option, nline, parser);
-    if (v == NULL) {
-        return -1;
+    unsigned long int tmp;
+    int r;
+    r = parser_getulong(section, option, &tmp, raw, nline, parser);
+    if (r == 1) {
+        if (tmp <= UINT_MAX) {
+            *value = (unsigned int) tmp;
+        }
+        else
+            return 0;
     }
+    return r;
+}
 
-    if (raw != NULL) {
-        *raw = v;
+/* Parse [section] option into value as an unsigned short
+ * if nline is not NULL, copy the line number into nline
+ * if raw is not NULL, copy the string value pointer into *raw
+ * Return 1 in case of success, 0 if the option is not an integer, -1 if the
+ * option is not defined
+ */
+int parser_getushort(const char *section, const char *option,
+        unsigned short *value, char **raw, int *nline, parser_context_t *parser) {
+    unsigned long int tmp;
+    int r;
+    r = parser_getulong(section, option, &tmp, raw, nline, parser);
+    if (r == 1) {
+        if (tmp <= USHRT_MAX) {
+            *value = (unsigned short) tmp;
+        }
+        else
+            return 0;
     }
-
-    return sscanf(v, "%u", value);
+    return r;
 }
 
 /* Parse [section] option into value as a float
