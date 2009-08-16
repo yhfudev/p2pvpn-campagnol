@@ -107,7 +107,7 @@ Campagnol needs a configuration file. It will use by default
 but you can specify another file as a command line argument.
 .PP
 The syntax of this file and all the available options are described in 
-.BR campagnol-conf (5).
+.BR campagnol.conf (5).
 .PP
 You can use the sample configuration file as a basis for writting your own.
 .SH FILES
