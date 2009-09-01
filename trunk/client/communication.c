@@ -26,6 +26,7 @@
 #include <time.h>
 #include <pthread.h>
 
+#include <inttypes.h>
 #include <arpa/inet.h>
 #include <sys/time.h>
 #include <signal.h>
@@ -391,7 +392,7 @@ static void * peer_handling(void * args) {
                     CLIENT_MUTEXUNLOCK(peer);
                     if (config.debug)
                         printf(
-                                "<< Received a VPN message: size %d from SRC = %u.%u.%u.%u to DST = %u.%u.%u.%u\n",
+                                "<< Received a VPN message: size %d from SRC = %"PRIu32".%"PRIu32".%"PRIu32".%"PRIu32" to DST = %"PRIu32".%"PRIu32".%"PRIu32".%"PRIu32"\n",
                                 r, (ntohl(u.ip->ip_src.s_addr) >> 24) & 0xFF,
                                 (ntohl(u.ip->ip_src.s_addr) >> 16) & 0xFF,
                                 (ntohl(u.ip->ip_src.s_addr) >> 8) & 0xFF,
@@ -647,7 +648,7 @@ static void * comm_socket(void * argument) {
             }
             /* Message from another peer */
             else {
-                if (config.debug) printf("<  Received a UDP packet: size %zd from %s\n", r, inet_ntoa(unknownaddr.sin_addr));
+                if (config.debug) printf("<  Received a UDP packet: size %zd from %s:%d\n", r, inet_ntoa(unknownaddr.sin_addr), ntohs(unknownaddr.sin_port));
                 if (r >= (int) sizeof(dtlsheader_t) &&
                         (u.dtlsheader->contentType == DTLS_APPLICATION_DATA
                         || u.dtlsheader->contentType == DTLS_HANDSHAKE
@@ -745,7 +746,7 @@ static void * comm_tun(void * argument) {
             r = read_tun(tunfd, u.raw, MESSAGE_MAX_LENGTH);
             if (config.debug)
                 printf(
-                        ">> Sending a VPN message: size %d from SRC = %u.%u.%u.%u to DST = %u.%u.%u.%u\n",
+                        ">> Sending a VPN message: size %d from SRC = %"PRIu32".%"PRIu32".%"PRIu32".%"PRIu32" to DST = %"PRIu32".%"PRIu32".%"PRIu32".%"PRIu32"\n",
                         r, (ntohl(u.ip->ip_src.s_addr) >> 24) & 0xFF,
                         (ntohl(u.ip->ip_src.s_addr) >> 16) & 0xFF,
                         (ntohl(u.ip->ip_src.s_addr) >> 8) & 0xFF,

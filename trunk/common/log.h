@@ -38,6 +38,12 @@ extern void _log_error(const char *filename, unsigned int linenumber,
         const char *functionname, int error_code, const char *s);
 #define log_error(error_code,msg)\
     _log_error(__FILE__, __LINE__, __func__, error_code, msg)
+#ifdef HAVE_CYGWIN
+extern void _log_error_cygwin(const char *filename, unsigned int linenumber,
+        const char *functionname, int error_code, const char *s);
+#define log_error_cygwin(error_code,msg)\
+    _log_error_cygwin(__FILE__, __LINE__, __func__, error_code, msg)
+#endif
 
 /* log and exit(1) if __ptr == NULL
  * return __ptr otherwise
@@ -64,6 +70,9 @@ extern void _log_error(const char *filename, unsigned int linenumber,
 #   define ASSERT(expr)       ((void)(0))
 #else
 #   include <assert.h>
+#   ifndef __STRING
+#       define __STRING(x)  #x
+#   endif
 #   define assert_log(expr)             \
     ((expr)                         \
         ? (void)(0)    \

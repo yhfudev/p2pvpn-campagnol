@@ -32,7 +32,8 @@ struct configuration {
     uint16_t localport;                         // local UDP port
     struct sockaddr_in serverAddr;              // rendezvous server inet address
     struct in_addr vpnIP;                       // VPN IP address
-    char *network;                              // VPN subnetwork
+    struct in_addr vpnNetmask;                  // VPN Netmask
+    char *network;                              // VPN subnetwork as a string
     int send_local_addr;                        // 1: Send the local IP/port to the RDV server
                                                 // 2: Send override_local_addr instead of the real local address
                                                 // 0: Do not publish a local address

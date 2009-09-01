@@ -32,6 +32,9 @@
 #include <signal.h>
 #include <unistd.h>
 #include <assert.h>
+#ifdef HAVE_CYGWIN
+#   include "lib/cygwin_byteorder.h"
+#endif
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>

@@ -96,10 +96,14 @@ static int parse_args(int argc, char **argv, const char **configFile) {
                 config.verbose = 1;
                 break;
             case 'm' :
+#ifdef HAVE_MLOCKALL
                 if (mlockall(MCL_CURRENT | MCL_FUTURE) == -1) {
                     log_error(errno, "Unable to lock the memory");
                     exit(EXIT_FAILURE);
                 }
+#else
+                log_message("This platform doesn't support mlockall.");
+#endif
                 break;
             case 'p' :
                 config.pidfile = CHECK_ALLOC_FATAL(strdup(optarg));
