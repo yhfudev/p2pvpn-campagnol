@@ -145,3 +145,37 @@ void _log_error(const char *filename, unsigned int linenumber,
                     functionname);
     }
 }
+
+#ifdef HAVE_CYGWIN
+#   include <w32api/windows.h>
+
+void _log_error_cygwin(const char *filename, unsigned int linenumber,
+        const char *functionname, int error_code, const char *s) {
+    char error_str[1024];
+
+    if (error_code != -1) {
+        if (!FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                        NULL, error_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                        error_str, sizeof(error_str), NULL)) {
+            strncpy(error_str, "Could not get the error message", sizeof(error_str));
+        }
+    }
+
+    if (s) {
+        if (error_code != -1)
+        _log_message(stderr, "%s:%u:%s: %s: %s", filename, linenumber,
+                functionname, s, error_str);
+        else
+        _log_message(stderr, "%s:%u:%s: %s", filename, linenumber,
+                functionname, s);
+    }
+    else {
+        if (error_code != -1)
+        _log_message(stderr, "%s:%u:%s: %s", filename, linenumber,
+                functionname, error_str);
+        else
+        _log_message(stderr, "%s:%u:%s: Error", filename, linenumber,
+                functionname);
+    }
+}
+#endif

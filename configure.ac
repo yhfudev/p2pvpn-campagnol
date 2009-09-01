@@ -66,6 +66,10 @@ case $host_os in
 		AC_DEFINE([HAVE_OPENBSD], [1], [OpenBSD])
 		host_os_name=openbsd
 		;;
+	*cygwin*)
+		AC_DEFINE([HAVE_CYGWIN], [1], [Cygwin])
+		host_os_name=cygwin
+		;;
 	*)
 		AC_MSG_ERROR([OS $host_os not supported.])
 		;;
@@ -73,6 +77,7 @@ esac
 AM_CONDITIONAL([HAVE_LINUX], [test "$host_os_name" = "linux"])
 AM_CONDITIONAL([HAVE_FREEBSD], [test "$host_os_name" = "freebsd"])
 AM_CONDITIONAL([HAVE_OPENBSD], [test "$host_os_name" = "openbsd"])
+AM_CONDITIONAL([HAVE_CYGWIN], [test "$host_os_name" = "cygwin"])
 AC_CACHE_SAVE
 
 # Checks for programs.
@@ -123,6 +128,7 @@ AC_TYPE_SSIZE_T
 
 # Checks for particular functions
 AC_FUNC_STRERROR_R
+AC_CHECK_FUNCS([mlockall])
 
 # Checks for library functions.
 # getline and tdestroy are missing on FreeBSD and OpenBSD

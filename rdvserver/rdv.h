@@ -29,6 +29,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#ifdef HAVE_CYGWIN
+#   include "lib/cygwin_byteorder.h"
+#endif
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <errno.h>

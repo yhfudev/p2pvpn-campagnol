@@ -82,6 +82,9 @@ endif
 if HAVE_OPENBSD
 campagnol_SOURCES += client/tun_device_openbsd.c
 endif
+if HAVE_CYGWIN
+campagnol_SOURCES += client/tun_device_cygwin.c
+endif
 
 campagnol_CPPFLAGS = -DSYSCONFDIR="\"$(sysconfdir)\"" -DLOCALSTATEDIR="\"$(localstatedir)\"" @OPENSSL_CFLAGS@
 campagnol_CFLAGS = @COMMON_CFLAGS@

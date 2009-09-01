@@ -53,6 +53,7 @@ void initConfig() {
     config.serverAddr.sin_family = AF_INET;
     config.serverAddr.sin_port=htons(SERVER_PORT_DEFAULT);
     memset(&config.vpnIP, 0, sizeof(config.localIP));
+    memset(&config.vpnNetmask, 0, sizeof(config.vpnNetmask));
     config.network = NULL;
     config.send_local_addr = 1;
     memset(&config.override_local_addr, 0, sizeof(config.override_local_addr));
@@ -135,6 +136,7 @@ static void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
     struct ifconf ifc;
     struct ifreq *ifr, ifreq_flags;
     int sockfd, size = 1;
+    struct in_addr ip_tmp;
 
     ifc.ifc_len = 0;
     ifc.ifc_req = NULL;
@@ -150,7 +152,7 @@ static void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
             log_error(errno, "ioctl SIOCGIFCONF");
             exit(EXIT_FAILURE);
         }
-    } while  (IFRSIZE <= ifc.ifc_len);
+    } while (IFRSIZE <= ifc.ifc_len);
 
     ifr = ifc.ifc_req;
     for (;(char *) ifr < (char *) ifc.ifc_req + ifc.ifc_len; ++ifr) {
@@ -159,7 +161,7 @@ static void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
 //            continue; // duplicate, skip it
 //        }
 
-        strncpy(ifreq_flags.ifr_name,  ifr->ifr_name, IFNAMSIZ);
+        strncpy(ifreq_flags.ifr_name, ifr->ifr_name, IFNAMSIZ);
         if (ioctl(sockfd, SIOCGIFFLAGS, &ifreq_flags)) {
             log_error(errno, "ioctl SIOCGIFFLAGS");
             exit(EXIT_FAILURE);
@@ -169,9 +171,12 @@ static void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
         }
 
         if (iface == NULL || strcmp (ifr->ifr_name, iface) == 0) {
-            *ip = (((struct sockaddr_in *) &(ifr->ifr_addr))->sin_addr);
-            *localIPset = 1;
-            break;
+            ip_tmp = (((struct sockaddr_in *) &(ifr->ifr_addr))->sin_addr);
+            if (ip_tmp.s_addr != INADDR_ANY && ip_tmp.s_addr != INADDR_NONE) {
+                *ip = ip_tmp;
+                *localIPset = 1;
+                break;
+            }
         }
     }
     close(sockfd);
@@ -184,24 +189,24 @@ static void get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
  * vpnip: IPv4 address of the client
  * len: number of bits in the netmask
  * broadcast (out): broadcast address
+ * netmask (out): netmask
  *
  * vpnIP and broadcast are in network byte order
  */
-static int get_ipv4_broadcast(uint32_t vpnip, int len, uint32_t *broadcast) {
-    uint32_t netmask;
+static int get_ipv4_broadcast(uint32_t vpnip, int len, uint32_t *broadcast, uint32_t *netmask) {
     if ( len<0 || len > 32 ) {// validity of len
         return -1;
     }
     // compute the netmask
     if (len == 32) {
-        netmask = 0xffffffff;
+        *netmask = 0xffffffff;
     }
     else {
-        netmask = ~(0xffffffff >> len);
+        *netmask = ~(0xffffffff >> len);
     }
     // network byte order
-    netmask = htonl(netmask);
-    *broadcast = (vpnip & netmask) | ~netmask;
+    *netmask = htonl(*netmask);
+    *broadcast = (vpnip & *netmask) | ~*netmask;
     return 0;
 }
 
@@ -383,7 +388,7 @@ void parseConfFile(const char *confFile) {
             }
         }
         /* get the broadcast IP */
-        if (get_ipv4_broadcast(config.vpnIP.s_addr, len, &config.vpnBroadcastIP.s_addr)) {
+        if (get_ipv4_broadcast(config.vpnIP.s_addr, len, &config.vpnBroadcastIP.s_addr, &config.vpnNetmask.s_addr)) {
             log_message("[%s] Parameter \""OPT_VPN_NETWORK"\": ill-formed netmask, should be between 0 and 32", confFile);
             exit(EXIT_FAILURE);
         }

@@ -91,8 +91,11 @@ static char *replace_args(const char *s, char *device) {
                         must_free_tmp = 1;
                         tmp = int_to_str(config.tun_mtu);
                         break;
-                    case 'N': // netmask
+                    case 'N': // netmask as a string
                         tmp = config.network;
+                        break;
+                    case 'n': // netmask
+                        tmp = inet_ntoa(config.vpnNetmask);
                         break;
                     case 'P': // local UDP port
                         must_free_tmp = 1;
@@ -108,16 +111,18 @@ static char *replace_args(const char *s, char *device) {
                 }
                 if (tmp != NULL) {
                     tmp_len = strlen(tmp);
-                    len += tmp_len - 2; // add replacement and remove %.
+                    len += tmp_len;// add replacement, remove %X, add two quotes
                     out = CHECK_ALLOC_FATAL(realloc(out, len));
                     dst = out + len_written;
-                    memcpy(dst, tmp, tmp_len);
+                    memcpy(dst, "'", 1);
+                    memcpy(dst+1, tmp, tmp_len);
+                    memcpy(dst+tmp_len+1, "'", 1);
                     if (must_free_tmp) {
                         free(tmp);
                         must_free_tmp = 0;
                     }
-                    dst += tmp_len;
-                    len_written += tmp_len;
+                    dst += tmp_len + 2;
+                    len_written += tmp_len + 2;
                     src += 2;
                 }
                 break;
