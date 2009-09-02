@@ -53,7 +53,7 @@ const char *tun_default_down[] = {
  * Bind it to config.vpnIP
  * istun : use a TUN or TAP device
  */
-int init_tun(int istun __attribute__((unused))) {
+int init_tun() {
     int tunfd;
     struct stat buf;
 

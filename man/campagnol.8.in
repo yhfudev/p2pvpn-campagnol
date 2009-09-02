@@ -1,6 +1,6 @@
 .ds configname @sysconfdir@/campagnol.conf
 .ds pidfilename @localstatedir@/run/campagnol.pid
-.TH "CAMPAGNOL CLIENT" 8 "October 21, 2008" "@version@"
+.TH "CAMPAGNOL CLIENT" 8 "September 2, 2009" "@version@"
 .SH NAME
 campagnol - Decentralized VPN over UDP tunneling
 .SH SYNOPSIS
@@ -46,7 +46,8 @@ or in another file defined with
 print help, then exit
 .TP
 .BR "\-m" ", " "--mlock"
-lock the process's pages into RAM by calling the mlockall system call
+lock the process's pages into RAM by calling the mlockall system call if
+available
 .TP
 .BR "\-p" ", " "--pidfile" "=\fIpidfile\fR"
 write the pid into

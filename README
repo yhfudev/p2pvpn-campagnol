@@ -117,21 +117,38 @@ neither on the same host nor on another host. It is likely to fail since the RDV
 server will not be able to see its public address.
 
 
+Dependencies
+------------
+
+* Runtime dependencies:
+
+  * OpenSSL library version >= 0.9.8j
+    The latest 0.9.8* available is recommended, 1.0.0beta* should also work.
+    http://www.openssl.org/
+    For Cygwin, install the Cygwin package.
+
+  * A TUN/TAP driver
+    For Linux and *BSD, it's the Universal TUN/TAP driver which is probably
+    already compiled into the kernel (http://vtun.sourceforge.net/tun).
+    For Cygwin, Campagnol uses the TAP-Win32 driver from the OpenVPN project. It
+    can be downloaded from http://openvpn.net/ (Windows installer).
+
+* Additional build-time dependencies:
+
+  * OpenSSL development package
+  
+  * If there is no ./configure script in the source tree (you checked out the
+    sources via subversion), you will need:
+    * autoconf >= 2.61
+    * automake 1.10
+
+
 Compilation
 -----------
 
-In order to compile Campagnol you need:
-  * OpenSSL library version >= 0.9.8j (last 0.9.8* available recommended,
-                                       1.0.0beta should also work)
-                                      http://www.openssl.org/
-  * the Universal TUN/TAP driver      http://vtun.sourceforge.net/tun
-
-  If there is no ./configure script in the source tree (you checked out the
-  sources via subversion), you will need:
-    * autoconf >= 2.61
-    * automake 1.10
-  To prepare the source tree and create the ./configure script, run:
-  $ autoreconf -if
+If the ./configure script is missing, you need to prepare the source tree by
+running:
+$ autoreconf -if
 
 You first need to use the 'configure' script. 
 $ ./configure --help
@@ -149,6 +166,7 @@ $ make
 
 Install Campagnol:
 $ make install
+
 
 Creating the certificates
 -------------------------

@@ -21,7 +21,7 @@
 ..
 .\" campagnol.conf path
 .ds filename @sysconfdir@/campagnol.conf
-.TH CAMPAGNOL.CONF 5 "November 29, 2008" "@version@"
+.TH CAMPAGNOL.CONF 5 "Septempber 2, 2009" "@version@"
 .SH NAME
 campagnol.conf - Campagnol VPN client configuration file
 .SH SYNOPSIS
@@ -81,7 +81,8 @@ c = "aze\\n"\\
 .PP
 Inside a section, the syntax
 .I ${param}
-can be used to reference another value (param) from the same section. For example:
+can be used to reference another value (param) from the same section. For
+example:
 .PP
 .ft CR
 .nf
@@ -112,13 +113,16 @@ All the DTLS-related parameters.
 This section is used to adjust the client's behavior.
 .TP
 .B [UP]
-This section is optional and defines the commands executed to configure the TUN device.
+This section is optional and defines the commands executed to configure the TUN
+device.
 .TP
 .B [DOWN]
-This section is optional and defines the commands executed when the TUN device is closed.
+This section is optional and defines the commands executed when the TUN device
+is closed.
 .RE
 .SH PARAMETERS
-This is a list of all the available parameters, with their default value if they are optional and their expected format.
+This is a list of all the available parameters, with their default value if they
+are optional and their expected format.
 .\" *** NETWORK ***
 .SS [NETWORK] section
 .TP 15n
@@ -224,6 +228,21 @@ static port forwarding for A on NAT_A and to use
 to publish
 its intermediate IP address and port on NAT_A. When B tries to open a new
 connection with A, it will now use its address on NAT_A.
+.TP
+.PARAMETER tun_device "[Name of the TUN interface]" "none"
+.IP
+CYGWIN - The name of the TUN/TAP adapter to use (as it appears in Windows'
+"Network Connections" pannel). If this is not defined, the first adapter found
+is used.
+.IP
+LINUX - Give this name to the TUN interface. If the parameter is not defined,
+the default name is similar to "tun0" (the number is incremented as needed).
+.TP
+.PARAMETER tap_id "[Name of the OpenVPN's TAP driver]" "tap0901"
+.IP
+CYGWIN ONLY - This parameters defines the name of the TAP driver. This is used
+to search for TAP adapters. The Cygwin port of Campagnol was developed and
+tested with the \[lq]tap0901\[rq] driver but other versions may also work.
 .\" *** VPN ***
 .SS [VPN] section
 .TP 15n
@@ -371,6 +390,9 @@ the netmask of the VPN, as defined in the
 .BR [VPN]
 section.
 .TP
+.B %n
+the netmask of the VPN in dot-decimal notation.
+.TP
 .B %%
 the \[oq]%\[cq] character
 .RE
@@ -403,14 +425,23 @@ set the MTU with ifconfig for OpenBSD.
 02 = "route add -net %N %V"
 .fi
 .ft
+.PP
+This is the default commands for Cygwin. Note that the MTU is already set by
+changing its value in the registry.
+.PP
+.fr CR
+.nf
+01 = "netsh interface ip set address name=%D static %V %n none"
+.fi
+.ft
 .\" *** DOWN ***
 .SS [DOWN] section
 This section is optional. It has the same syntax than the
 .BR [UP]
-section but it defines the shell commands that are executed when the TUN device is
-closed. The same special variables are available.
+section but it defines the shell commands that are executed when the TUN device
+is closed. The same special variables are available.
 .PP
-The default for Linux and OpenBSD is to execute nothing.
+The default for Linux, OpenBSD and Cygwin is to execute nothing.
 .PP
 The following corresponds to the default for FreeBSD. We need to explicitely
 close the TUN device with ifconfig:

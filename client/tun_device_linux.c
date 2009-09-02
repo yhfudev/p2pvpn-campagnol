@@ -48,7 +48,7 @@ const char *tun_default_down[] = {NULL};
  * Bind it to config.vpnIP
  * istun : use a TUN or TAP device
  */
-int init_tun(int istun) {
+int init_tun() {
     int tunfd;
     struct ifreq ifr;           // interface request used to open the TUN device
 
@@ -62,17 +62,22 @@ int init_tun(int istun) {
     memset(&ifr, 0, sizeof(ifr));
 
     /* IFF_TUN       - TUN device (no Ethernet headers)
-       IFF_TAP       - TAP device
        IFF_NO_PI     - Do not provide packet information
        IFF_ONE_QUEUE - One-queue mode (workaround for old kernels). The driver
                        will only use its internal queue.
     */
-    ifr.ifr_flags = (istun ? IFF_TUN : IFF_TAP) | IFF_NO_PI;
+    ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
     if (config.tun_one_queue) {
         ifr.ifr_flags |= IFF_ONE_QUEUE;
     }
 
-    strncpy(ifr.ifr_name, (istun ? "tun%d" : "tap%d"), IFNAMSIZ);
+    if (config.tun_device != NULL) {
+        strncpy(ifr.ifr_name, config.tun_device, IFNAMSIZ);
+        ifr.ifr_name[IFNAMSIZ - 1] = '\0';
+    }
+    else {
+        strncpy(ifr.ifr_name, "tun%d", IFNAMSIZ);
+    }
 
     if ((ioctl(tunfd, TUNSETIFF, (void *) &ifr)) < 0) {
         log_error(errno, "Error ioctl TUNSETIFF");
