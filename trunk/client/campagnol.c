@@ -300,7 +300,7 @@ int main (int argc, char **argv) {
     /* start the signal handler */
     createDetachedThread(sig_handler, NULL);
 
-    tunfd = init_tun(1);
+    tunfd = init_tun();
     if (tunfd < 0) {
         exit_status = EXIT_FAILURE;
         goto clean_end;

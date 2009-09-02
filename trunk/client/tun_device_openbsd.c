@@ -54,7 +54,7 @@ const char *tun_default_down[] = {NULL};
  * Bind it to config.vpnIP
  * istun : use a TUN or TAP device
  */
-int init_tun(int istun __attribute__((unused))) {
+int init_tun() {
     int tunfd = 0;
     int i;
     char devicename[20];

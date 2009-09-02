@@ -41,6 +41,8 @@ struct configuration {
     int tun_mtu;                                // MTU of the tun device
     struct in_addr vpnBroadcastIP;              // "broadcast" IP, computed from vpnIP and network
     char *iface;                                // bind to a specific network interface
+    char *tun_device;                           // The name of the TUN interface
+    char *tap_id;                               // Version of the OpenVPN's TAP driver
 
     char *certificate_pem;                      // PEM formated file containing the client certificate
     char *key_pem;                              // PEM formated file containing the client private key
@@ -90,6 +92,8 @@ extern void freeConfig(void);
 #define OPT_INTERFACE       "interface"
 #define OPT_SEND_LOCAL      "use_local_addr"
 #define OPT_OVRRIDE_LOCAL   "override_local_addr"
+#define OPT_TUN_DEVICE      "tun_device"
+#define OPT_TAP_ID          "tap_id"
 
 #define OPT_VPN_IP          "vpn_ip"
 #define OPT_VPN_NETWORK     "network"

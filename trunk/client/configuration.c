@@ -60,6 +60,8 @@ void initConfig() {
     config.tun_mtu = TUN_MTU_DEFAULT;
     memset(&config.vpnBroadcastIP, 0, sizeof(config.vpnBroadcastIP));
     config.iface = NULL;
+    config.tun_device = NULL;
+    config.tap_id = NULL;
 
     config.certificate_pem = NULL;
     config.key_pem = NULL;
@@ -346,6 +348,16 @@ void parseConfFile(const char *confFile) {
         }
     }
 
+    value = parser_get(SECTION_NETWORK, OPT_TUN_DEVICE, &nline, &parser);
+    if (value != NULL) {
+        config.tun_device = CHECK_ALLOC_FATAL(strdup(value));
+    }
+
+    value = parser_get(SECTION_NETWORK, OPT_TAP_ID, &nline, &parser);
+    if (value != NULL) {
+        config.tap_id = CHECK_ALLOC_FATAL(strdup(value));
+    }
+
 
 
     value = parser_get(SECTION_VPN, OPT_VPN_IP, &nline, &parser);
@@ -621,6 +633,8 @@ void freeConfig() {
     if (config.verif_dir) free(config.verif_dir);
     if (config.cipher_list) free(config.cipher_list);
     if (config.pidfile) free(config.pidfile);
+    if (config.tun_device) free(config.tun_device);
+    if (config.tap_id) free(config.tap_id);
     if (config.exec_up) {
         s = config.exec_up;
         while (*s) {

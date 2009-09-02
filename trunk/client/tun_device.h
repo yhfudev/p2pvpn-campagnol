@@ -24,7 +24,7 @@
 #ifndef TUN_DEVICE_H_
 #define TUN_DEVICE_H_
 
-extern int init_tun(int istun);
+extern int init_tun(void);
 extern int close_tun(int fd);
 
 extern void exec_up(char *device);

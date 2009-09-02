@@ -17,7 +17,6 @@
  */
 
 #include "campagnol.h"
-#define TAP_ID "tap0901"
 
 #include <w32api/windows.h>
 #include <w32api/winioctl.h>
@@ -54,6 +53,7 @@ static int find_tap(char *net_cfg_instance_id, DWORD net_cfg_instance_id_len,
     char adapter_key[1024];
     char adapter_name[16384];
     char component_id[256];
+    char *tap_id = config.tap_id != NULL ? config.tap_id : "tap0901";
     DWORD data_type;
 
     int i;
@@ -100,7 +100,7 @@ static int find_tap(char *net_cfg_instance_id, DWORD net_cfg_instance_id_len,
         }
 
         // If this is a TAP driver, get and check the adapter's name
-        if (strcmp(component_id, TAP_COMPONENT_ID) == 0) {
+        if (strcmp(component_id, tap_id) == 0) {
             snprintf(adapter_key, sizeof(adapter_key), "%s\\%s\\Connection",
                     NETWORK_CONNECTIONS_KEY, net_cfg_instance_id);
 
@@ -172,7 +172,7 @@ static void * thread_read(void *arg __attribute__((unused))) {
     return NULL;
 }
 
-int init_tun(int istun __attribute__((unused))) {
+int init_tun() {
     HKEY key;
     char adapterid[256];
     char tapname[256];
@@ -181,7 +181,10 @@ int init_tun(int istun __attribute__((unused))) {
     DWORD len;
     ULONG status;
 
-    if (find_tap(adapterid, sizeof(adapterid), &key, NULL) != 0) {
+    if (config.verbose)
+        printf("TUN interface initialization\n");
+
+    if (find_tap(adapterid, sizeof(adapterid), &key, config.tun_device) != 0) {
         log_error(-1, "Unable to find a TUN/TAP device");
         return -1;
     }
@@ -249,9 +252,12 @@ int init_tun(int istun __attribute__((unused))) {
         return -1;
     }
 
+    if (config.verbose)
+        printf("TUN interface configuration (%s MTU %d)\n", device,
+                config.tun_mtu);
     exec_up(device);
 
-    reader_thread = createDetachedThread(thread_read, NULL);
+    reader_thread = createThread(thread_read, NULL);
     char test;
     read(socks[0], &test, 1);
 
@@ -259,6 +265,7 @@ int init_tun(int istun __attribute__((unused))) {
 }
 
 int close_tun(int fd __attribute__((unused))) {
+    joinThread(reader_thread, NULL);
     exec_down(device);
     close(socks[0]);
     close(socks[1]);
