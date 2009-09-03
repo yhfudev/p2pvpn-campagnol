@@ -34,9 +34,10 @@ const char *tun_default_up[] = {
 const char *tun_default_down[] = { NULL };
 
 static HANDLE dev;
-static int socks[2];
 static char *device;
-static pthread_t reader_thread;
+static OVERLAPPED overlapped_read;
+static OVERLAPPED overlapped_write;
+static int pending_read = 0;
 
 /*
  * Look for a TAP device into the registry
@@ -53,7 +54,7 @@ static int find_tap(char *net_cfg_instance_id, DWORD net_cfg_instance_id_len,
     char adapter_key[1024];
     char adapter_name[16384];
     char component_id[256];
-    char *tap_id = config.tap_id != NULL ? config.tap_id : "tap0901";
+    const char *tap_id = config.tap_id != NULL ? config.tap_id : "tap0901";
     DWORD data_type;
 
     int i;
@@ -137,41 +138,6 @@ static int find_tap(char *net_cfg_instance_id, DWORD net_cfg_instance_id_len,
     return -1;
 }
 
-/*
- * Read the device's file and write the packets into socks[1]
- */
-static void * thread_read(void *arg __attribute__((unused))) {
-    char *buf = CHECK_ALLOC_FATAL(malloc(config.tun_mtu));
-    DWORD r, status = 0;
-    OVERLAPPED overlapped;
-    overlapped.Offset = 0;
-    overlapped.OffsetHigh = 0;
-    overlapped.hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-
-    // We're ready
-    buf[0] = 1;
-    write(socks[1], buf, 1);
-
-    while (!end_campagnol) {
-        ReadFile(dev, buf, config.tun_mtu, &r, &overlapped);
-        while ((!end_campagnol) && (status = WaitForSingleObject(
-                overlapped.hEvent, 500)) == WAIT_TIMEOUT) {
-        }
-        if (status == WAIT_OBJECT_0) {
-            GetOverlappedResult(overlapped.hEvent, &overlapped, &r, TRUE);
-            write(socks[1], buf, r);
-        }
-        else if (status == WAIT_FAILED) {
-            log_error_cygwin(GetLastError(),
-                    "Error while waiting for events on the TUN/TAP device");
-        }
-    }
-    CancelIo(dev);
-    free(buf);
-
-    return NULL;
-}
-
 int init_tun() {
     HKEY key;
     char adapterid[256];
@@ -199,19 +165,6 @@ int init_tun() {
     }
     RegCloseKey(key);
 
-    /*
-     * This idea is from Tinc
-     * We can't use select on the Win32 HANDLE and I don't want to "pollute" the
-     * code with Win32 calls. So, at least for now, the packets are copied into
-     * a unix sockets pair and socks[0] is used as a file descriptor for reading
-     * the TUN device.
-     * This may change latter.
-     */
-    if (socketpair(AF_UNIX, SOCK_DGRAM, PF_UNIX, socks)) {
-        log_error(errno, "Failed to call socketpair");
-        return -1;
-    }
-
     // Open the device's file for asynchronous operations
     snprintf(tapname, sizeof(tapname), USERMODEDEVICEDIR "%s" TAPSUFFIX,
             adapterid);
@@ -221,8 +174,6 @@ int init_tun() {
     if (dev == INVALID_HANDLE_VALUE) {
         log_error_cygwin(GetLastError(),
                 "Unable to open the TUN/TAP device for writing");
-        close(socks[0]);
-        close(socks[1]);
         return -1;
     }
 
@@ -234,8 +185,6 @@ int init_tun() {
             sizeof(ep), &len, NULL)) {
         log_error_cygwin(GetLastError(),
                 "Error while setting up the TUN device");
-        close(socks[0]);
-        close(socks[1]);
         CloseHandle(dev);
         return -1;
     }
@@ -246,8 +195,6 @@ int init_tun() {
             sizeof(status), &status, sizeof(status), &len, NULL)) {
         log_error_cygwin(GetLastError(),
                 "Error while setting up the TUN device");
-        close(socks[0]);
-        close(socks[1]);
         CloseHandle(dev);
         return -1;
     }
@@ -257,36 +204,74 @@ int init_tun() {
                 config.tun_mtu);
     exec_up(device);
 
-    reader_thread = createThread(thread_read, NULL);
-    char test;
-    read(socks[0], &test, 1);
+    overlapped_read.Offset = 0;
+    overlapped_read.OffsetHigh = 0;
+    overlapped_read.hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+    overlapped_write.Offset = 0;
+    overlapped_write.OffsetHigh = 0;
+    overlapped_write.hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 
-    return socks[0];
+    return 1;
 }
 
 int close_tun(int fd __attribute__((unused))) {
-    joinThread(reader_thread, NULL);
     exec_down(device);
-    close(socks[0]);
-    close(socks[1]);
+    CloseHandle(overlapped_read.hEvent);
+    CloseHandle(overlapped_write.hEvent);
     CloseHandle(dev);
     free(device);
     return 0;
 }
 
-ssize_t read_tun(int fd __attribute__((unused)), void *buf, size_t count) {
-    return read(socks[0], buf, count);
+/* Set up an asynchronous read and wait at most 'ms' miliseconds
+ * return 1 if the read is complete,
+ * 0 if the wait timed out
+ * -1 in case of error
+ */
+int read_tun_wait(void *buf, size_t count, unsigned long int ms) {
+    DWORD status;
+
+    if (!pending_read) {
+        ReadFile(dev, buf, count, NULL, &overlapped_read);
+        pending_read = 1;
+    }
+
+    status = WaitForSingleObject(overlapped_read.hEvent, ms);
+    if (status == WAIT_OBJECT_0)
+        return 1;
+    else if (status == WAIT_TIMEOUT)
+        return 0;
+    else if (status == WAIT_FAILED) {
+        log_error_cygwin(GetLastError(),
+                "Error while waiting for events on the TUN/TAP device");
+        return -1;
+    }
+    return -1;
 }
 
-ssize_t write_tun(int fd __attribute__((unused)), void *buf, size_t count) {
-    OVERLAPPED overlapped;
+/*
+ * Finalize the asynchronous read and return the number of bytes read
+ */
+ssize_t read_tun_finalize() {
     DWORD len;
+    GetOverlappedResult(overlapped_read.hEvent, &overlapped_read, &len, TRUE);
+    pending_read = 0;
+    return (ssize_t) len;
+}
 
-    overlapped.Offset = 0;
-    overlapped.OffsetHigh = 0;
-    overlapped.hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+/*
+ * Cancel a pending IO
+ */
+void read_tun_cancel() {
+    if (pending_read) {
+        CancelIo(dev);
+        pending_read = 0;
+    }
+}
 
-    WriteFile(dev, buf, count, &len, &overlapped);
-    GetOverlappedResult(overlapped.hEvent, &overlapped, &len, TRUE);
+ssize_t write_tun(void *buf, size_t count) {
+    DWORD len;
+    WriteFile(dev, buf, count, NULL, &overlapped_write);
+    GetOverlappedResult(overlapped_write.hEvent, &overlapped_write, &len, TRUE);
     return (ssize_t) len;
 }

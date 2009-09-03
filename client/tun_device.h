@@ -32,12 +32,17 @@ extern void exec_down(char *device);
 extern const char *tun_default_up[];
 extern const char *tun_default_down[];
 
-#if defined (HAVE_FREEBSD) || defined (HAVE_LINUX)
-#   define read_tun(fd,buf,count) read(fd,buf,count)
-#   define write_tun(fd,buf,count) write(fd,buf,count)
-#else
+#if defined (HAVE_OPENBSD)
 extern ssize_t read_tun(int fd, void *buf, size_t count);
 extern ssize_t write_tun(int fd, void *buf, size_t count);
+#elif defined (HAVE_CYGWIN)
+extern int read_tun_wait(void *buf, size_t count, unsigned long int ms);
+extern ssize_t read_tun_finalize(void);
+extern void read_tun_cancel(void);
+extern ssize_t write_tun(void *buf, size_t count);
+#else
+#   define read_tun(fd,buf,count) read(fd,buf,count)
+#   define write_tun(fd,buf,count) write(fd,buf,count)
 #endif
 
 #endif /*TUN_DEVICE_H_*/

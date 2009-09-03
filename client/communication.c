@@ -205,7 +205,9 @@ static void * peer_handling(void * args) {
     packet_t u; // union used to receive the messages
     message_t smsg;
     struct client *peer = (struct client*) args;
+#ifndef HAVE_CYGWIN
     int tunfd = peer->tunfd;
+#endif
     struct timespec timeout_connect;            // timeout
     time_t timestamp, last_time = 0;
 
@@ -414,7 +416,11 @@ static void * peer_handling(void * args) {
                         u.ip->ip_sum = compute_csum((uint16_t*) u.ip, sizeof(*u.ip));
                     }
                     // send it to the TUN device
+#ifdef HAVE_CYGWIN
+                    write_tun(u.raw, r);
+#else
                     write_tun(tunfd, u.raw, r);
+#endif
                 }
             }
 
@@ -725,8 +731,10 @@ static void * comm_tun(void * argument) {
 
     int r;
     int r_select;
+#ifndef HAVE_CYGWIN
     fd_set fd_select;                           // for the select call
     struct timeval timeout;                     // timeout used with select
+#endif
     packet_t u;
     struct in_addr peer_addr;
     struct client *peer;
@@ -734,16 +742,24 @@ static void * comm_tun(void * argument) {
     u.raw = CHECK_ALLOC_FATAL(malloc(MESSAGE_MAX_LENGTH));
 
     while (!end_campagnol) {
+#ifdef HAVE_CYGWIN
+        r_select = read_tun_wait(u.raw, MESSAGE_MAX_LENGTH, SELECT_DELAY_SEC*1000 + SELECT_DELAY_USEC/1000);
+#else
         /* select call initialisation */
         init_timeout(&timeout);
         FD_ZERO(&fd_select);
         FD_SET(tunfd, &fd_select);
         r_select = select(tunfd+1, &fd_select, NULL, NULL, &timeout);
+#endif
 
 
         /* MESSAGE READ FROM TUN DEVICE */
         if (r_select > 0) {
+#ifdef HAVE_CYGWIN
+            r = read_tun_finalize();
+#else
             r = read_tun(tunfd, u.raw, MESSAGE_MAX_LENGTH);
+#endif
             if (config.debug)
                 printf(
                         ">> Sending a VPN message: size %d from SRC = %"PRIu32".%"PRIu32".%"PRIu32".%"PRIu32" to DST = %"PRIu32".%"PRIu32".%"PRIu32".%"PRIu32"\n",
@@ -779,7 +795,11 @@ static void * comm_tun(void * argument) {
              * Local packet, loop back
              */
             else if (peer_addr.s_addr == config.vpnIP.s_addr) {
+#ifdef HAVE_CYGWIN
+                write_tun(u.raw, r);
+#else
                 write_tun(tunfd, u.raw, r);
+#endif
             }
             else {
                 peer = get_client_VPN(&peer_addr);
