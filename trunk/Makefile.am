@@ -7,7 +7,8 @@ AUTOMAKE_OPTIONS = subdir-objects
 
 EXTRA_DIST = Changelog \
 	lib/getline.c lib/getline.h \
-	lib/tdestroy.c lib/tdestroy.h
+	lib/tdestroy.c lib/tdestroy.h \
+	lib/cygwin_byteorder.h
 bin_PROGRAMS=
 AM_CFLAGS = @COMMON_CFLAGS@
 
@@ -83,7 +84,7 @@ if HAVE_OPENBSD
 campagnol_SOURCES += client/tun_device_openbsd.c
 endif
 if HAVE_CYGWIN
-campagnol_SOURCES += client/tun_device_cygwin.c
+campagnol_SOURCES += client/tun_device_cygwin.c client/tap-win32_common.h
 endif
 
 campagnol_CPPFLAGS = -DSYSCONFDIR="\"$(sysconfdir)\"" -DLOCALSTATEDIR="\"$(localstatedir)\"" @OPENSSL_CFLAGS@
