@@ -27,7 +27,6 @@
 #include "communication.h"
 #include "tun_device.h"
 #include "../common/log.h"
-#include "../common/pthread_wrap.h"
 
 const char *tun_default_up[] = {
         "netsh interface ip set address name=%D static %V %n none", NULL };
