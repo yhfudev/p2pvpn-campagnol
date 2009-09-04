@@ -827,6 +827,10 @@ static void * comm_tun(void * argument) {
         }
     }
 
+#ifdef HAVE_CYGWIN
+    read_tun_cancel();
+#endif
+
     free(u.raw);
     SSL_REMOVE_ERROR_STATE;
     return NULL;
