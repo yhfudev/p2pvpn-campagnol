@@ -46,6 +46,13 @@ CLEANFILES = man/campagnol.8 man/campagnol.conf.5 man/campagnol_rdv.8
 DISTCLEANFILES = man/.tstamp
 
 
+# texinfo
+# -------
+
+#MAKEINFOFLAGS = --no-split
+info_TEXINFOS = doc/campagnol.texi
+
+
 # common/libcommon.a
 # ------------------
 
