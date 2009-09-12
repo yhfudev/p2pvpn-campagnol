@@ -1,0 +1,986 @@
+\input texinfo  @c -*-texinfo-*-
+@c %**start of header
+@setfilename campagnol.info
+@settitle Campagnol VPN Manual
+@comment  @setchapternewpage odd
+@c %**end of header
+
+@include version.texi
+
+@copying
+This manual is for Campagnol VPN version @value{VERSION}, a decentralized VPN
+over UDP tunneling.
+
+Last updated: @value{UPDATED}
+
+Copyright @copyright{} 2009 Florent Bondoux.
+
+@quotation
+This documentation is free documentation: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This work is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this work. If not, see <http://www.gnu.org/licenses/>.
+@end quotation
+@end copying
+
+@titlepage
+@title Campagnol VPN Manual
+@subtitle Edition @value{VERSION}
+@subtitle @value{UPDATED-MONTH}
+@author Florent Bondoux
+
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+@end titlepage
+
+@contents
+
+@ifnottex
+@node Top
+@top Campagnol VPN
+
+@insertcopying
+@end ifnottex
+
+@menu
+* Introduction::
+* Installation::
+* Client's configuration::
+* Running Campagnol::
+* Contact::
+@comment  @ifnottex
+@comment  * General Public License::
+@comment  @end ifnottex
+* Index::
+@end menu
+
+@comment -----------------------------------------------------------------------
+@node Introduction
+@chapter Introduction
+
+Campagnol is a distributed IP-layer VPN software. All messages are transmitted
+over UDP and are authenticated and encrypted with DTLS (Datagram Transport Layer
+Security).
+
+Campagnol is able to open new connections through NATs or firewalls by using
+UDP hole punching.
+
+The connections are exclusively point-to-point and are opened only when needed.
+
+@menu
+* IP-layer VPN::
+* Client and rendez-vous server::
+* Overview::
+* Supported platforms::
+@end menu
+
+@comment -----------------------------------------------------------------------
+@node IP-layer VPN
+@section IP-layer VPN
+@cindex VPN
+@cindex tunnels
+@cindex DTLS
+@cindex introduction
+
+The VPN is built by tunneling the IP layer (only IPv4 for the current version)
+through an encrypted DTLS (Datagram Transport Layer Security) channel. The VPN
+is defined by its subnetwork and each host connected to the VPN is identified by
+its IP address on the VPN subnetwork.
+
+@cindex point to point
+@cindex unicast
+@cindex broadcast
+The hosts of the VPN run a client software which manages the tunnels and is
+responsible of the sending and the receiving of the IP packets. The tunnels
+between the clients are direct (point-to-point) UDP connections which are
+dynamically created when they are needed. Because of the dynamic P2P
+connections, the VPN is only suited for unicast. IP broadcast are emulated by
+sending the packets over all the currently opened tunnels.
+
+This is the protocol stack of the VPN:
+@quotation
+@example
+-----------------------
+      Application
+-----------------------
+   TCP/UDP/ICMP/...
+-----------------------
+ @emph{IPv4} (VPN subnetwork)
+-----------------------
+      @emph{DTLS record}
+-----------------------
+         @emph{UDP}
+-----------------------
+         IPv4
+-----------------------
+         ...
+-----------------------
+@end example
+@end quotation
+
+@cindex overhead
+The overhead of Campagnol is variable and depends on the ciphering algorithm in
+use:
+@itemize @minus
+@item The additional IPv4 layer adds 20 bytes.
+
+@item The UDP layer adds 8 bytes
+
+@item The DTLS record layer has a 13 bytes header but the ciphered blocks also
+has a variable padding, a MAC and an IV. The data are not compressed so it's
+possible to calculate the exact overhead. For example, this takes from 50 bytes
+to 65 bytes when using SHA1 and a block cipher algorithm with 16 bytes-blocks.
+
+To calculate the exact size of the DTLS layer for a given data size, block
+cipher and MAC algorithm:
+@itemize @minus
+@item Add to the data size the @emph{length of the MAC} (20 bytes for SHA1, 15
+bytes for MD5), the @emph{length of the block cipher's blocks} (it's the IV of
+the CBC, 8 or 16 bytes depending of the algorithm) and @emph{1 byte} for the
+padding length's field.
+
+@item This block need to be padded to form the fragment that will be encrypted.
+So add the number of byte needed to force the length of the fragment to be a
+multiple of the block cipher's block length.
+
+@item Finally add 13 bytes for the DTLS record header.
+@end itemize
+@end itemize
+
+@comment -----------------------------------------------------------------------
+@node Client and rendez-vous server
+@section Client and rendez-vous server
+
+Campagnol VPN is made up of two parts:
+
+@cindex client
+@cindex campagnol, client software
+@itemize @minus
+@item a client software running on every computer taking part in the VPN. It is
+the software that will send/receive the packets on the VPN after authentication
+and encryption. This program is non-interactive and can run as a daemon.
+
+@cindex rendez-vous server
+@cindex RDV
+@cindex campagnol_rdv, rendez-vous server software
+@item a lightweight external server, the rendezvous server, which maintains the
+registrations of every clients and keep tracks of the connections.
+@end itemize
+
+@cindex UDP hole punching
+@cindex public endpoint
+@cindex NAT traversal
+One of the initial objective of Campagnol is to connect computers running on
+typical home networks (e.g. behind an ADSL modem with NAT capabilities) with
+as little configuration as possible. Therefore Campagnol uses a NAT traversal
+technique: UDP hole punching. The rendez-vous server is the central part of the
+hole punching. It must see the ``public endpoint'' of all the clients so it
+often must have a central position. The following drawing corresponds to the
+best case situation:
+
+@quotation
+@verbatim
+ [peer A] ---|NAT|---(         )
+                     (         )
+ [peer B] ---|NAT|---( NETWORK )--- [RDV]
+                     (         )
+         [peer C] ---(         )
+@end verbatim
+
+Several clients are connected to Internet. They optionally lie behind a NAT and
+those NAT must accept UDP hole punching.
+
+The rendezvous server has a @emph{public IP} or may also be configured behind a
+NAT. It sees the public address of the clients which is enough thanks to the
+hole punching.
+@end quotation
+
+@comment -----------------------------------------------------------------------
+@node Overview
+@section Overview
+@cindex functioning
+
+When the client is launched, it starts off with registering with the rendezvous
+(RDV) server. It will then regularly exchange some small messages with the RDV
+server in order to keep the connection alive and maintain the translation tables
+of the NATs. Later on the RDV server is used to initiate the UDP hole punching
+between two clients.
+
+@cindex TUN virtual interface
+The client uses the TUN kernel driver to create a virtual network interface for
+the VPN and then associates a route to this interface. When a packet for a
+unknown peer arrives on the TUN device, Campagnol asks the RDV server for a new
+connection. This initiate the UDP hole punching between the two peers. Once the
+connection is established, the two peers open a DTLS session, authenticate each
+other and eventually the link is ready. This is a peer to peer connection: no
+data will flow through the RDV server or any other node. Connections are closed
+when inactive.
+
+@cindex authentication
+@cindex X.509
+@cindex key
+@cindex certificate
+@cindex PKI
+Campagnol uses an X.509 certificate based mutual authentication between the
+clients (with DTLS). Each client needs to own a valid certificate and its
+associated key pair. Therefore a typical usage is to have a minimum PKI to
+manage the VPN. You will for instance generate:
+@itemize @minus
+@item a private key (your CA) and an associated trusted root certificate
+distributed to all the clients
+
+@item one private key and one signed certificate per client
+
+@item possibly a certificate revocation list to manage the old client's
+certificates
+@end itemize
+
+@comment -----------------------------------------------------------------------
+@node Supported platforms
+@section Supported platforms
+@cindex platforms
+
+Both the client and the RDV server are written in C. The supported platforms
+are Linux, FreeBSD, OpenBSD and 32 bits Windows with Cygwin.
+
+@cindex Cygwin TAP driver
+@cindex TAP-Win32
+The Cygwin port uses the TAP driver from the OpenVPN project (TAP-Win32) which
+is available on their website (@uref{http://openvpn.net}).
+
+NetBSD and Solaris are candidate platforms for a port since they also have a
+TUN/TAP driver.
+
+@comment -----------------------------------------------------------------------
+@comment -----------------------------------------------------------------------
+@node Installation
+@chapter Installation
+
+This chapter describes how to build and install Campagnol. The procedure is the
+same on all the supported platforms.
+
+@menu
+* Dependencies::
+* Building Campagnol::
+* Creating the certificates::
+@end menu
+
+@comment -----------------------------------------------------------------------
+@node Dependencies
+@section Dependencies
+@cindex dependencies
+
+@menu
+* Runtime dependencies::
+* Build-time dependencies::
+@end menu
+
+@comment -----------------------------------------------------------------------
+@node Runtime dependencies
+@subsection Runtime dependencies
+
+@cindex OpenSSL, dependency
+@itemize @minus
+@item @strong{OpenSSL library version >= 0.9.8j}, @uref{http://www.openssl.org/}
+
+The latest 0.9.8* available is recommended. Campagnol should also work with
+OpenSSL 1.0.0*.
+
+Cygwin users should use the OpenSSL package from the Cygwin repository.
+
+@cindex TUN/TAP driver
+@item @strong{TUN/TAP driver}
+
+For Linux and *BSD, the TUN/TAP driver is the @emph{Universal TUN/TAP driver}
+from @uref{http://vtun.sourceforge.net/tun}.
+
+This driver is included in the default kernel of FreeBSD and OpenBSD. The kernel
+option on Linux is called @samp{CONFIG_TUN} (which is enabled in the default
+kernel of most Linux distributions).
+@end itemize
+
+@comment -----------------------------------------------------------------------
+@node Build-time dependencies
+@subsection Build-time dependencies
+
+In addition to the runtime dependencies, you need the following packages to
+build Campagnol:
+
+@itemize @minus
+@item @strong{OpenSSL development packages}
+
+The development files for OpenSSL are sometimes shipped in a separate package
+(openssl-dev, libssl-dev@dots{}).
+
+@item If the source tree doesn't contain the @file{./configure} file (you
+checked out the sources from the SVN repository), you will need:
+@itemize @minus
+@item @strong{autoconf >= 2.61}
+
+@item @strong{automake >= 1.10}
+@end itemize
+@end itemize
+
+@comment -----------------------------------------------------------------------
+@node Building Campagnol
+@section Building Campagnol
+@cindex configure (autoconf)
+
+If the @file{./configure} script is missing, you need to prepare the source tree
+by running:
+@example
+autoreconf -if
+@end example
+
+You first need to use the @file{configure} script.
+@example
+./configure --help
+@end example
+
+It will use @command{pkg-config} to configure OpenSSL. If you do not have
+@command{pkg-config} or if you have installed OpenSSL in a non standard
+directory, you should have a look at the @option{--with-openssl*} options for
+the @file{configure} script.
+@example
+./configure --with-openssl=/usr/local
+@end example
+
+If you do not want to build the RDV server or the client, you can use the
+options @option{--disable-server} and @option{--disable-client}.
+
+Build Campagnol:
+@example
+make
+@end example
+
+Install Campagnol:
+@example
+make install
+@end example
+
+@comment -----------------------------------------------------------------------
+@node Creating the certificates
+@section Creating the certificates
+@cindex certificates, creation
+@cindex key, creation
+@cindex private key, creation
+@cindex CA, creation
+@cindex ca_wrap.sh
+
+The @file{samples/sample_certs} directory in the sources contains a few
+certificates and configuration files useful for testing purpose only. You will
+need to create a small certificate authority for your VPN.
+
+Campagnol comes with a small wrapper script around the OpenSSL utilities:
+@command{ca_wrap.sh}. It can be used to
+
+@itemize @minus
+@item create a basic OpenSSL configuration file
+
+@item build the root certificate authority key and certificate
+
+@item create new keys and signed certificates for your VPN
+
+@item revoke certificates
+
+@item generate a certificate revocation list
+@end itemize
+
+@menu
+* Startup::
+* Create the root CA::
+* Create a key and a signed certificate for a client::
+* Revoke a certificate::
+* Generate a CRL::
+@end menu
+
+@comment -----------------------------------------------------------------------
+@node Startup
+@subsection Startup
+
+@enumerate
+@item Create a directory (e.g. @file{/etc/campagnol/}) for your CA and copy the
+script into this directory.
+
+@item Edit the script. You will have to check/set the variables defined at the
+top of the file:
+@itemize @minus
+@item @option{TOP_DIR} is the working directory. It can be an absolute path or a
+relative path from your current directory.
+
+
+@item the @option{SSL_*_DEFAULT} variables define the default certificate
+validity period, the default key size, and the default values for the
+certificate fields. They are used to generate the configuration file.
+@end itemize
+
+@item Run @code{./ca_wrap.sh gen_conf} to create the directories and the
+configuration file.
+
+@item You may review the generated file.
+@end enumerate
+
+@comment -----------------------------------------------------------------------
+@node Create the root CA
+@subsection Create the root CA
+
+@enumerate
+@item @code{./ca_wrap.sh gen_ca}
+
+This will create the private key, the root certificate and the necessary files.
+
+
+@item You are asked for a pass phrase to protect the CA private key.
+
+@item You are asked for the fields of the certificate. The default values are
+the one you defined at the beginning of the script.
+@end enumerate
+
+@comment -----------------------------------------------------------------------
+@node Create a key and a signed certificate for a client
+@subsection Create a key and a signed certificate for a client
+
+For each client on the VPN, you will have to create a new key/certificate.
+
+@enumerate
+@item Use the gen_cert command, for example:
+
+@example
+./ca_wrap.sh gen_cert box_1
+@end example
+This will create a new key and signed certificate that will be output in the
+directory @file{box_1}.
+
+@item You are asked for fields of the certificate.
+
+The default @option{Organizational Unit Name} is set to the directory name. You
+should set something unique for the @option{Common Name} but it's not
+required. The default values are fine for the other fields.
+
+Note that with the generated configuration file, the @option{Country Name},
+@option{State Or Province Name} and @option{Organization Name} fields must be
+the same for the CA certificate and the client certificates.
+
+@item The password of the CA key is asked to sign the certificate request.
+
+@item The key is in @file{box_1/key.pem}. The certificate is in
+@file{box_1/certificate.pem} and a copy is kept in the @file{certs/}
+directory. The database of the CA has been updated with the new certificate.
+
+@item The client will need this key and certificate, and the CA
+certificate (@file{cacert.pem}) to do mutual authentication. Keep the key
+private and distribute it to the client using a secure channel.
+@end enumerate
+
+@comment -----------------------------------------------------------------------
+@node Revoke a certificate
+@subsection Revoke a certificate
+
+If the key of a client has been compromised or if you do not want to authorize
+it anymore, you can revoke the certificate.
+
+@enumerate
+@item If you want to revoke the certificate in the @file{old_cert} directory
+(which must have been created with @code{./ca_wrap.sh gen_cert old_cert}), run
+@code{./ca_wrap.sh revoke_crt old_cert}.
+
+@item You are asked for the pass phrase of the CA private key.
+
+@item The CA database is updated.
+@end enumerate
+
+@comment -----------------------------------------------------------------------
+@node Generate a CRL
+@subsection Generate a CRL
+@cindex CRL, creation
+
+To tell the clients that some certificate have been revoked, you have to create
+a Certificate Revocation List and distribute it to all the clients.
+
+@enumerate
+@item @code{./ca_wrap.sh gen_crl}
+
+@item You are asked for the pass phrase of the CA private key.
+
+@item The CRL is in @file{crl.pem}. It's default validity period is defined in
+the configuration file.
+@end enumerate
+
+
+@comment -----------------------------------------------------------------------
+@comment -----------------------------------------------------------------------
+@node Client's configuration
+@chapter Client's configuration
+
+You need to create a configuration file for each client. Usually, large part of
+the file will be the same for all the clients. In most cases, you will only have
+to change the host VPN IP and the key and certificate paths.
+
+@quotation
+The main source of documentation of the configuration file is its man page
+@samp{campagnol.conf(5)} which describes the full syntax and the options.
+@end quotation
+
+@menu
+* Configuration file::
+* Basic options::
+* Advanced configuration::
+* Main difficulties::
+@end menu
+
+@comment -----------------------------------------------------------------------
+@node Configuration file
+@section Configuration file
+@cindex campagnol.conf
+
+The easiest way is to start with the sample configuration file which describes
+every option. A few options are mandatory.
+
+By default Campagnol uses @file{/etc/campagnol.conf}, an other config file might
+be used by giving its name as a command line argument.
+
+This file has an INI-like syntax. Comments start with a @samp{;} or a @samp{#}
+and continue to the end of the line. Values may be quoted between double
+quotation marks ("...") and special characters can be escaped with @samp{\} (\\,
+\n, \# ...).
+
+The configuration file has the following sections:
+@table @strong
+@item [NETWORK]
+@cindex section [NETWORK]
+The public and local network related options such as the rendez-vous server
+address, the VPN MTU or the local interface.
+
+@item [VPN]
+@cindex section [VPN]
+This section defines the IP address and netmask used on the VPN.
+
+@item [SECURITY]
+@cindex section [SECURITY]
+All the DTLS-related parameters (key, certificates and CRL, @dots{})
+
+@item [CLIENT]
+@cindex section [CLIENT]
+This section is used to adjust the client's behavior.
+
+@item [UP]
+@cindex section [UP]
+This section is optional and defines the commands executed to configure the TUN
+device. When the section is @emph{not} defined, the default commands are
+executed.
+
+@item [DOWN]
+@cindex section [DOWN]
+This section is similar to the @option{UP} section but defines the commands
+that are executed when the TUN device is closed.
+@end table
+
+
+@comment -----------------------------------------------------------------------
+@node Basic options
+@section Basic options
+
+Every client will have to look at the following options. They should be enough
+for most setup.
+
+@table @strong
+@item [NETWORK]
+@table @option
+@item local_host
+@cindex option local_host [NETWORK]
+This option is used to define the local IP (or hostname). Leaving this option
+commented out enable the auto-detection of the IP. You should set this option
+if the host has several network interfaces.
+
+@item server_host
+@cindex option server_host [NETWORK]
+The IP address or hostname of the rendez-vous server.
+
+@item server_port
+@cindex option server_port [NETWORK]
+The UDP port of the rendez-vous server (the default is 57888).
+
+@item interface
+@cindex option interface [NETWORK]
+The primary use of this option is to help with the auto-detection of the local
+IP (when @option{local_host} is commented out) by giving the name of the
+interface to use. On Linux, this option also enable interface binding (the UDP
+socket is bound to this interface).
+
+@item tun_device
+@cindex option tun_device [NETWORK]
+@cindex Cygwin TUN device, configuration
+On Cygwin, this parameter is used to set the name of the TUN/TAP interface to
+use. If the parameter is not defined, the client will use the first adapter
+found.
+@end table
+
+@item [VPN]
+@table @option
+@item vpn_ip
+@cindex option vpn_ip [VPN]
+The IP address for the VPN.
+
+@item network
+@cindex option network [VPN]
+The subnetwork for the VPN in CIDR notation (e.g. @samp{10.0.0.0/24}). This
+value must be the same for all the clients of the VPN.
+@end table
+
+@item [SECURITY]
+@cindex key, configuration
+@cindex certificate, configuration
+@table @option
+@item certificate
+@cindex option certificate [SECURITY]
+The PEM file containing the public certificate.
+
+@item key
+@cindex option key [SECURITY]
+The PEM file containing the private key.
+
+@item ca_certificates
+@cindex option ca_certificates [SECURITY]
+The PEM file containing a root certificate chain
+@end table
+@end table
+
+@comment -----------------------------------------------------------------------
+@node Advanced configuration
+@section Advanced configuration
+
+@table @strong
+@item [NETWORK]
+@table @option
+@item local_port
+@cindex option local_port [NETWORK]
+Set the local UDP port. Useful if you have some firewall or NAT rules to define.
+
+@item tun_mtu
+@cindex MTU, configuration
+@cindex option tun_mtu [NETWORK]
+This parameter set the MTU of the TUN device (i.e. the MTU of the VPN). It's
+recommended to use the same value for all the clients although it's not
+strictly required (using different MTU has an impact on the performance).
+
+The default value (1419) is the  highest value  which should  yield packets
+smaller than 1500 bytes (the usual MTU for ethernet) whichever cipher algorithm
+is used (@pxref{IP-layer VPN}).
+
+@item use_local_addr
+@cindex option use_local_addr [NETWORK]
+When enabled, this parameter allows the client to publish its local IP address
+and port. It is enabled by default. This option is required when several
+clients are behind a common NAT (@pxref{Common NAT}).
+
+@item override_local_addr
+@cindex option override_local_addr [NETWORK]
+This parameter is used in conjunction with @option{use_local_addr}. It is used
+to override the local endpoint published by @option{use_local_addr}.
+@xref{Multiple levels of NATs}.
+
+@item tap_id
+@cindex TAP-Win32, version
+@cindex option tap_id [NETWORK]
+@emph{For Cygwin only}. This parameters defines the name of the TAP driver. The
+name is used when searching for TAP adapters. The Cygwin port of Campagnol was
+developed and tested with the “tap0901” driver but other versions may also work.
+@end table
+
+@item [SECURITY]
+@table @option
+@item ca_certificate_dir
+@cindex option ca_certificate_dir [SECURITY]
+To specify the CA root certificate chain, you can use either
+@option{ca_certificate} or @option{ca_certificate_dir}. The latter is used with
+a directory name. This directory must contain all the required certificates and
+it must be prepared with the @command{c_rehash} OpenSSL's utility.
+
+It both @option{ca_certificate} and @option{ca_certificate_dir} are defined,
+@option{ca_certificate} is searched first.
+
+@item crl_file
+@cindex option crl_file [SECURITY]
+@cindex CRL, configuration
+A PEM file containing a certificate revocation list (CRL). When a new connection
+is opened, the remote peer's certificate is checked against this CRL.
+
+@item verify_depth
+@cindex option verify_depth [SECURITY]
+The maximum depth for the certificate chain verification (default: 9).
+
+@item cipher_list
+@cindex option cipher_list [SECURITY]
+@cindex cipher, configuration
+The OpenSSL ciphers lists to use. If this value is defined, then it must be the
+same for every clients of the VPN, or at least the values must be compatible.
+The syntax is explained in the openssl-ciphers(1) man page.
+@end table
+
+@item [CLIENT]
+@table @option
+@item fifo_size
+@cindex option fifo_size [CLIENT]
+The client uses one transmit and one receive queue per connection. This set the
+length of the queue (number of packets). The default is 50.
+
+@item txqueue
+@cindex option txqueue [CLIENT]
+@emph{For Linux only}. The length of the transmit queue of the TUN/TAP device.
+The current default value of the driver is 500 packets. Setting a smaller value
+is useful with a slow internet connection or with severe rate limiting since it
+will reduce the maximum latency.
+
+@item tun_one_queue
+@cindex option tun_one_queue [CLIENT]
+@emph{For Linux only}. Set the TUN/TAP driver in single queue mode. When running
+in single queue mode, the TUN/TAP driver drops the  packets  by  itself  when
+its internal  queue is full instead of rescheduling the packets. This mode is
+required  to work around a bug in pre-2.6.11 kernels. It may also help on slow
+hardware or with slow connection speed since it will de  facto reduce 
+the maximum transmit queue length.
+
+@item client_max_rate
+@cindex rate limiting, configuration
+@cindex option client_max_rate [CLIENT]
+Limit the total outgoing traffic of the client. The value is in
+kilobytes/second.
+
+@item connexion_max_rate
+@cindex option connexion_max_rate [CLIENT]
+Limit the outgoing traffic allowed for each connection. The value is in
+kilobytes/second.
+
+@item timeout
+@cindex option timeout [CLIENT]
+The inactivity timeout (in seconds) before closing a connection. All the
+clients should use the same timeout value but it's not mandatory.
+
+@item keepalive
+@cindex option keepalive [CLIENT]
+The client must send some keepalive messages when a connection is inactive to
+maintain the contexts in the traversed NATs and firewalls. This set the timeout
+before sending a keepalive message.
+
+@item max_clients
+@cindex option max_client [CLIENT]
+The maximum number of connections allowed.
+@end table
+
+@item [UP]
+@cindex section [UP]
+This  section  is optional. It defines the programs that are launched to
+configure the TUN device. It should be used to run ifconfig, set the MTU, add a
+route, open some port on the firewall...
+
+If the section is not defined, Campagnol will execute some platform-dependent
+default commands to setup the interface, its MTU and add a route. If it is
+empty, then no command are executed.
+
+See the man page campagnol.conf(5) for a detailed description of this section
+and the default commands.
+
+@item [DOWN]
+@cindex section [DOWN]
+Similar to the @option{UP} section, but defines the commands to execute when
+the TUN device is closed. See campagnol.conf(5).
+
+@end table
+
+
+@comment -----------------------------------------------------------------------
+@node Main difficulties
+@section Main difficulties
+
+@menu
+* Common NAT::
+* Multiple levels of NATs::
+* Non public rendez-vous server::
+@end menu
+
+@comment -----------------------------------------------------------------------
+@node Common NAT
+@subsection Common NAT
+@cindex NAT, setting up the VPN with a common NAT
+
+@quotation
+@verbatim
+ [peer A] ---|   |   (         )---|NAT|--- [peer C]
+             |NAT|---( NETWORK )
+ [peer B] ---|   |   (         )--- [RDV]
+@end verbatim
+@end quotation
+
+This configuration involves two clients A and B which are on the same network
+behind a common NAT.
+
+If A sends a packet to B using B's public endpoint (i.e. the associated port on
+the NAT and the NAT's public IP), this will fail unless the common NAT does
+@emph{hairpin translation}. Sadly hairpin translation is not a widely spread
+feature.
+
+The two clients A and B must use their private endpoint. This is done by setting
+the option @option{use_local_addr} in their configuration file (this is the
+default).
+
+If the option is enabled, the rendez-vous server will tell them to use their
+local endpoint to reach each other. It will actually sees that they both
+have the same public IP thus are behind the same NAT equipment. This works
+around the problem and the NAT doesn't need to do hairpin translation.
+
+The two clients will sill use the public endpoints to talk with C.
+
+@comment -----------------------------------------------------------------------
+@node Multiple levels of NATs
+@subsection Multiple levels of NATs
+@cindex NAT, setting up the VPN with multiple levels of NAT
+
+@quotation
+@verbatim
+ [peer A] ---|NAT_A|---|     |   (         )
+                       |NAT_C|---( NETWORK )
+ [peer B] ---|NAT_B|---|     |   (         )--- [RDV]
+@end verbatim
+@end quotation
+
+In addition to a common NAT, this case involves at least one peer lying behind
+another level of NAT. With this configuration, the two clients A and B can't
+talk to each other by using their private address.
+
+A first method to connect A and B is to disable their @option{use_local_addr}
+option (so that they won't try to use their private addresses). It will work
+only if @var{NAT_C} supports hairpin translation.
+
+The second method supposes that you can configure the inner NATs @var{NAT_A}
+and @var{NAT_B}. We need to use the @option{override_local_addr} parameter in
+conjunction with the @option{use_local_addr} parameter. It is used to send a
+fake local address to the rendez-vous server instead of the real one. So you can
+define static port forwarding rules on @var{NAT_A} and @var{NAT_B} and use
+@option{override_local_addr} to publish the intermediate IP on @var{NAT_A} and
+@var{NAT_B}.
+
+@comment -----------------------------------------------------------------------
+@node Non public rendez-vous server
+@subsection Non public rendez-vous server
+
+@quotation
+@verbatim
+              ---(         )   |   |--- [RDV (+ peer)]
+  other peers ---( NETWORK )---|NAT|
+              ---(         )   |   |--- [peer]
+@end verbatim
+@end quotation
+
+If the rendez-vous server is behind a NAT, you can't run a client behind this
+NAT neither on the same host nor on another host. It is likely to fail since the
+rendez-vous server will not be able to see its public address and this would
+break the UDP hole punching. There is no solution for this setup.
+
+
+@comment -----------------------------------------------------------------------
+@comment -----------------------------------------------------------------------
+@node Running Campagnol
+@chapter Running Campagnol
+@cindex running
+
+@menu
+* Running the rendez-vous server::
+* Running the client::
+@end menu
+
+@comment -----------------------------------------------------------------------
+@node Running the rendez-vous server
+@section Running the rendez-vous server
+
+Run the rendez-vous server on a publicly accessible computer (for every clients
+of the VPN). The server uses the default UDP port 57888. Be sure that this port
+is reachable. The server doesn't require superuser privileges if you do not ask
+for a privileged port (<1024).
+
+Start the server and set the maximum number of registered clients (highly
+recommended):
+@example
+campagnol_rdv --max-clients=20
+@end example
+
+To start the server on another port:
+@example
+campagnol_rdv --port=34567
+@end example
+
+To start the server as a daemon:
+@example
+campagnol_rdv --daemon
+@end example
+
+
+@comment -----------------------------------------------------------------------
+@node Running the client
+@section Running the client
+
+To start a client, run:
+@example
+campagnol conf_file.conf
+@end example
+
+To start the client as a daemon:
+@example
+campagnol --daemon conf_file.conf
+@end example
+
+@cindex signals
+Send a @samp{SIGTERM} or @samp{SIGINT} signal to the client to kill it cleanly.
+If no configuration file is given, campagnol will search for a default
+@file{/etc/campagnol.conf} file. When campagnol is launched as a daemon, it will
+write its PID into @file{/var/run/campagnol.pid} (or another file defined with
+@option{--pidfile}).
+
+If you changed the CRL or the key/certificate used by a client, you can use the
+following signals:
+@itemize @minus
+@item @samp{SIGUSR1} to immediately kill all the connections and reload the
+files
+
+@item @samp{SIGUSR2} to smoothly reload the files (they will be used for the
+subsequent connections)
+@end itemize
+
+
+@comment -----------------------------------------------------------------------
+@comment -----------------------------------------------------------------------
+@node Contact
+@unnumbered Contact
+The website of Campagnol is at @url{http://campagnol.sourceforge.net}.
+
+The project is hosted on SourceForce at
+@url{http://sourceforge.net/projects/campagnol/}. To get help, see the support
+page for the forums or send a mail to the maintainer at
+@email{fbondoux@@users.sourceforge.net}.
+
+
+@comment -----------------------------------------------------------------------
+@comment -----------------------------------------------------------------------
+@comment  @ifnottex
+@comment  @node General Public License
+@comment  @appendix General Public License
+@comment  @include gpl.texi
+@comment  @end ifnottex
+
+
+@comment -----------------------------------------------------------------------
+@comment -----------------------------------------------------------------------
+@node Index
+@unnumbered Index
+
+@printindex cp
+
+@bye

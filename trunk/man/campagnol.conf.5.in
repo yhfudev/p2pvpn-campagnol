@@ -1,6 +1,6 @@
 .\" Begin/end an indented schematic
 .de BDRAWING
-.  ft CR
+.  ft C
 .  in +7n
 .  nf
 ..
@@ -45,7 +45,7 @@ A \[oq]\\\[cq] at the end of the value is treated as a line continuation. It is
 removed and the parser continue to read the value with the next line. Quoted
 values can also extend to several lines.
 .PP
-.ft CR
+.ft C
 .nf
 [SOME_SECTION]
   param        = value        # comment
@@ -84,7 +84,7 @@ Inside a section, the syntax
 can be used to reference another value (param) from the same section. For
 example:
 .PP
-.ft CR
+.ft C
 .nf
 [SECURITY]
 basedir = "/etc/campagnol_certs"
@@ -154,7 +154,7 @@ The rendezvous server port.
 .PARAMETER tun_mtu integer 1419
 .IP
 This parameter set the MTU of the TUN device. This value must be the same on
-each clients.
+every clients.
 .IP
 It may be interesting to change the MTU of the tun device if you are running
 campagnol on a network with a unusual MTU. The default value is the highest
@@ -172,7 +172,7 @@ is also bound to this interface.
 .TP
 .PARAMETER use_local_addr "[yes/no]" "yes"
 .IP
-This parameter allows the client to publish it's local IP and UDP port. It's
+This parameter allows the client to publish its local IP and UDP port. It's
 useful if this client and others clients of the VPN are behind a common NAT:
 .IP
 .BDRAWING
@@ -353,9 +353,9 @@ The maximum number of simultaneously opened connections with other clients.
 .SS [UP] section
 This section is optional. It defines the programs that are launched to configure
 the TUN device. It should be used to run ifconfig, set the MTU, add a route,
-open som port on the firewall...
+open some port on the firewall...
 .PP
-If the section is not defined, campagnol will execute some plateform-dependent
+If the section is not defined, campagnol will execute some platform-dependent
 default commands to setup the interface, its MTU and add a route. If it is
 empty, then no command are executed.
 .PP
@@ -399,7 +399,7 @@ the \[oq]%\[cq] character
 .PP
 The following example corresponds to the default shell commands for Linux.
 .PP
-.ft CR
+.ft C
 .nf
 [UP]
 01 = "ifconfig %D %V mtu %M up"
@@ -409,7 +409,7 @@ The following example corresponds to the default shell commands for Linux.
 .PP
 This is the default commands for FreeBSD:
 .PP
-.ft CR
+.ft C
 .nf
 01 = "ifconfig %D inet %V %V mtu %M up"
 02 = "route add -net %N %V"
@@ -419,7 +419,7 @@ This is the default commands for FreeBSD:
 This is the default commands for OpenBSD. Note that you do not need to manually
 set the MTU with ifconfig for OpenBSD.
 .PP
-.ft CR
+.ft C
 .nf
 01 = "ifconfig %D inet %V %V up"
 02 = "route add -net %N %V"
@@ -429,7 +429,7 @@ set the MTU with ifconfig for OpenBSD.
 This is the default commands for Cygwin. Note that the MTU is already set by
 changing its value in the registry.
 .PP
-.fr CR
+.ft C
 .nf
 01 = "netsh interface ip set address name=%D static %V %n none"
 .fi
@@ -446,7 +446,7 @@ The default for Linux, OpenBSD and Cygwin is to execute nothing.
 The following corresponds to the default for FreeBSD. We need to explicitely
 close the TUN device with ifconfig:
 .PP
-.ft CR
+.ft C
 .nf
 [DOWN]
 01 = "ifconfig %D destroy"
