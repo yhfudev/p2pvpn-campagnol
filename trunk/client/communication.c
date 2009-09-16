@@ -116,7 +116,7 @@ static void *punch(void *arg) {
         sendto(peer->sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&(peer->clientaddr), sizeof(peer->clientaddr));
         usleep(PUNCH_DELAY_USEC);
     }
-    decr_ref(peer);
+    decr_ref(peer, 1);
     pthread_exit(NULL);
 }
 
@@ -160,7 +160,7 @@ static void *SSL_writing(void *args) {
     }
     free(packet);
     SSL_REMOVE_ERROR_STATE;
-    decr_ref(peer);
+    decr_ref(peer, 1);
     return NULL;
 }
 
@@ -216,16 +216,15 @@ static void * peer_handling(void * args) {
 
 
     while (1) {
+        CLIENT_MUTEXLOCK(peer);
         if (peer->state == NEW) {
             if (end_campagnol) {
-                CLIENT_MUTEXLOCK(peer);
                 CHANGE_STATE(peer, CLOSED);
                 CLIENT_MUTEXUNLOCK(peer);
                 continue;
             }
 
             /* ask the RDV server for a new connection with peer */
-            CLIENT_MUTEXLOCK(peer);
             init_smsg(&smsg, ASK_CONNECTION, peer->vpnIP.s_addr, 0);
             sendto(peer->sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
 
@@ -245,7 +244,6 @@ static void * peer_handling(void * args) {
         }
         else if (peer->state == PUNCHING) {
             if (end_campagnol) {
-                CLIENT_MUTEXLOCK(peer);
                 CHANGE_STATE(peer, CLOSED);
                 CLIENT_MUTEXUNLOCK(peer);
                 continue;
@@ -254,7 +252,6 @@ static void * peer_handling(void * args) {
             start_punch(peer);
             clock_gettime(CLOCK_REALTIME, &timeout_connect);
             timeout_connect.tv_sec += 3; // wait 3 secs
-            CLIENT_MUTEXLOCK(peer);
             if (conditionTimedwait(&peer->cond_connected, &peer->mutex, &timeout_connect) != 0) {
                 // timeout
                 CHANGE_STATE(peer, CLOSED);
@@ -273,11 +270,11 @@ static void * peer_handling(void * args) {
         }
         else if (peer->state == LINKED) {
             if (end_campagnol) {
-                CLIENT_MUTEXLOCK(peer);
                 CHANGE_STATE(peer, CLOSED);
                 CLIENT_MUTEXUNLOCK(peer);
                 continue;
             }
+            CLIENT_MUTEXUNLOCK(peer);
             /* DTLS handshake */
             BIO_ctrl(peer->wbio, BIO_CTRL_DGRAM_SET_PEER, 0, &peer->clientaddr);
             r = SSL_do_handshake(peer->ssl);
@@ -298,6 +295,7 @@ static void * peer_handling(void * args) {
             }
         }
         else if (peer->state == ESTABLISHED) {
+            CLIENT_MUTEXUNLOCK(peer);
             int end_reading_loop = 0;
             log_message_verb("New DTLS connection opened with peer %s", inet_ntoa(peer->vpnIP));
 
@@ -426,11 +424,11 @@ static void * peer_handling(void * args) {
 
         }
         else if (peer->state == CLOSED) {
+            CLIENT_MUTEXUNLOCK(peer);
             /* remove one ref. for this thread and the last ref to destroy the
              * client
              */
-            decr_ref(peer);
-            decr_ref(peer); // now this peer is dead.
+            decr_ref(peer, 2); // now this peer is dead.
             break;
         }
     }
@@ -564,23 +562,21 @@ static void *rdv_handling(void *arg) {
                 case REJ_CONNECTION:
                     peer = get_client_VPN(&rmsg.ip1);
                     if (peer != NULL) {
-                        CLIENT_MUTEXLOCK(peer);
                         peer->rdv_answer = REJ_CONNECTION;
                         CLIENT_MUTEXUNLOCK(peer);
                         conditionSignal(&peer->cond_connected);
-                        decr_ref(peer);
+                        decr_ref(peer, 1);
                     }
                     break;
                 case ANS_CONNECTION:
                     peer = get_client_VPN(&rmsg.ip2);
                     if (peer != NULL) {
-                        CLIENT_MUTEXLOCK(peer);
                         peer->rdv_answer = ANS_CONNECTION;
                         peer->clientaddr.sin_addr = rmsg.ip1;
                         peer->clientaddr.sin_port = rmsg.port;
                         CLIENT_MUTEXUNLOCK(peer);
                         conditionSignal(&peer->cond_connected);
-                        decr_ref(peer);
+                        decr_ref(peer, 1);
                     }
                     break;
                 case FWD_CONNECTION:
@@ -595,10 +591,11 @@ static void *rdv_handling(void *arg) {
                         }
                         /* start punching */
                         start_peer_handling(peer);
-                        decr_ref(peer);
+                        decr_ref(peer, 1);
                     }
                     else {
-                        decr_ref(peer);
+                        CLIENT_MUTEXUNLOCK(peer);
+                        decr_ref(peer, 1);
                     }
                     break;
                 case RECONNECT:
@@ -663,7 +660,6 @@ static void * comm_socket(void * argument) {
                     /* It's a DTLS packet, send it to the associated peer_handling thread using the FIFO BIO */
                     peer = get_client_real(&unknownaddr);
                     if (peer != NULL) {
-                        CLIENT_MUTEXLOCK(peer);
                         if (peer->state == ESTABLISHED || peer->state == LINKED) {
                             CLIENT_MUTEXUNLOCK(peer);
                             BIO_write(peer->rbio, u.raw, r);
@@ -671,7 +667,7 @@ static void * comm_socket(void * argument) {
                         else {
                             CLIENT_MUTEXUNLOCK(peer);
                         }
-                        decr_ref(peer);
+                        decr_ref(peer, 1);
                     }
                     else if (u.dtlsheader->contentType == DTLS_APPLICATION_DATA) {
                         /* We received a DTLS record from an unknown peer.
@@ -700,7 +696,8 @@ static void * comm_socket(void * argument) {
                             peer = get_client_real(&unknownaddr);
                             if (peer != NULL) {
                                 conditionSignal(&peer->cond_connected);
-                                decr_ref(peer);
+                                CLIENT_MUTEXUNLOCK(peer);
+                                decr_ref(peer, 1);
                             }
                             break;
                         case PUNCH_KEEP_ALIVE:
@@ -812,7 +809,6 @@ static void * comm_tun(void * argument) {
                     start_peer_handling(peer);
                 }
                 else {
-                    CLIENT_MUTEXLOCK(peer);
                     if (peer->state != CLOSED) {
                         client_update_time(peer,time(NULL));
                         CLIENT_MUTEXUNLOCK(peer);
@@ -822,7 +818,7 @@ static void * comm_tun(void * argument) {
                         CLIENT_MUTEXUNLOCK(peer);
                     }
                 }
-                decr_ref(peer);
+                decr_ref(peer, 1);
             }
         }
     }
