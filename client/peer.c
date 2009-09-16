@@ -52,7 +52,10 @@ static int compare_clients_vpn(const void *itema, const void *itemb) {
 pthread_mutex_t mutex_clients;
 
 void mutex_clients_init(void) {
-    mutexInit(&mutex_clients, NULL);
+    pthread_mutexattr_t attrs;
+    mutexattrInit(&attrs);
+    mutexattrSettype(&attrs, PTHREAD_MUTEX_RECURSIVE);
+    mutexInit(&mutex_clients, &attrs);
 }
 
 void mutex_clients_destroy(void) {
@@ -73,9 +76,10 @@ void incr_ref(struct client *peer) {
  * Safely decrement the reference counter of peer
  * If the count reaches 0, the peer is freed
  */
-void decr_ref(struct client *peer) {
+void decr_ref(struct client *peer, int n) {
+    GLOBAL_MUTEXLOCK;
     mutexLock(&peer->mutex_ref);
-    peer->ref_count--;
+    peer->ref_count -= n;
 //    fprintf(stderr, "decr %s [%d]\n", inet_ntoa(peer->vpnIP), peer->ref_count);
     if (peer->ref_count == 0) {
         mutexUnlock(&peer->mutex_ref);
@@ -84,6 +88,7 @@ void decr_ref(struct client *peer) {
     else {
         mutexUnlock(&peer->mutex_ref);
     }
+    GLOBAL_MUTEXUNLOCK;
 }
 
 /*
@@ -172,13 +177,6 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t t, struct in
 }
 
 /*
- * Contains the last search results for
- * _get_client_VPN and _get_client_real
- */
-struct client *cache_client_VPN = NULL;
-struct client *cache_client_real = NULL;
-
-/*
  * Remove a client from the list "clients"
  * Free the associated SSL structures
  */
@@ -207,10 +205,6 @@ void remove_client(struct client *peer) {
 
     tdelete(peer, &clients_vpn_root, compare_clients_vpn);
 
-    if(peer == cache_client_VPN)
-        cache_client_VPN = NULL;
-    if (peer == cache_client_real)
-        cache_client_real = NULL;
     free(peer);
     n_clients --;
     GLOBAL_MUTEXUNLOCK;
@@ -220,15 +214,15 @@ void remove_client(struct client *peer) {
  * Get a client by its VPN IP address and increments its ref. counter
  * return NULL if the client is unknown
  */
-struct client * _get_client_VPN(struct in_addr *address) {
+struct client * get_client_VPN(struct in_addr *address) {
     struct client peer_tmp, *peer;
     GLOBAL_MUTEXLOCK;
     peer_tmp.vpnIP.s_addr = address->s_addr;
     peer = tfind(&peer_tmp, &clients_vpn_root, compare_clients_vpn);
     if (peer != NULL) {
         peer = *(void **) peer;
-        cache_client_VPN = peer;
         incr_ref(peer);
+        CLIENT_MUTEXLOCK(peer);
     }
     GLOBAL_MUTEXUNLOCK;
     return peer;
@@ -238,15 +232,15 @@ struct client * _get_client_VPN(struct in_addr *address) {
  * Get a client by its real IP address and UDP port and increments its ref. counter
  * return NULL if the client is unknown
  */
-struct client * _get_client_real(struct sockaddr_in *cl_address) {
+struct client * get_client_real(struct sockaddr_in *cl_address) {
     struct client *peer = clients;
     GLOBAL_MUTEXLOCK;
     while (peer != NULL) {
         if (peer->clientaddr.sin_addr.s_addr == cl_address->sin_addr.s_addr
             && peer->clientaddr.sin_port == cl_address->sin_port) {
             /* found */
-            cache_client_real = peer;
             incr_ref(peer);
+            CLIENT_MUTEXLOCK(peer);
             GLOBAL_MUTEXUNLOCK;
             return peer;
         }
