@@ -290,6 +290,11 @@ int main (int argc, char **argv) {
         exit_status = EXIT_FAILURE;
         goto clean_end;
     }
+    if (fcntl(sockfd, F_SETFL, O_NONBLOCK) == -1) {
+        log_error(errno, "Could not set non-blocking mode on the socket");
+        exit_status = EXIT_FAILURE;
+        goto clean_end;
+    }
 
 
     /* mask all signals in this thread and child threads */
@@ -332,7 +337,7 @@ int main (int argc, char **argv) {
         smsg.port = 0;
         smsg.type = BYE;
         if (config.debug) printf("Sending BYE\n");
-        sendto(sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
+        xsendto(sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
     }
 
     if (tunfd > 0)

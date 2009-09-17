@@ -1,5 +1,6 @@
 v 0.3.3
 	The client and rdv server have been ported to Cygwin.
+	Add a texinfo manual.
 
 	client:
 	* bss_fifo: add a drop-tail mode in addition to the default blocking

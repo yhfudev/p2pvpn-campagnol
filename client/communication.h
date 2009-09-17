@@ -179,4 +179,20 @@ extern void handler_sigTimerPing(int sig);
 /* The rate limiter for the whole client */
 extern struct tb_state global_rate_limiter;
 
+
+/* wrapper around sendto for non blocking I/O */
+static inline ssize_t xsendto(int sockfd, const void *buf, size_t len, int flags, const
+        struct sockaddr *dest_addr, socklen_t addrlen) {
+    ssize_t r;
+    fd_set set;
+
+    while ((r = sendto(sockfd, buf, len, flags, dest_addr, addrlen)) == -1
+            && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+        FD_ZERO(&set);
+        FD_SET(sockfd, &set);
+        select(sockfd+1, NULL, &set, NULL, NULL);
+    }
+    return r;
+}
+
 #endif /*COMMUNICATION_H_*/

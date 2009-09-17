@@ -66,7 +66,7 @@ void handler_sigTimerPing(int sig __attribute__((unused))) {
     message_t smsg;
     /* send a PING message to the RDV server */
     init_smsg(&smsg, PING,0,0);
-    int s = sendto(sockfd_global,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
+    int s = xsendto(sockfd_global,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
     if (s == -1) log_error(errno, "PING");
 }
 
@@ -113,7 +113,7 @@ static void *punch(void *arg) {
             break;
         }
         CLIENT_MUTEXUNLOCK(peer);
-        sendto(peer->sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&(peer->clientaddr), sizeof(peer->clientaddr));
+        xsendto(peer->sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&(peer->clientaddr), sizeof(peer->clientaddr));
         usleep(PUNCH_DELAY_USEC);
     }
     decr_ref(peer, 1);
@@ -135,6 +135,7 @@ static void start_punch(struct client *peer) {
  * and write them to the SSL stream
  */
 static void *SSL_writing(void *args) {
+    fd_set set;
     struct client *peer = (struct client *) args;
     int r, w, err;
     int packet_len = MESSAGE_MAX_LENGTH;
@@ -147,9 +148,25 @@ static void *SSL_writing(void *args) {
         r = BIO_read(peer->out_fifo, packet, packet_len);
         if (r == 0)
             break;
-        w = SSL_write(peer->ssl, packet, r);
+        do {
+            w = SSL_write(peer->ssl, packet, r);
+            if (w <= 0) {
+                err = SSL_get_error(peer->ssl, w);
+                if (err == SSL_ERROR_WANT_WRITE) {
+                    FD_ZERO(&set);
+                    FD_SET(peer->sockfd, &set);
+                    select(peer->sockfd+1, NULL, &set, NULL, NULL);
+                }
+                else {
+                    break;
+                }
+            }
+            else {
+                break;
+            }
+        } while (1);
+
         if (w <= 0) {
-            err = SSL_get_error(peer->ssl, w);
             if (err == SSL_ERROR_ZERO_RETURN)
                 break;
             else if (err == SSL_ERROR_SSL && !SSL_get_shutdown(peer->ssl)) {
@@ -226,7 +243,7 @@ static void * peer_handling(void * args) {
 
             /* ask the RDV server for a new connection with peer */
             init_smsg(&smsg, ASK_CONNECTION, peer->vpnIP.s_addr, 0);
-            sendto(peer->sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
+            xsendto(peer->sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
 
             /* wait for and check answer */
             clock_gettime(CLOCK_REALTIME, &timeout_connect);
@@ -257,7 +274,7 @@ static void * peer_handling(void * args) {
                 CHANGE_STATE(peer, CLOSED);
                 CLIENT_MUTEXUNLOCK(peer);
                 init_smsg(&smsg, CLOSE_CONNECTION, peer->vpnIP.s_addr, 0);
-                sendto(peer->sockfd, &smsg, sizeof(smsg), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
+                xsendto(peer->sockfd, &smsg, sizeof(smsg), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
             }
             else if (end_campagnol) {
                 CHANGE_STATE(peer, CLOSED);
@@ -282,7 +299,7 @@ static void * peer_handling(void * args) {
                 log_message("Error during DTLS handshake with peer %s", inet_ntoa(peer->vpnIP));
                 ERR_print_errors_fp(stderr);
                 init_smsg(&smsg, CLOSE_CONNECTION, peer->vpnIP.s_addr, 0);
-                sendto(peer->sockfd, &smsg, sizeof(smsg), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
+                xsendto(peer->sockfd, &smsg, sizeof(smsg), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
                 CLIENT_MUTEXLOCK(peer);
                 CHANGE_STATE(peer, CLOSED);
                 CLIENT_MUTEXUNLOCK(peer);
@@ -313,7 +330,7 @@ static void * peer_handling(void * args) {
                         CLIENT_MUTEXLOCK(peer);
                         if (timestamp - peer->last_keepalive > (time_t) config.keepalive) {
                             init_smsg(&smsg, PUNCH_KEEP_ALIVE, 0, 0);
-                            sendto(peer->sockfd ,&smsg, sizeof(smsg), 0, (struct sockaddr *)&(peer->clientaddr), sizeof(peer->clientaddr));
+                            xsendto(peer->sockfd ,&smsg, sizeof(smsg), 0, (struct sockaddr *)&(peer->clientaddr), sizeof(peer->clientaddr));
                             peer->last_keepalive = timestamp;
                         }
 
@@ -322,7 +339,7 @@ static void * peer_handling(void * args) {
                             if (config.debug) printf("timeout: %s\n", inet_ntoa(peer->vpnIP));
                             log_message_verb("Closing DTLS connection with peer %s", inet_ntoa(peer->vpnIP));
                             init_smsg(&smsg, CLOSE_CONNECTION, peer->vpnIP.s_addr, 0);
-                            sendto(peer->sockfd, &smsg, sizeof(smsg), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
+                            xsendto(peer->sockfd, &smsg, sizeof(smsg), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
                             CHANGE_STATE(peer, CLOSED);
                             CLIENT_MUTEXUNLOCK(peer);
                             r = SSL_shutdown(peer->ssl);
@@ -507,7 +524,7 @@ static int register_rdv(struct rdv_args *args) {
         registeringTries++;
         if (config.debug)
             printf("Sending HELLO\n");
-        if (sendto(args->sockfd, &smsg, sizeof(smsg), 0,
+        if (xsendto(args->sockfd, &smsg, sizeof(smsg), 0,
                 (struct sockaddr *) &config.serverAddr,
                 sizeof(config.serverAddr)) == -1) {
             log_error(errno, "sendto");
@@ -642,71 +659,71 @@ static void * comm_socket(void * argument) {
 
         /* MESSAGE READ FROM THE SOCKET */
         if (r_select > 0) {
-            r = recvfrom(sockfd,u.raw,u_len,0,(struct sockaddr *)&unknownaddr,&len);
-            /* from the RDV server ? */
-            if (config.serverAddr.sin_addr.s_addr == unknownaddr.sin_addr.s_addr
-                && config.serverAddr.sin_port == unknownaddr.sin_port) {
-                if (r == sizeof(message_t))
-                    BIO_write(args->rdvargs->fifo, u.raw, r);
-            }
-            /* Message from another peer */
-            else {
-                if (config.debug) printf("<  Received a UDP packet: size %zd from %s:%d\n", r, inet_ntoa(unknownaddr.sin_addr), ntohs(unknownaddr.sin_port));
-                if (r >= (int) sizeof(dtlsheader_t) &&
-                        (u.dtlsheader->contentType == DTLS_APPLICATION_DATA
-                        || u.dtlsheader->contentType == DTLS_HANDSHAKE
-                        || u.dtlsheader->contentType == DTLS_ALERT
-                        || u.dtlsheader->contentType == DTLS_CHANGE_CIPHER_SPEC)) {
-                    /* It's a DTLS packet, send it to the associated peer_handling thread using the FIFO BIO */
-                    peer = get_client_real(&unknownaddr);
-                    if (peer != NULL) {
-                        if (peer->state == ESTABLISHED || peer->state == LINKED) {
-                            CLIENT_MUTEXUNLOCK(peer);
-                            BIO_write(peer->rbio, u.raw, r);
-                        }
-                        else {
-                            CLIENT_MUTEXUNLOCK(peer);
-                        }
-                        decr_ref(peer, 1);
-                    }
-                    else if (u.dtlsheader->contentType == DTLS_APPLICATION_DATA) {
-                        /* We received a DTLS record from an unknown peer.
-                         * This may be due to a lost close notification, or we
-                         * died uncleanly and were restarted.
-                         * Let's reply with a fatal alert record...
-                         */
-                        unsigned char alert_mess[15];
-                        dtlsheader_t *alert_mess_hdr = (dtlsheader_t *)alert_mess;
-                        alert_mess_hdr->contentType = DTLS_ALERT;
-                        alert_mess_hdr->version = u.dtlsheader->version;
-                        alert_mess_hdr->epoch = u.dtlsheader->epoch;
-                        alert_mess_hdr->seq_number = u.dtlsheader->seq_number;
-                        alert_mess[11] = 0; // length
-                        alert_mess[12] = 2; // length
-                        alert_mess[13] = 2; // fatal
-                        alert_mess[14] = 80; // internal error
-                        sendto(sockfd, alert_mess, 15, 0, (struct sockaddr *)&unknownaddr, len);
-                    }
+            while ((r = recvfrom(sockfd,u.raw,u_len,0,(struct sockaddr *)&unknownaddr,&len)) != -1) {
+                /* from the RDV server ? */
+                if (config.serverAddr.sin_addr.s_addr == unknownaddr.sin_addr.s_addr
+                    && config.serverAddr.sin_port == unknownaddr.sin_port) {
+                    if (r == sizeof(message_t))
+                        BIO_write(args->rdvargs->fifo, u.raw, r);
                 }
-                else if (r == sizeof(message_t)) {
-                    switch (u.message->type) {
-                        /* UDP hole punching */
-                        case PUNCH :
-                            /* we can now reach the client */
-                            peer = get_client_real(&unknownaddr);
-                            if (peer != NULL) {
-                                conditionSignal(&peer->cond_connected);
+                /* Message from another peer */
+                else {
+                    if (config.debug) printf("<  Received a UDP packet: size %zd from %s:%d\n", r, inet_ntoa(unknownaddr.sin_addr), ntohs(unknownaddr.sin_port));
+                    if (r >= (int) sizeof(dtlsheader_t) &&
+                            (u.dtlsheader->contentType == DTLS_APPLICATION_DATA
+                            || u.dtlsheader->contentType == DTLS_HANDSHAKE
+                            || u.dtlsheader->contentType == DTLS_ALERT
+                            || u.dtlsheader->contentType == DTLS_CHANGE_CIPHER_SPEC)) {
+                        /* It's a DTLS packet, send it to the associated peer_handling thread using the FIFO BIO */
+                        peer = get_client_real(&unknownaddr);
+                        if (peer != NULL) {
+                            if (peer->state == ESTABLISHED || peer->state == LINKED) {
                                 CLIENT_MUTEXUNLOCK(peer);
-                                decr_ref(peer, 1);
+                                BIO_write(peer->rbio, u.raw, r);
                             }
-                            break;
-                        case PUNCH_KEEP_ALIVE:
-                            /* receive a keepalive message */
-                        default :
-                            break;
+                            else {
+                                CLIENT_MUTEXUNLOCK(peer);
+                            }
+                            decr_ref(peer, 1);
+                        }
+                        else if (u.dtlsheader->contentType == DTLS_APPLICATION_DATA) {
+                            /* We received a DTLS record from an unknown peer.
+                             * This may be due to a lost close notification, or we
+                             * died uncleanly and were restarted.
+                             * Let's reply with a fatal alert record...
+                             */
+                            unsigned char alert_mess[15];
+                            dtlsheader_t *alert_mess_hdr = (dtlsheader_t *)alert_mess;
+                            alert_mess_hdr->contentType = DTLS_ALERT;
+                            alert_mess_hdr->version = u.dtlsheader->version;
+                            alert_mess_hdr->epoch = u.dtlsheader->epoch;
+                            alert_mess_hdr->seq_number = u.dtlsheader->seq_number;
+                            alert_mess[11] = 0; // length
+                            alert_mess[12] = 2; // length
+                            alert_mess[13] = 2; // fatal
+                            alert_mess[14] = 80; // internal error
+                            xsendto(sockfd, alert_mess, 15, 0, (struct sockaddr *)&unknownaddr, len);
+                        }
+                    }
+                    else if (r == sizeof(message_t)) {
+                        switch (u.message->type) {
+                            /* UDP hole punching */
+                            case PUNCH :
+                                /* we can now reach the client */
+                                peer = get_client_real(&unknownaddr);
+                                if (peer != NULL) {
+                                    conditionSignal(&peer->cond_connected);
+                                    CLIENT_MUTEXUNLOCK(peer);
+                                    decr_ref(peer, 1);
+                                }
+                                break;
+                            case PUNCH_KEEP_ALIVE:
+                                /* receive a keepalive message */
+                            default :
+                                break;
+                        }
                     }
                 }
-
             }
         }
     }
@@ -910,7 +927,7 @@ int start_vpn(int sockfd, int tunfd) {
 
     init_smsg(&smsg, BYE, config.vpnIP.s_addr, 0);
     if (config.debug) printf("Sending BYE\n");
-    if (sendto(sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr)) == -1) {
+    if (xsendto(sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr)) == -1) {
         log_error(errno, "sendto");
     }
 
