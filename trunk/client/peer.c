@@ -38,16 +38,35 @@ struct client *clients = NULL;
 int n_clients = 0;
 /* tree, items ordered by VPN IP */
 static void *clients_vpn_root = NULL;
+/* tree, items ordered by public endpoint */
+static void *clients_address_root = NULL;
 
-/* comparison routine for clients_vpn_root */
+/* comparison routine for clients_vpn_root (by VPN IP) */
 static int compare_clients_vpn(const void *itema, const void *itemb) {
     const struct client *peer1 = (const struct client *) itema;
     const struct client *peer2 = (const struct client *) itemb;
     return memcmp(&peer1->vpnIP, &peer2->vpnIP, sizeof(peer1->vpnIP));
 }
 
+/* comparison routine for clients_address_root (by public endpoint) */
+static int compare_clients_addr(const void *itema, const void *itemb) {
+    const struct client *peer1 = (const struct client *) itema;
+    const struct client *peer2 = (const struct client *) itemb;
+    if (peer1->clientaddr.sin_addr.s_addr < peer2->clientaddr.sin_addr.s_addr)
+        return -1;
+    if (peer1->clientaddr.sin_addr.s_addr == peer2->clientaddr.sin_addr.s_addr) {
+        if (peer1->clientaddr.sin_port < peer2->clientaddr.sin_port)
+            return -1;
+        if (peer1->clientaddr.sin_port == peer2->clientaddr.sin_port) {
+            return 0;
+        }
+        return 1;
+    }
+    return 1;
+}
+
 /*
- * mutex used to manipulate 'clients'
+ * mutex used to manipulate the clients list and the trees
  */
 pthread_mutex_t mutex_clients;
 
@@ -167,6 +186,25 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t t, struct in
         return NULL;
     }
 
+    /*
+     * Only add the client to clients_address_root if the real endpoint is
+     * available. Otherwise, need to call register_client_endpoint later.
+     */
+    if (clientPort != 0) {
+        slot = tsearch((void *) peer, &clients_address_root, compare_clients_addr);
+        if (slot == NULL) {
+            log_error(errno, "Cannot allocate a new client (tsearch)");
+            tdelete(peer, &clients_address_root, compare_clients_addr);
+            mutexDestroy(&peer->mutex_ref);
+            mutexDestroy(&peer->mutex);
+            conditionDestroy(&peer->cond_connected);
+            SSL_free(peer->ssl);
+            free(peer);
+            GLOBAL_MUTEXUNLOCK;
+            return NULL;
+        }
+    }
+
     peer->next = clients;
     peer->prev = NULL;
     if (peer->next) peer->next->prev = peer;
@@ -174,6 +212,22 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t t, struct in
     n_clients ++;
     GLOBAL_MUTEXUNLOCK;
     return peer;
+}
+
+/*
+ * Add the client to the real address tree.
+ */
+int register_client_endpoint(struct client *peer) {
+    void *slot;
+    GLOBAL_MUTEXLOCK;
+    slot = tsearch((void *) peer, &clients_address_root, compare_clients_addr);
+    if (slot == NULL) {
+        log_error(errno, "Cannot allocate a new client (tsearch)");
+        GLOBAL_MUTEXUNLOCK;
+        return -1;
+    }
+    GLOBAL_MUTEXUNLOCK;
+    return 0;
 }
 
 /*
@@ -204,6 +258,7 @@ void remove_client(struct client *peer) {
     }
 
     tdelete(peer, &clients_vpn_root, compare_clients_vpn);
+    tdelete(peer, &clients_address_root, compare_clients_addr);
 
     free(peer);
     n_clients --;
@@ -213,6 +268,7 @@ void remove_client(struct client *peer) {
 /*
  * Get a client by its VPN IP address and increments its ref. counter
  * return NULL if the client is unknown
+ * the client's mutex is locked.
  */
 struct client * get_client_VPN(struct in_addr *address) {
     struct client peer_tmp, *peer;
@@ -231,21 +287,19 @@ struct client * get_client_VPN(struct in_addr *address) {
 /*
  * Get a client by its real IP address and UDP port and increments its ref. counter
  * return NULL if the client is unknown
+ * the client's mutex is locked.
  */
 struct client * get_client_real(struct sockaddr_in *cl_address) {
-    struct client *peer = clients;
+    struct client peer_tmp, *peer;
     GLOBAL_MUTEXLOCK;
-    while (peer != NULL) {
-        if (peer->clientaddr.sin_addr.s_addr == cl_address->sin_addr.s_addr
-            && peer->clientaddr.sin_port == cl_address->sin_port) {
-            /* found */
-            incr_ref(peer);
-            CLIENT_MUTEXLOCK(peer);
-            GLOBAL_MUTEXUNLOCK;
-            return peer;
-        }
-        peer = peer->next;
+    peer_tmp.clientaddr.sin_addr.s_addr = cl_address->sin_addr.s_addr;
+    peer_tmp.clientaddr.sin_port = cl_address->sin_port;
+    peer = tfind(&peer_tmp, &clients_address_root, compare_clients_addr);
+    if (peer != NULL) {
+        peer = *(void **)peer;
+        incr_ref(peer);
+        CLIENT_MUTEXLOCK(peer);
     }
     GLOBAL_MUTEXUNLOCK;
-    return NULL;
+    return peer;
 }

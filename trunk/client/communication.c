@@ -254,8 +254,14 @@ static void * peer_handling(void * args) {
                 CHANGE_STATE(peer, CLOSED);
             }
             else {
-                // ok
-                CHANGE_STATE(peer, PUNCHING);
+                // the RDV accepted the connection,
+                // we now know the public endpoint of the peer
+                if (register_client_endpoint(peer) != 0) {
+                    CHANGE_STATE(peer, CLOSED);
+                }
+                else {
+                    CHANGE_STATE(peer, PUNCHING);
+                }
             }
             CLIENT_MUTEXUNLOCK(peer);
         }

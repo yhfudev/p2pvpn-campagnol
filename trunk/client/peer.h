@@ -77,6 +77,7 @@ extern void mutex_clients_init(void);
 extern void mutex_clients_destroy(void);
 
 extern struct client * add_client(int sockfd, int tunfd, int state, time_t t, struct in_addr clientIP, uint16_t clientPort, struct in_addr vpnIP, int is_dtls_client);
+extern int register_client_endpoint(struct client *peer);
 extern void remove_client(struct client *peer);
 
 extern struct client * get_client_VPN(struct in_addr *address);
