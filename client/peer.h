@@ -63,31 +63,35 @@ struct client {
 
 
 
-extern struct client *clients;
-extern int n_clients;
-extern pthread_mutex_t mutex_clients;
+extern struct client *peers_list;
+extern int peers_n_clients;
+extern pthread_mutex_t peers_mutex;
 
 /* mutex manipulation */
-#define GLOBAL_MUTEXLOCK {/*fprintf(stderr, "lock %s %d\n",__FILE__,__LINE__);*/mutexLock(&mutex_clients);}
-#define GLOBAL_MUTEXUNLOCK {/*fprintf(stderr, "unlock %s %d\n",__FILE__,__LINE__);*/mutexUnlock(&mutex_clients);}
+#define GLOBAL_MUTEXLOCK {/*fprintf(stderr, "lock %s %d\n",__FILE__,__LINE__);*/mutexLock(&peers_mutex);}
+#define GLOBAL_MUTEXUNLOCK {/*fprintf(stderr, "unlock %s %d\n",__FILE__,__LINE__);*/mutexUnlock(&peers_mutex);}
 #define CLIENT_MUTEXLOCK(c) {/*fprintf(stderr, "lock %d %s %d\n",(c)->vpnIP.s_addr,__FILE__,__LINE__);*/mutexLock(&(c)->mutex);}
 #define CLIENT_MUTEXUNLOCK(c) {/*fprintf(stderr, "unlock %d %s %d\n",(c)->vpnIP.s_addr,__FILE__,__LINE__);*/mutexUnlock(&(c)->mutex);}
 
-extern void mutex_clients_init(void);
-extern void mutex_clients_destroy(void);
+extern void peers_mutex_init(void);
+extern void peers_mutex_destroy(void);
 
-extern struct client * add_client(int sockfd, int tunfd, int state, time_t t, struct in_addr clientIP, uint16_t clientPort, struct in_addr vpnIP, int is_dtls_client);
-extern int register_client_endpoint(struct client *peer);
-extern void remove_client(struct client *peer);
+extern struct client * peers_add_requested(int sockfd, int tunfd, int state,
+        time_t t, struct in_addr vpnIP);
+extern struct client * peers_add_caller(int sockfd, int tunfd, int state,
+        time_t t, struct in_addr clientIP, uint16_t clientPort,
+        struct in_addr vpnIP);
+extern int peers_register_endpoint(struct client *peer);
+extern void peers_remove(struct client *peer);
 
-extern struct client * get_client_VPN(struct in_addr *address);
-extern struct client * get_client_real(struct sockaddr_in *cl_address);
+extern struct client * peers_get_by_VPN(struct in_addr *address);
+extern struct client * peers_get_by_endpoint(struct sockaddr_in *cl_address);
 
-extern void incr_ref(struct client *peer);
-extern void decr_ref(struct client *peer, int n);
+extern void peers_incr_ref(struct client *peer);
+extern void peers_decr_ref(struct client *peer, int n);
 
 /* update the activity timestamp and the link activity timestamp */
-#define client_update_time(peer,timestamp) ({\
+#define peers_update_peer_time(peer,timestamp) ({\
     time_t t = timestamp;\
     struct client * c = peer;\
     c->time = t;\
