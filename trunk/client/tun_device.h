@@ -24,6 +24,9 @@
 #ifndef TUN_DEVICE_H_
 #define TUN_DEVICE_H_
 
+#include "campagnol.h"
+#include "../common/log.h"
+
 extern int init_tun(void);
 extern int close_tun(int fd);
 
@@ -41,8 +44,28 @@ extern ssize_t read_tun_finalize(void);
 extern void read_tun_cancel(void);
 extern ssize_t write_tun(void *buf, size_t count);
 #else
-#   define read_tun(fd,buf,count) read(fd,buf,count)
-#   define write_tun(fd,buf,count) write(fd,buf,count)
+static inline ssize_t read_tun(int fd, void *buf, size_t count) {
+    ssize_t r;
+    r = read(fd, buf, count);
+    // We do not expect EINTR since signals are masked in this thread so any
+    // error should be fatal
+    if (r == -1) {
+        log_error(errno, "Error while reading the tun device");
+        abort();
+    }
+    return r;
+}
+
+static inline ssize_t write_tun(int fd, const void *buf, size_t count) {
+    ssize_t r;
+    r = write(fd, buf, count);
+    // We do not expect any non fatal error
+    if (r == -1) {
+        log_error(errno, "Error while writting to the tun device");
+        abort();
+    }
+    return r;
+}
 #endif
 
 #endif /*TUN_DEVICE_H_*/
