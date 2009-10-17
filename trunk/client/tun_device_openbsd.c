@@ -113,11 +113,17 @@ ssize_t read_tun(int fd, void *buf, size_t count) {
     r = readv(fd, iov, 2);
     if (r > 0)
         return r - sizeof(family);
+    else if (r == -1) {
+        log_error(errno, "Error while reading the tun device");
+        abort();
+    }
+
     return r;
 }
 
 ssize_t write_tun(int fd, void *buf, size_t count) {
     struct iovec iov[2];
+    ssize_t r;
     uint32_t family = htonl(AF_INET);
 
     iov[0].iov_base = &family;
@@ -126,5 +132,10 @@ ssize_t write_tun(int fd, void *buf, size_t count) {
     iov[1].iov_base = buf;
     iov[1].iov_len = count;
 
-    return writev(fd, iov, 2);
+    r = writev(fd, iov, 2);
+    if (r == -1) {
+        log_error(errno, "Error while writting to the tun device");
+        abort();
+    }
+    return r;
 }
