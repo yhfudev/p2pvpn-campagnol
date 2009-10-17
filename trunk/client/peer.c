@@ -34,8 +34,8 @@
 #include <search.h>
 
 /* List of known clients */
-struct client *clients = NULL;
-int n_clients = 0;
+struct client *peers_list = NULL;
+int peers_n_clients = 0;
 /* tree, items ordered by VPN IP */
 static void *clients_vpn_root = NULL;
 /* tree, items ordered by public endpoint */
@@ -68,23 +68,23 @@ static int compare_clients_addr(const void *itema, const void *itemb) {
 /*
  * mutex used to manipulate the clients list and the trees
  */
-pthread_mutex_t mutex_clients;
+pthread_mutex_t peers_mutex;
 
-void mutex_clients_init(void) {
+void peers_mutex_init(void) {
     pthread_mutexattr_t attrs;
     mutexattrInit(&attrs);
     mutexattrSettype(&attrs, PTHREAD_MUTEX_RECURSIVE);
-    mutexInit(&mutex_clients, &attrs);
+    mutexInit(&peers_mutex, &attrs);
 }
 
-void mutex_clients_destroy(void) {
-    mutexDestroy(&mutex_clients);
+void peers_mutex_destroy(void) {
+    mutexDestroy(&peers_mutex);
 }
 
 /*
  * Safely increment the reference counter of peer
  */
-void incr_ref(struct client *peer) {
+void peers_incr_ref(struct client *peer) {
     mutexLock(&peer->mutex_ref);
     peer->ref_count++;
 //    fprintf(stderr, "incr %s [%d]\n", inet_ntoa(peer->vpnIP), peer->ref_count);
@@ -95,14 +95,14 @@ void incr_ref(struct client *peer) {
  * Safely decrement the reference counter of peer
  * If the count reaches 0, the peer is freed
  */
-void decr_ref(struct client *peer, int n) {
+void peers_decr_ref(struct client *peer, int n) {
     GLOBAL_MUTEXLOCK;
     mutexLock(&peer->mutex_ref);
     peer->ref_count -= n;
 //    fprintf(stderr, "decr %s [%d]\n", inet_ntoa(peer->vpnIP), peer->ref_count);
     if (peer->ref_count == 0) {
         mutexUnlock(&peer->mutex_ref);
-        remove_client(peer);
+        peers_remove(peer);
     }
     else {
         mutexUnlock(&peer->mutex_ref);
@@ -114,18 +114,20 @@ void decr_ref(struct client *peer, int n) {
  * Add a client to the list
  *
  * !! The reference counter of the new client is 2:
- * one reference in the linked list "clients" plus the returned reference
+ * one reference in the linked list "peers_list" plus the returned reference
  *
- * just call decr_ref to remove the last reference from "clients":
+ * just call peers_decr_ref to remove the last reference from "peers_list":
  * This will remove the client from the linked list and free it's memory
  */
-struct client * add_client(int sockfd, int tunfd, int state, time_t t, struct in_addr clientIP, uint16_t clientPort, struct in_addr vpnIP, int is_dtls_client) {
+static struct client * peers_add(int sockfd, int tunfd, int state, time_t t,
+        struct in_addr clientIP, uint16_t clientPort, struct in_addr vpnIP,
+        int is_dtls_client) {
     int r;
     void *slot;
 
     GLOBAL_MUTEXLOCK;
 
-    if (n_clients >= config.max_clients) {
+    if (peers_n_clients >= config.max_clients) {
         if (config.debug) {
             printf("Cannot open a new connection: maximum number of connections reached\n");
         }
@@ -188,7 +190,7 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t t, struct in
 
     /*
      * Only add the client to clients_address_root if the real endpoint is
-     * available. Otherwise, need to call register_client_endpoint later.
+     * available. Otherwise, need to call peers_register_endpoint later.
      */
     if (clientPort != 0) {
         slot = tsearch((void *) peer, &clients_address_root, compare_clients_addr);
@@ -205,19 +207,38 @@ struct client * add_client(int sockfd, int tunfd, int state, time_t t, struct in
         }
     }
 
-    peer->next = clients;
+    peer->next = peers_list;
     peer->prev = NULL;
     if (peer->next) peer->next->prev = peer;
-    clients = peer;
-    n_clients ++;
+    peers_list = peer;
+    peers_n_clients ++;
     GLOBAL_MUTEXUNLOCK;
     return peer;
 }
 
 /*
+ * Add a new peer when we are initiating the session. We are the DTLS client for
+ * this session.
+ * Need to call peers_register_endpoint later when we know its endpoint.
+ */
+struct client * peers_add_requested(int sockfd, int tunfd, int state, time_t t,
+        struct in_addr vpnIP) {
+    return peers_add(sockfd, tunfd, state, t, (struct in_addr) {0}, 0, vpnIP, 1);
+}
+
+/*
+ * Add a new peer when another client tries to reach us. We are the DTLS server
+ * for this session.
+ */
+struct client * peers_add_caller(int sockfd, int tunfd, int state, time_t t,
+        struct in_addr clientIP, uint16_t clientPort, struct in_addr vpnIP) {
+    return peers_add(sockfd, tunfd, state, t, clientIP, clientPort, vpnIP, 0);
+}
+
+/*
  * Add the client to the real address tree.
  */
-int register_client_endpoint(struct client *peer) {
+int peers_register_endpoint(struct client *peer) {
     void *slot;
     GLOBAL_MUTEXLOCK;
     slot = tsearch((void *) peer, &clients_address_root, compare_clients_addr);
@@ -231,10 +252,10 @@ int register_client_endpoint(struct client *peer) {
 }
 
 /*
- * Remove a client from the list "clients"
+ * Remove a client from the list "peers_list"
  * Free the associated SSL structures
  */
-void remove_client(struct client *peer) {
+void peers_remove(struct client *peer) {
     GLOBAL_MUTEXLOCK;
     if (config.debug) printf("Deleting the client %s\n", inet_ntoa(peer->vpnIP));
 
@@ -254,14 +275,14 @@ void remove_client(struct client *peer) {
         peer->prev->next = peer->next;
     }
     else {
-        clients = peer->next;
+        peers_list = peer->next;
     }
 
     tdelete(peer, &clients_vpn_root, compare_clients_vpn);
     tdelete(peer, &clients_address_root, compare_clients_addr);
 
     free(peer);
-    n_clients --;
+    peers_n_clients --;
     GLOBAL_MUTEXUNLOCK;
 }
 
@@ -270,14 +291,14 @@ void remove_client(struct client *peer) {
  * return NULL if the client is unknown
  * the client's mutex is locked.
  */
-struct client * get_client_VPN(struct in_addr *address) {
+struct client * peers_get_by_VPN(struct in_addr *address) {
     struct client peer_tmp, *peer;
     GLOBAL_MUTEXLOCK;
     peer_tmp.vpnIP.s_addr = address->s_addr;
     peer = tfind(&peer_tmp, &clients_vpn_root, compare_clients_vpn);
     if (peer != NULL) {
         peer = *(void **) peer;
-        incr_ref(peer);
+        peers_incr_ref(peer);
         CLIENT_MUTEXLOCK(peer);
     }
     GLOBAL_MUTEXUNLOCK;
@@ -289,7 +310,7 @@ struct client * get_client_VPN(struct in_addr *address) {
  * return NULL if the client is unknown
  * the client's mutex is locked.
  */
-struct client * get_client_real(struct sockaddr_in *cl_address) {
+struct client * peers_get_by_endpoint(struct sockaddr_in *cl_address) {
     struct client peer_tmp, *peer;
     GLOBAL_MUTEXLOCK;
     peer_tmp.clientaddr.sin_addr.s_addr = cl_address->sin_addr.s_addr;
@@ -297,7 +318,7 @@ struct client * get_client_real(struct sockaddr_in *cl_address) {
     peer = tfind(&peer_tmp, &clients_address_root, compare_clients_addr);
     if (peer != NULL) {
         peer = *(void **)peer;
-        incr_ref(peer);
+        peers_incr_ref(peer);
         CLIENT_MUTEXLOCK(peer);
     }
     GLOBAL_MUTEXUNLOCK;
