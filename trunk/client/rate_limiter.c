@@ -101,7 +101,7 @@ void tb_count(struct tb_state *tb, size_t packet_size) {
     clock_gettime(SHAPER_CLOCK, &now);
 
     timespecsub(&now, &tb->last_arrival_time, &elapsed);
-    elapsed_ms = elapsed.tv_sec*1000 + (elapsed.tv_nsec/1000000.);
+    elapsed_ms = (double) elapsed.tv_sec * 1000. + ((double) elapsed.tv_nsec/1000000.);
 
     tb->bucket_available += (size_t) round(elapsed_ms * tb->bucket_rate);
     tb->bucket_available = (tb->bucket_available > tb->bucket_size) ? tb->bucket_size : tb->bucket_available;
@@ -121,9 +121,9 @@ void tb_count(struct tb_state *tb, size_t packet_size) {
     /* not enough tokens ?
      * we need to sleep during sleep_ms
      */
-    sleep_ms = (packet_size - tb->bucket_available) / tb->bucket_rate;
+    sleep_ms = (double) (packet_size - tb->bucket_available) / tb->bucket_rate;
     req_sleep.tv_sec = (time_t) floor(sleep_ms/1000.);
-    req_sleep.tv_nsec = (long int) ((sleep_ms - 1000 * req_sleep.tv_sec) * 1000000L);
+    req_sleep.tv_nsec = (long int) ((sleep_ms - 1000. * (double) req_sleep.tv_sec) * 1000000L);
 
     while (nanosleep(&req_sleep, &rem_sleep) != 0 ) {
         if (errno == EINTR) {
@@ -139,7 +139,7 @@ void tb_count(struct tb_state *tb, size_t packet_size) {
     clock_gettime(SHAPER_CLOCK, &now);
 
     timespecsub(&now, &tb->last_arrival_time, &elapsed);
-    elapsed_ms = elapsed.tv_sec*1000 + (elapsed.tv_nsec/1000000.);
+    elapsed_ms = (double) elapsed.tv_sec * 1000. + ((double) elapsed.tv_nsec/1000000.);
 
     tb->bucket_available += (size_t) round(elapsed_ms * tb->bucket_rate);
     tb->bucket_available = (tb->bucket_available < packet_size) ? 0 : (tb->bucket_available - packet_size);
