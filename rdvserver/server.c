@@ -36,7 +36,7 @@
 
 #define IN_ADDR_EMPTY ((struct in_addr) { 0 })
 
-static inline int
+static inline ssize_t
         send_message(unsigned char type, uint16_t port, struct in_addr ip1,
                 struct in_addr ip2, int sockfd, struct sockaddr *to);
 static inline void send_OK(struct sockaddr *to, int sockfd);
@@ -327,7 +327,8 @@ static void handle_packet(message_t *rmsg, struct sockaddr_in *unknownaddr, int 
 }
 
 void rdv_server(int sockfd) {
-    int r_select, r;
+    int r_select;
+    ssize_t r;
     fd_set fd_select;
     struct timeval timeout;
     message_t rmsg;
@@ -374,9 +375,9 @@ void rdv_server(int sockfd) {
     }
 }
 
-int send_message(unsigned char type, uint16_t port, struct in_addr ip1,
+ssize_t send_message(unsigned char type, uint16_t port, struct in_addr ip1,
         struct in_addr ip2, int sockfd, struct sockaddr *to) {
-    int s;
+    ssize_t s;
     message_t smsg;
     smsg.type = type;
     smsg.port = port;

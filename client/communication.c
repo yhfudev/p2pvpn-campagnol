@@ -66,7 +66,8 @@ void handler_sigTimerPing(int sig __attribute__((unused))) {
     message_t smsg;
     /* send a PING message to the RDV server */
     init_smsg(&smsg, PING,0,0);
-    int s = xsendto(sockfd_global,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
+    ssize_t s = xsendto(sockfd_global, &smsg, sizeof(smsg), 0,
+            (struct sockaddr *) &config.serverAddr, sizeof(config.serverAddr));
     if (s == -1) log_error(errno, "PING");
 }
 
@@ -228,7 +229,7 @@ static void * peer_handling(void * args) {
     struct timespec timeout_connect;            // timeout
     time_t timestamp, last_time = 0;
 
-    size_t u_len = 1<<16;
+    int u_len = 1<<16;
     u.raw = CHECK_ALLOC_FATAL(malloc(u_len));
 
 
@@ -644,7 +645,7 @@ static void * comm_socket(void * argument) {
     struct comm_args * args = argument;
     int sockfd = args->sockfd;
 
-    ssize_t r;
+    int r;
     int r_select;
     fd_set fd_select;                           // for the select call
     struct timeval timeout;                     // timeout used with select
@@ -666,7 +667,7 @@ static void * comm_socket(void * argument) {
 
         /* MESSAGE READ FROM THE SOCKET */
         if (r_select > 0) {
-            while ((r = recvfrom(sockfd,u.raw,u_len,0,(struct sockaddr *)&unknownaddr,&len)) != -1) {
+            while ((r = (int) recvfrom(sockfd,u.raw,u_len,0,(struct sockaddr *)&unknownaddr,&len)) != -1) {
                 /* from the RDV server ? */
                 if (config.serverAddr.sin_addr.s_addr == unknownaddr.sin_addr.s_addr
                     && config.serverAddr.sin_port == unknownaddr.sin_port) {
@@ -675,7 +676,7 @@ static void * comm_socket(void * argument) {
                 }
                 /* Message from another peer */
                 else {
-                    if (config.debug) printf("<  Received a UDP packet: size %zd from %s:%d\n", r, inet_ntoa(unknownaddr.sin_addr), ntohs(unknownaddr.sin_port));
+                    if (config.debug) printf("<  Received a UDP packet: size %d from %s:%d\n", r, inet_ntoa(unknownaddr.sin_addr), ntohs(unknownaddr.sin_port));
                     if (r >= (int) sizeof(dtlsheader_t) &&
                             (u.dtlsheader->contentType == DTLS_APPLICATION_DATA
                             || u.dtlsheader->contentType == DTLS_HANDSHAKE
@@ -779,7 +780,7 @@ static void * comm_tun(void * argument) {
 #ifdef HAVE_CYGWIN
             r = read_tun_finalize();
 #else
-            r = read_tun(tunfd, u.raw, MESSAGE_MAX_LENGTH);
+            r = (int) read_tun(tunfd, u.raw, MESSAGE_MAX_LENGTH);
 #endif
             if (config.debug)
                 printf(

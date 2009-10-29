@@ -35,7 +35,7 @@
 struct client *clients = NULL;
 int n_clients = 0;
 
-/* tree, items ordered by read address */
+/* tree, items ordered by real address */
 static void *clients_address_root = NULL;
 /* tree, items ordered by VPN IP */
 static void *clients_vpn_root = NULL;

@@ -393,7 +393,7 @@ void parseConfFile(const char *confFile) {
                 exit(EXIT_FAILURE);
             }
             /* read the netmask */
-            len = strtol(search, &end, 10);
+            len = (int) strtol(search, &end, 10);
             if ((unsigned int) (end-search) != strlen(search)) {// A character is not a figure
                 log_message("[%s] Parameter \""OPT_VPN_NETWORK"\": ill-formed netmask (1 or 2 figures)", confFile);
                 exit(EXIT_FAILURE);

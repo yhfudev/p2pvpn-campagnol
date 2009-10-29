@@ -566,7 +566,7 @@ void parser_remove_section(const char *section, parser_context_t *parser) {
 }
 
 /* remove comments # and ; */
-static int remove_comments(char *line) {
+static ssize_t remove_comments(char *line) {
     const char *src = line;
     char *dst = line;
 
@@ -612,7 +612,7 @@ static int remove_comments(char *line) {
  * return the length of token after expansion or -1 if the syntax of the line
  * continuation is wrong.
  */
-static int expand_token(char *token, int *quoted, int *continued) {
+static ssize_t expand_token(char *token, int *quoted, int *continued) {
     const char *src = token;
     char *dst = token;
     int escaped = 0;
@@ -717,7 +717,8 @@ void parser_read(const char *confFile, parser_context_t *parser, int debug) {
     char *section = NULL; // current section
     size_t name_length = 0, value_length = 0, section_length = 0;
 
-    int continued, r_continued;
+    int continued;
+    ssize_t r_continued;
     int quoted;
     char *token_end;
     char *line_eq;
