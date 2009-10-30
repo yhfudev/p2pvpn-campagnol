@@ -34,7 +34,7 @@ or in another file defined with
 print help, then exit
 .TP
 .BR "\-m" ", " "--max-clients" "=\fI[maximum number of clients]\fR"
-set the maximum number of registered clients. The default is to not limitate the number of clients. The use of this option is highly recommended.
+set the maximum number of registered clients. The default is 100 clients. Setting the value to 0 means unlimited (not recommended).
 .TP
 .BR "\-p" ", " "--port" "=\fI[port number]\fR"
 set the server UDP port
