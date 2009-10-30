@@ -906,8 +906,9 @@ of the VPN). The server uses the default UDP port 57888. Be sure that this port
 is reachable. The server doesn't require superuser privileges if you do not ask
 for a privileged port (<1024).
 
-Start the server and set the maximum number of registered clients (highly
-recommended):
+By default, the server accepts up to 100 registered clients.
+
+Start the server and adjust the maximum number of registered clients:
 @example
 campagnol_rdv --max-clients=20
 @end example

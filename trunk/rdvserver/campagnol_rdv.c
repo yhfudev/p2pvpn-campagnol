@@ -118,13 +118,14 @@ static void sig_handler(int sig) {
 static int parse_args(int argc, char **argv) {
     int opt;
     int i;
+    char *endptr;
 
     config.verbose = 0;
     config.daemonize = 0;
     config.debug = 0;
     config.dump = 0;
     config.serverport = SERVER_PORT_DEFAULT;
-    config.max_clients = 0;
+    config.max_clients = MAX_CLIENTS_DEFAULT;
     config.pidfile = NULL;
 
     struct option long_options[] = {
@@ -155,8 +156,9 @@ static int parse_args(int argc, char **argv) {
             case 'h' :
                 return 1;
             case 'm':
-                config.max_clients = atoi(optarg);
-                if (config.max_clients <= 0) {
+                errno = 0;
+                config.max_clients = (int) strtol(optarg, &endptr, 10);
+                if (errno != 0 || endptr == optarg || config.max_clients < 0) {
                     return 1;
                 }
                 break;

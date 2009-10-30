@@ -39,6 +39,7 @@
 #include <signal.h>
 
 #define SERVER_PORT_DEFAULT 57888
+#define MAX_CLIENTS_DEFAULT 100
 
 struct configuration {
     int verbose;                                // verbose
