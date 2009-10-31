@@ -20,6 +20,11 @@ v 0.3.3
 	* net_socket.c: Check the length of the interface name.
 	* ca_wrap.sh: Add a command to list the generated certificates.
 	* campagnol.c: Add a command line option to mlock the process.
+	* configuration.c: Reduce the default size of the queues from 50
+	packets to 20.
+
+	rdv server:
+	Set the default maximum number of clients to 100.
 
 v 0.3.2:
 	client:
