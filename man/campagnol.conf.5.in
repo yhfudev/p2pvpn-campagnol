@@ -300,7 +300,7 @@ explains the syntax for this parameter and how to determine a cipherlist.
 .\" *** CLIENT ***
 .SS [CLIENT] section
 .TP 15n
-.PARAMETER fifo_size integer 50
+.PARAMETER fifo_size integer 20
 .IP
 The internal queue length of Campagnol. The client uses one transmit and one
 receive queue.

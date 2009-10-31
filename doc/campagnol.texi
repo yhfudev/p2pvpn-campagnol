@@ -731,7 +731,7 @@ The syntax is explained in the openssl-ciphers(1) man page.
 @item fifo_size
 @cindex option fifo_size [CLIENT]
 The client uses one transmit and one receive queue per connection. This set the
-length of the queue (number of packets). The default is 50.
+length of the queue (number of packets). The default is 20.
 
 @item txqueue
 @cindex option txqueue [CLIENT]

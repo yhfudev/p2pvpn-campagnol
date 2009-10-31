@@ -71,7 +71,7 @@ void initConfig() {
     config.cipher_list = NULL;
     config.crl = NULL;
 
-    config.FIFO_size = 50;
+    config.FIFO_size = 20;
     config.tb_client_rate = 0.f;
     config.tb_connection_rate = 0.f;
     config.tb_client_size = 0;
