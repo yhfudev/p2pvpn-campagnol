@@ -152,8 +152,7 @@ static void *SSL_writing(void *args) {
         do {
             w = SSL_write(peer->ssl, packet, r);
             if (w <= 0) {
-                err = SSL_get_error(peer->ssl, w);
-                if (err == SSL_ERROR_WANT_WRITE) {
+                if (BIO_should_write(peer->wbio)) {
                     FD_ZERO(&set);
                     FD_SET(peer->sockfd, &set);
                     select(peer->sockfd+1, NULL, &set, NULL, NULL);
@@ -168,6 +167,7 @@ static void *SSL_writing(void *args) {
         } while (1);
 
         if (w <= 0) {
+            err = SSL_get_error(peer->ssl, w);
             if (err == SSL_ERROR_ZERO_RETURN)
                 break;
             else if (err == SSL_ERROR_SSL && !SSL_get_shutdown(peer->ssl)) {
@@ -216,6 +216,10 @@ static void end_SSL_writing(struct client *peer) {
  * The SSL stream is fed by calling BIO_write with peer->rbio
  *
  * args: the connected peer (struct client *)
+ *
+ * TODO: this design with two threads per session is not supported by OpenSSL
+ * and broken. It breaks at least SSL_get_error (WANT_READ and WANT_WRITE are
+ * not reliable) and it would also break SSL renegotiations.
  */
 static void * peer_handling(void * args) {
     int r;
@@ -373,6 +377,7 @@ static void * peer_handling(void * args) {
                 if (r <= 0) { // error or shutdown
                     err = SSL_get_error(peer->ssl, r);
                     switch(err) {
+                        case SSL_ERROR_WANT_WRITE:
                         case SSL_ERROR_WANT_READ:
                             continue;
                             break;
