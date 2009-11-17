@@ -27,9 +27,8 @@
 
 extern void log_init(int enabled, int verbose, const char *name);
 extern void log_close(void);
-extern __attribute__((format(printf,2,3))) void _log_message(FILE *out,
-        const char *format, ...);
-#define log_message(format, ...) _log_message(stdout, format, ##__VA_ARGS__)
+extern __attribute__((format(printf,1,2))) void log_message(const char *format,
+        ...);
 extern __attribute__((format(printf,1,2))) void log_message_verb(
         const char *format, ...);
 extern __attribute__((format(printf,1,2))) void log_message_syslog(
