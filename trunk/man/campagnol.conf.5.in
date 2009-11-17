@@ -21,7 +21,7 @@
 ..
 .\" campagnol.conf path
 .ds filename @sysconfdir@/campagnol.conf
-.TH CAMPAGNOL.CONF 5 "Septempber 2, 2009" "@version@"
+.TH CAMPAGNOL.CONF 5 "November 16, 2009" "@version@"
 .SH NAME
 campagnol.conf - Campagnol VPN client configuration file
 .SH SYNOPSIS
@@ -32,18 +32,28 @@ reads its configuration datas from
 .I \*[filename]
 (or another file specified in the command line).
 .PP
-This file has an INI-like syntax. Section names are written between square
-brackets []. Comments start with a \[oq];\[cq] or a \[oq]#\[cq]
-and continue to the end of the line.
-Values may be quoted between double quotation marks and special characters can
-be escaped with 
-\[oq]\\\[cq]
-(\\\\, \\n, \\# ...). The white-spaces around the section names,
-the parameters and their values are stripped. All names are case sensitive.
+This file has an INI-like syntax with extensions.
+.SH SYNTAX
+Section name are written between square brackets ([ and ]). All the parameters
+written after a section declaration belong to that section. The remaining text
+on the line after the declaration is ignored. The white spaces around the
+section names are ignored. The name are case sensitive.
 .PP
-A \[oq]\\\[cq] at the end of the value is treated as a line continuation. It is
-removed and the parser continue to read the value with the next line. Quoted
-values can also extend to several lines.
+Comments start with a \[oq];\[cq] or a \[oq]#\[cq] and continue to the end of
+the line.
+.PP
+Parameters are defined with the syntax \[oq]name = value\[cq]. The white spaces
+around the name and the value are stripped. The name are case sensitive.
+.PP
+Values may be quoted between double quotation marks. A quoted value can expand
+over multiple lines. A \[oq]\\\[cq] at the end of the line is treated as a line
+continuation. It is removed and the parser continue to read the value with the
+next line. Several quotted or unquotted values on the same line are
+concatenated.
+.PP
+Special characters in the section names, parameters and values can be escaped
+with \[oq]\\\[cq]. Most of the C escape sequences are accepted in addition to
+\\#, \\;, \\[, \\] and \\=.
 .PP
 .ft C
 .nf
@@ -56,13 +66,14 @@ values can also extend to several lines.
 [MULTILINE 1]
 # The following definitions are equivalent
 a = "aze rty uio"
-b = "aze"\\
+b = aze " rty " uio
+c = "aze"\\
     " rty "\\
     "uio"
-c = aze\\
+d = aze\\
     " rty "\\
     uio
-d = "aze\\
+e = "aze\\
  rty \\
 uio"
 
@@ -81,8 +92,9 @@ c = "aze\\n"\\
 .PP
 Inside a section, the syntax
 .I ${param}
-can be used to reference another value (param) from the same section. For
-example:
+can be used to reference another value (param) from the same section. To protect
+a \[oq]${..}\[cq] sequence from being expanded, it can be escaped with
+\[oq]$${..}\[cq].
 .PP
 .ft C
 .nf
@@ -96,7 +108,6 @@ key = ${basedir}/key.pem           # expands to
 .ft
 .PP
 The configuration file defines the following sections:
-.PP
 .RS
 .TP 13n
 .B [NETWORK]
@@ -112,13 +123,9 @@ All the DTLS-related parameters.
 .B [CLIENT]
 This section is used to adjust the client's behavior.
 .TP
-.B [UP]
-This section is optional and defines the commands executed to configure the TUN
-device.
-.TP
-.B [DOWN]
-This section is optional and defines the commands executed when the TUN device
-is closed.
+.B [COMMANDS]
+This section defines the commands executed when the TUN device is opened or
+closed.
 .RE
 .SH PARAMETERS
 This is a list of all the available parameters, with their default value if they
@@ -349,21 +356,31 @@ contexts of the involved NATs and firewalls.
 .PARAMETER max_clients integer 100
 .IP
 The maximum number of simultaneously opened connections with other clients.
-.\" *** UP ***
-.SS [UP] section
-This section is optional. It defines the programs that are launched to configure
-the TUN device. It should be used to run ifconfig, set the MTU, add a route,
-open some port on the firewall...
+.\" *** COMMANDS ***
+.SS [COMMANDS] section
+This section defines the programs that are launched when the TUN device is
+opened or closed. It can be used to configure the TUN device with ifconfig, 
+set the MTU, add a route, open some port on the firewall...
 .PP
-If the section is not defined, campagnol will execute some platform-dependent
-default commands to setup the interface, its MTU and add a route. If it is
-empty, then no command are executed.
-.PP
-The order of execution of the shell commands is defined by their keys wich are
-sorted with 
-.BR strcmp (3).
-.PP
-The following special variables are available:
+Campagnol can also execute some platform-dependend default commands to setup the
+interface, its MTU and add a route.
+.TP 15n
+.PARAMETER default_up "[yes/no]" "yes"
+.IP
+Use the default commands when the TUN device is opened instead of the commands
+defined in this section.
+.TP
+.PARAMETER default_down "[yes/no]" "yes"
+.IP
+Use the default commands when the TUN device is closed instead of the commands
+defined in this section.
+.TP
+.PARAMETER up "shell command" "plateform-dependent"
+.IP
+A shell command executed when the TUN device is opened and \fBdefault_up\fR is
+false. This parameter can be defined multiple times.
+.IP
+Inside the command, the following special variables are available:
 .RS
 .TP 8n
 .B %D
@@ -396,60 +413,58 @@ the netmask of the VPN in dot-decimal notation.
 .B %%
 the \[oq]%\[cq] character
 .RE
+.TP
+.PARAMETER down "shell command" "plateform-dependent"
+.IP
+A shell command executed when the TUN device is closed and \fBdefault_down\fR
+is false. This parameter can be defined multiple times.
+.IP
+The same spacial variables are available.
 .PP
-The following example corresponds to the default shell commands for Linux.
-.PP
+This is the default up commands for Linux:
+.IP
 .ft C
 .nf
-[UP]
-01 = "ifconfig %D %V mtu %M up"
-02 = "ip route replace %N via %V || route add -net %N gw %V"
+up = "ifconfig %D %V mtu %M up"
+up = "ip route replace %N via %V || route add -net %N gw %V"
 .fi
 .ft
 .PP
-This is the default commands for FreeBSD:
-.PP
+This is the default up commands for FreeBSD:
+.IP
 .ft C
 .nf
-01 = "ifconfig %D inet %V %V mtu %M up"
-02 = "route add -net %N %V"
+up = "ifconfig %D inet %V %V mtu %M up"
+up = "route add -net %N %V"
 .fi
 .ft
 .PP
-This is the default commands for OpenBSD. Note that you do not need to manually
-set the MTU with ifconfig for OpenBSD.
-.PP
+This is the default up commands for OpenBSD (note that you do not need to
+manually set the MTU with ifconfig for OpenBSD):
+.IP
 .ft C
 .nf
-01 = "ifconfig %D inet %V %V up"
-02 = "route add -net %N %V"
+up = "ifconfig %D inet %V %V up"
+up = "route add -net %N %V"
 .fi
 .ft
 .PP
-This is the default commands for Cygwin. Note that the MTU is already set by
-changing its value in the registry.
-.PP
+This is the default up command for Cygwin (note that the MTU is already set by
+Campagnol by changing its value in the registry):
+.IP
 .ft C
 .nf
-01 = "netsh interface ip set address name=%D static %V %n none"
+up = "netsh interface ip set address name=%D static %V %n none"
 .fi
 .ft
-.\" *** DOWN ***
-.SS [DOWN] section
-This section is optional. It has the same syntax than the
-.BR [UP]
-section but it defines the shell commands that are executed when the TUN device
-is closed. The same special variables are available.
 .PP
-The default for Linux, OpenBSD and Cygwin is to execute nothing.
+There is no default down command on Linux, OpenBSD and Cygwin.
 .PP
-The following corresponds to the default for FreeBSD. We need to explicitely
-close the TUN device with ifconfig:
-.PP
+This is the defaul down command for FreeBSD:
+.IP
 .ft C
 .nf
-[DOWN]
-01 = "ifconfig %D destroy"
+down = "ifconfig %D destroy"
 .fi
 .ft
 .SH SEE ALSO
