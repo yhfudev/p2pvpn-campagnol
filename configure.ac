@@ -131,9 +131,9 @@ AC_FUNC_STRERROR_R
 AC_CHECK_FUNCS([mlockall])
 
 # Checks for library functions.
-# getline and tdestroy are missing on FreeBSD and OpenBSD
+# tdestroy is missing on FreeBSD and OpenBSD
 AC_CONFIG_LIBOBJ_DIR([lib])
-AC_REPLACE_FUNCS([getline tdestroy])
+AC_REPLACE_FUNCS([tdestroy])
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
