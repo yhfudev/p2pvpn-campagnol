@@ -22,6 +22,10 @@ v 0.3.3
 	* campagnol.c: Add a command line option to mlock the process.
 	* configuration.c: Reduce the default size of the queues from 50
 	packets to 20.
+	* configuration: Replace the parser with a more readable and
+	maintainable parser. The new parser supports parameters with multiple
+	values and preserves the order of the definitions. The [UP] and [DOWN]
+	sections have been replaced with a single [COMMANDS] section.
 
 	rdv server:
 	Set the default maximum number of clients to 100.

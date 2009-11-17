@@ -572,16 +572,10 @@ All the DTLS-related parameters (key, certificates and CRL, @dots{})
 @cindex section [CLIENT]
 This section is used to adjust the client's behavior.
 
-@item [UP]
-@cindex section [UP]
-This section is optional and defines the commands executed to configure the TUN
-device. When the section is @emph{not} defined, the default commands are
-executed.
-
-@item [DOWN]
-@cindex section [DOWN]
-This section is similar to the @option{UP} section but defines the commands
-that are executed when the TUN device is closed.
+@item [COMMANDS]
+@cindex section [COMMANDS]
+This section defines the commands executed when the TUN device is opened or
+closed.
 @end table
 
 
@@ -594,6 +588,7 @@ for most setup.
 
 @table @strong
 @item [NETWORK]
+@cindex section [NETWORK]
 @table @option
 @item local_host
 @cindex option local_host [NETWORK]
@@ -625,6 +620,7 @@ found.
 @end table
 
 @item [VPN]
+@cindex section [VPN]
 @table @option
 @item vpn_ip
 @cindex option vpn_ip [VPN]
@@ -637,6 +633,7 @@ value must be the same for all the clients of the VPN.
 @end table
 
 @item [SECURITY]
+@cindex section [SECURITY]
 @cindex key, configuration
 @cindex certificate, configuration
 @table @option
@@ -660,6 +657,7 @@ The PEM file containing a root certificate chain
 
 @table @strong
 @item [NETWORK]
+@cindex section [NETWORK]
 @table @option
 @item local_port
 @cindex option local_port [NETWORK]
@@ -697,6 +695,7 @@ developed and tested with the “tap0901” driver but other versions may also w
 @end table
 
 @item [SECURITY]
+@cindex section [SECURITY]
 @table @option
 @item ca_certificate_dir
 @cindex option ca_certificate_dir [SECURITY]
@@ -727,6 +726,7 @@ The syntax is explained in the openssl-ciphers(1) man page.
 @end table
 
 @item [CLIENT]
+@cindex section [CLIENT]
 @table @option
 @item fifo_size
 @cindex option fifo_size [CLIENT]
@@ -776,23 +776,39 @@ before sending a keepalive message.
 The maximum number of connections allowed.
 @end table
 
-@item [UP]
-@cindex section [UP]
-This  section  is optional. It defines the programs that are launched to
-configure the TUN device. It should be used to run ifconfig, set the MTU, add a
-route, open some port on the firewall...
+@item [COMMANDS]
+@cindex section [COMMANDS]
+This  section  defines  the  programs  that  are launched when the TUN device is
+opened or closed. It can be used to configure the TUN device with ifconfig, set
+the MTU, add a route, open some port on the firewall...
 
-If the section is not defined, Campagnol will execute some platform-dependent
-default commands to setup the interface, its MTU and add a route. If it is
-empty, then no command are executed.
+Campagnol can also execute some platform-dependend default commands to setup the
+interface, its MTU and add a route.
 
-See the man page campagnol.conf(5) for a detailed description of this section
-and the default commands.
+See the man page @samp{campagnol.conf(5)} for a detailed description of this
+section and the default commands.
 
-@item [DOWN]
-@cindex section [DOWN]
-Similar to the @option{UP} section, but defines the commands to execute when
-the TUN device is closed. See campagnol.conf(5).
+@table @option
+@item default_up
+@cindex option default_up [COMMANDS]
+Use the default commands when the TUN device is opened instead of the commands
+defined in this section.
+
+@item default_down
+@cindex option default_down [COMMANDS]
+Use the default commands when the TUN device is closed instead of the commands
+defined in this section.
+
+@item up
+@cindex option up [COMMANDS]
+Add a shell command to execute when the TUN device is opened and
+@option{default_up} is false. The parameter can be specified multiple times.
+
+@item down
+@cindex option down [COMMANDS]
+Add a shell command to execute when the TUN device is closed and
+@option{default_down} is false. The parameter can be specified multiple times.
+@end table
 
 @end table
 
