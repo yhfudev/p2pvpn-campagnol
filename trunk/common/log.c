@@ -69,12 +69,23 @@ __attribute__((format(printf,2,0))) static inline void log_message_inner(
 }
 
 /*
- * Log a message with systlog or print it to out
+ * Log a message with syslog or print it to out
  */
-void _log_message(FILE *out, const char *format, ...) {
+static __attribute__((format(printf,2,3))) void _log_message(FILE *out,
+        const char *format, ...) {
     va_list ap;
     va_start(ap, format);
     log_message_inner(out, format, ap);
+    va_end(ap);
+}
+
+/*
+ * Log a message with syslog or print it to stdout
+ */
+void log_message(const char *format, ...) {
+    va_list ap;
+    va_start(ap, format);
+    log_message_inner(stdout, format, ap);
     va_end(ap);
 }
 
