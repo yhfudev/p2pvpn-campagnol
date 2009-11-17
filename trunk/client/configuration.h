@@ -73,7 +73,7 @@ struct configuration {
 };
 
 extern void initConfig(void);
-extern void parseConfFile(const char *file);
+extern int parseConfFile(const char *file);
 extern void freeConfig(void);
 
 /* names of sections and options */
@@ -81,8 +81,7 @@ extern void freeConfig(void);
 #define SECTION_VPN         "VPN"
 #define SECTION_CLIENT      "CLIENT"
 #define SECTION_SECURITY    "SECURITY"
-#define SECTION_UP          "UP"
-#define SECTION_DOWN        "DOWN"
+#define SECTION_COMMANDS    "COMMANDS"
 
 #define OPT_LOCAL_HOST      "local_host"
 #define OPT_LOCAL_PORT      "local_port"
@@ -116,5 +115,10 @@ extern void freeConfig(void);
 #define OPT_TIMEOUT         "timeout"
 #define OPT_KEEPALIVE       "keepalive"
 #define OPT_MAX_CLIENTS     "max_clients"
+
+#define OPT_DEFAULT_UP      "default_up"
+#define OPT_DEFAULT_DOWN    "default_down"
+#define OPT_UP              "up"
+#define OPT_DOWN            "down"
 
 #endif /*CONFIGURATION_H_*/

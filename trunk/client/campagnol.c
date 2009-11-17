@@ -248,7 +248,9 @@ int main (int argc, char **argv) {
     SSL_load_error_strings();
     setup_openssl_thread();
 
-    parseConfFile(configFile);
+    if (parseConfFile(configFile) != 0) {
+        goto clean_end;
+    }
 
     if (config.daemonize) {
         const char *pidtmp = (config.pidfile != NULL) ? config.pidfile : DEFAULT_PID_FILE;

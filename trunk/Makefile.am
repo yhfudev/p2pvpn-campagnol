@@ -6,7 +6,6 @@ AUTOMAKE_OPTIONS = subdir-objects
 # -----------------------
 
 EXTRA_DIST = Changelog \
-	lib/getline.c lib/getline.h \
 	lib/tdestroy.c lib/tdestroy.h \
 	lib/cygwin_byteorder.h
 bin_PROGRAMS=
@@ -59,6 +58,8 @@ info_TEXINFOS = doc/campagnol.texi
 noinst_LIBRARIES = common/libcommon.a
 common_libcommon_a_SOURCES = common/bss_fifo.c common/bss_fifo.h \
 	common/config_parser.c common/config_parser.h \
+	common/config_io.c \
+	common/strlib.c common/strlib.h \
 	common/log.c common/log.h\
 	common/pthread_wrap.h common/sem_wrap.h
 common_libcommon_a_LIBADD = $(LIBOBJS)
