@@ -17,12 +17,12 @@
  */
 
 /*
- * This module handle INI configuration files.
+ * This module handles INI configuration files.
  *
  * Syntax :
  * - Sections
  *   - sections are defined between square brackets : [section]
- *   - sections ends at the next section declaration or at EOF
+ *   - sections end at the next section declaration or at EOF
  *   - section's names are case sensitive
  *   - whitespaces around the section's name are stripped
  *   - the name can contain whitespaces
@@ -54,7 +54,7 @@
  *     file is equivalent to "/home/foo/file"
  *   - If a ${.} sequence must not be expanded, it can be protected with $${.}
  * - Escaped characters:
- *   - the C escape sequences except \nnn and \xhh
+ *   - the C escape sequences
  *   - \# for #
  *   - \; for ;
  *   - \[ for [

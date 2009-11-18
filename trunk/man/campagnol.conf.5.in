@@ -52,8 +52,8 @@ next line. Several quotted or unquotted values on the same line are
 concatenated.
 .PP
 Special characters in the section names, parameters and values can be escaped
-with \[oq]\\\[cq]. Most of the C escape sequences are accepted in addition to
-\\#, \\;, \\[, \\] and \\=.
+with \[oq]\\\[cq]. The C escape sequences are accepted (\\, \\n, \\xhh...) in
+addition to \\#, \\;, \\[, \\] and \\=.
 .PP
 .ft C
 .nf
