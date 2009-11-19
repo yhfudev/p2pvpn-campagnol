@@ -23,10 +23,14 @@
 #include <errno.h>
 #include <ctype.h>
 #include <string.h>
-#include <stdarg.h>
 
-#include "log.h"
 #include "strlib.h"
+
+// The log API uses the library, so we don't use log.h
+// Prefix the perror argument with the file and line number
+#define _PERROR_QUOTE(x) #x
+#define PERROR_QUOTE(x) _PERROR_QUOTE(x)
+#define PERROR(str) perror(__FILE__ ":" PERROR_QUOTE(__LINE__) ": " str)
 
 /*
  * Init a string buffer.
@@ -81,7 +85,11 @@ void strlib_grow(strlib_buf_t *sb, size_t n) {
             sb->buflen = buflen_new;
         else
             sb->buflen = buflen_grow;
-        sb->s = CHECK_ALLOC_FATAL(realloc(sb->s, sb->buflen));
+        sb->s = realloc(sb->s, sb->buflen);
+        if (sb->s == NULL) {
+            PERROR("realloc");
+            exit(EXIT_FAILURE);
+        }
     }
 }
 
@@ -125,20 +133,27 @@ void strlib_appendbuf(strlib_buf_t *dest, strlib_buf_t *src) {
 /* Append a formated string to the buffer */
 void strlib_appendf(strlib_buf_t *sb, const char *fmt, ...) {
     va_list ap;
-    int len;
-
     va_start(ap, fmt);
-    len = vsnprintf(sb->s + sb->len, sb->buflen - sb->len, fmt, ap);
+    strlib_vappendf(sb, fmt, ap);
     va_end(ap);
+}
+
+/* Append a formated string to the buffer with a va_list */
+void strlib_vappendf(strlib_buf_t *sb, const char *fmt, va_list ap) {
+    int len;
+    va_list aq;
+    va_copy(aq, ap);
+    len = vsnprintf(sb->s + sb->len, sb->buflen - sb->len, fmt, aq);
+    va_end(aq);
     if (len < 0) {
-        log_error(errno, "vsnprintf");
+        PERROR("vsnprintf");
         exit(EXIT_FAILURE);
     }
     if (len >= (int) (sb->buflen - sb->len)) {
         strlib_grow(sb, len);
-        va_start(ap, fmt);
+        va_copy(aq, ap);
         len = vsnprintf(sb->s + sb->len, sb->buflen - sb->len, fmt, ap);
-        va_end(ap);
+        va_end(aq);
     }
     sb->len += len;
 }
