@@ -132,8 +132,8 @@ static SSL_CTX * createContext(int is_client) {
     }
     if (!SSL_CTX_use_certificate_chain_file(ctx, config.certificate_pem)) {
         ERR_print_errors_fp(stderr);
-        log_error(-1, "SSL_CTX_use_certificate_chain_file");
-        log_message("%s", config.certificate_pem);
+        log_error(-1, "SSL_CTX_use_certificate_chain_file (%s)",
+                config.certificate_pem);
         SSL_CTX_free(ctx);
         return NULL;
     }
