@@ -43,7 +43,7 @@ int create_socket(void) {
     if (config.debug) printf("Create the UDP socket...\n");
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd<0) {
-        log_message("Error: creating socket");
+        log_error(errno, "Could not create the socket");
         return -1;
     }
 
@@ -57,8 +57,7 @@ int create_socket(void) {
         }
         strcpy(ifr.ifr_name, config.iface);
         if(setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, &ifr, sizeof(ifr))) {
-            log_error(errno, "Could not bind the socket to the interface");
-            log_message("interface: %s", config.iface);
+            log_error(errno, "Could not bind the socket to the interface (%s)", config.iface);
             return -1;
         }
     }
@@ -69,8 +68,9 @@ int create_socket(void) {
     localaddr.sin_addr.s_addr=config.localIP.s_addr;
     if (config.localport != 0) localaddr.sin_port=htons(config.localport);
     if (bind(sockfd,(struct sockaddr *)&localaddr,sizeof(localaddr))<0) {
-        log_error(errno, "Could not bind the socket to the local IP address");
-        log_message("address: %s:%u", inet_ntoa(config.localIP), config.localport);
+        log_error(errno,
+                "Could not bind the socket to the local IP address (%s port %u)",
+                inet_ntoa(config.localIP), config.localport);
         return -1;
     }
     if (config.verbose) printf("Socket opened\n");

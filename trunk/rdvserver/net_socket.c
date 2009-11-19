@@ -40,7 +40,7 @@ int create_socket(void) {
     if (config.debug) printf("Create the UDP socket...\n");
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd<0) {
-        log_message("Error: creating socket");
+        log_error(errno, "Could not create the socket");
         return -1;
     }
 
@@ -49,8 +49,8 @@ int create_socket(void) {
     localaddr.sin_addr.s_addr = INADDR_ANY;
     if (config.serverport != 0) localaddr.sin_port=htons(config.serverport);
     if (bind(sockfd,(struct sockaddr *)&localaddr,sizeof(localaddr))<0) {
-        log_error(errno, "Could not bind the socket to the port");
-        log_message("port: %d", config.serverport);
+        log_error(errno, "Could not bind the socket to the port (%d)",
+                config.serverport);
         return -1;
     }
 
