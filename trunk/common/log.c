@@ -29,6 +29,7 @@
 #include <string.h>
 
 #include "log.h"
+#include "strlib.h"
 
 static int log_enabled;
 static int log_verbose;
@@ -57,7 +58,7 @@ void log_close(void) {
  * Log format/ap if log_enabled is true
  * Otherwise print the message to out if not NULL
  */
-__attribute__((format(printf,2,0))) static inline void log_message_inner(
+__attribute__((format(printf,2,0))) static inline void log_message_inner_v(
         FILE *out, const char *format, va_list ap) {
     if (log_enabled) {
         vsyslog(LOG_NOTICE, format, ap);
@@ -69,13 +70,13 @@ __attribute__((format(printf,2,0))) static inline void log_message_inner(
 }
 
 /*
- * Log a message with syslog or print it to out
+ * Equivalent to log_message_inner_v but called with a variable argument list
  */
-static __attribute__((format(printf,2,3))) void _log_message(FILE *out,
-        const char *format, ...) {
+__attribute__((format(printf,2,3))) static inline void log_message_inner(
+        FILE *out, const char *format, ...) {
     va_list ap;
     va_start(ap, format);
-    log_message_inner(out, format, ap);
+    log_message_inner_v(out, format, ap);
     va_end(ap);
 }
 
@@ -85,7 +86,7 @@ static __attribute__((format(printf,2,3))) void _log_message(FILE *out,
 void log_message(const char *format, ...) {
     va_list ap;
     va_start(ap, format);
-    log_message_inner(stdout, format, ap);
+    log_message_inner_v(stdout, format, ap);
     va_end(ap);
 }
 
@@ -96,7 +97,7 @@ void log_message(const char *format, ...) {
 void log_message_verb(const char *format, ...) {
     va_list ap;
     va_start(ap, format);
-    log_message_inner(log_verbose ? stdout : NULL, format, ap);
+    log_message_inner_v(log_verbose ? stdout : NULL, format, ap);
     va_end(ap);
 }
 
@@ -117,8 +118,10 @@ void log_message_syslog(const char *format, ...) {
  * or to stderr
  */
 void _log_error(const char *filename, unsigned int linenumber,
-        const char *functionname, int error_code, const char *s) {
+        const char *functionname, int error_code, const char *format, ...) {
     char *error_str = NULL;
+    va_list ap;
+    strlib_buf_t sb;
 
     if (error_code != -1) {
 #ifdef HAVE_STRERROR_R
@@ -139,30 +142,33 @@ void _log_error(const char *filename, unsigned int linenumber,
 #endif /* HAVE_STRERROR_R */
     }
 
-    if (s) {
-        if (error_code != -1)
-            _log_message(stderr, "%s:%u:%s: %s: %s", filename, linenumber,
-                    functionname, s, error_str);
-        else
-            _log_message(stderr, "%s:%u:%s: %s", filename, linenumber,
-                    functionname, s);
+    strlib_init(&sb);
+    strlib_appendf(&sb, "%s:%u:%s: ", filename, linenumber, functionname);
+    if (format != NULL) {
+        va_start(ap, format);
+        strlib_vappendf(&sb, format, ap);
+        va_end(ap);
     }
     else {
-        if (error_code != -1)
-            _log_message(stderr, "%s:%u:%s: %s", filename, linenumber,
-                    functionname, error_str);
-        else
-            _log_message(stderr, "%s:%u:%s: Error", filename, linenumber,
-                    functionname);
+        strlib_appendf(&sb, "%s", "Error");
     }
+
+    if (error_code != -1)
+        log_message_inner(stderr, "%s: %s", sb.s, error_str);
+    else
+        log_message_inner(stderr, "%s", sb.s);
+
+    strlib_free(&sb);
 }
 
 #ifdef HAVE_CYGWIN
 #   include <w32api/windows.h>
 
 void _log_error_cygwin(const char *filename, unsigned int linenumber,
-        const char *functionname, int error_code, const char *s) {
+        const char *functionname, int error_code, const char *format, ...) {
     char error_str[1024];
+    va_list ap;
+    strlib_buf_t sb;
 
     if (error_code != -1) {
         if (!FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
@@ -172,21 +178,22 @@ void _log_error_cygwin(const char *filename, unsigned int linenumber,
         }
     }
 
-    if (s) {
-        if (error_code != -1)
-        _log_message(stderr, "%s:%u:%s: %s: %s", filename, linenumber,
-                functionname, s, error_str);
-        else
-        _log_message(stderr, "%s:%u:%s: %s", filename, linenumber,
-                functionname, s);
+    strlib_init(&sb);
+    strlib_appendf(&sb, "%s:%u:%s: ", filename, linenumber, functionname);
+    if (format != NULL) {
+        va_start(ap, format);
+        strlib_vappendf(&sb, format, ap);
+        va_end(ap);
     }
     else {
-        if (error_code != -1)
-        _log_message(stderr, "%s:%u:%s: %s", filename, linenumber,
-                functionname, error_str);
-        else
-        _log_message(stderr, "%s:%u:%s: Error", filename, linenumber,
-                functionname);
+        strlib_appendf(&sb, "%s", "Error");
     }
+
+    if (error_code != -1)
+        log_message_inner(stderr, "%s: %s", sb.s, error_str);
+    else
+        log_message_inner(stderr, "%s", sb.s);
+
+    strlib_free(&sb);
 }
 #endif

@@ -612,7 +612,7 @@ void parser_read(const char *confFile, parser_context_t *parser, int debug) {
 
     conf = fopen(confFile, "r");
     if (conf == NULL) {
-        log_error(errno, confFile);
+        log_error(errno, "%s", confFile);
         exit(EXIT_FAILURE);
     }
 

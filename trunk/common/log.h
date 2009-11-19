@@ -33,15 +33,18 @@ extern __attribute__((format(printf,1,2))) void log_message_verb(
         const char *format, ...);
 extern __attribute__((format(printf,1,2))) void log_message_syslog(
         const char *format, ...);
-extern void _log_error(const char *filename, unsigned int linenumber,
-        const char *functionname, int error_code, const char *s);
-#define log_error(error_code,msg)\
-    _log_error(__FILE__, __LINE__, __func__, error_code, msg)
+extern __attribute__((format(printf,5,6))) void _log_error(const char *filename,
+        unsigned int linenumber, const char *functionname, int error_code,
+        const char *format, ...);
+#define log_error(error_code, format, ...) \
+    _log_error(__FILE__, __LINE__, __func__, error_code, format, ##__VA_ARGS__)
 #ifdef HAVE_CYGWIN
-extern void _log_error_cygwin(const char *filename, unsigned int linenumber,
-        const char *functionname, int error_code, const char *s);
-#define log_error_cygwin(error_code,msg)\
-    _log_error_cygwin(__FILE__, __LINE__, __func__, error_code, msg)
+extern __attribute__((format(printf,5,6))) void _log_error_cygwin(
+        const char *filename, unsigned int linenumber, const char *functionname,
+        int error_code, const char *format, ...);
+#define log_error_cygwin(error_code, format, ...)\
+    _log_error_cygwin(__FILE__, __LINE__, __func__, error_code, format,\
+            ##__VA_ARGS__)
 #endif
 
 /* log and exit(1) if __ptr == NULL
