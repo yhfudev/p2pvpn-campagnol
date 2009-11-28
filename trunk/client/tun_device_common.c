@@ -28,119 +28,57 @@
 #include "tun_device.h"
 #include "configuration.h"
 #include "../common/log.h"
+#include "../common/strlib.h"
 
-/* "itoa"
- * return a newly allocated string
+/* Replace the special variables %D %V ... in s and write the result in sb
  */
-static char *int_to_str(int i) {
-    int out_len = 5;
-    int r;
-    char *out = CHECK_ALLOC_FATAL(malloc(out_len));
-
-    r = snprintf(out, out_len, "%d", i);
-    if (r >= out_len) {
-        free(out);
-        out_len = r+1;
-        out = CHECK_ALLOC_FATAL(malloc(out_len));
-        r = snprintf(out, out_len, "%d", i);
-    }
-    if (r == -1) {
-        return NULL;
-    }
-    return out;
-}
-
-/* Replace the special variables %D %V ... in s
- * return a newly allocated string
- */
-static char *replace_args(const char *s, char *device) {
-    char * out;
-    size_t len, len_written = 0;
+static void replace_args(strlib_buf_t *sb, const char *s, char *device) {
     const char *src;
-    char *dst;
-    char *tmp;
-    size_t tmp_len;
-    char buf[3];
-    int must_free_tmp = 0;
 
-    buf[0] = '%';
-    buf[2] = '\0';
-
-    len = strlen(s)+1;
-    out = CHECK_ALLOC_FATAL(malloc(len));
-
+    strlib_reset(sb);
     src = s;
-    dst = out;
 
-    while(*src) {
+    while (*src) {
         switch(*src) {
             case '%':
-                tmp = NULL;
-                switch(*(src+1)) {
+                switch (*(src+1)) {
                     case '%':
-                        must_free_tmp = 1;
-                        tmp = CHECK_ALLOC_FATAL(strdup("%"));
+                        strlib_push(sb, '%');
                         break;
                     case 'D': // device
-                        tmp = device;
+                        strlib_appendf(sb, "%s", device);
                         break;
                     case 'V': // VPN IP
-                        tmp = inet_ntoa (config.vpnIP);
+                        strlib_appendf(sb, "%s", inet_ntoa (config.vpnIP));
                         break;
                     case 'M': // MTU
-                        must_free_tmp = 1;
-                        tmp = int_to_str(config.tun_mtu);
+                        strlib_appendf(sb, "%d", config.tun_mtu);
                         break;
                     case 'N': // netmask as a string
-                        tmp = config.network;
+                        strlib_appendf(sb, "%s", config.network);
                         break;
                     case 'n': // netmask
-                        tmp = inet_ntoa(config.vpnNetmask);
+                        strlib_appendf(sb, "%s", inet_ntoa(config.vpnNetmask));
                         break;
                     case 'P': // local UDP port
-                        must_free_tmp = 1;
-                        tmp = int_to_str(config.localport);
+                        strlib_appendf(sb, "%d", config.localport);
                         break;
                     case 'I': // local IP
-                        tmp = inet_ntoa(config.localIP);
+                        strlib_appendf(sb, "%s", inet_ntoa(config.localIP));
                         break;
                     default:
-                        buf[1] = *(src+1);
-                        tmp = buf;
+                        strlib_push(sb, '%');
+                        strlib_push(sb, *(src+1));
                         break;
                 }
-                if (tmp != NULL) {
-                    tmp_len = strlen(tmp);
-                    len += tmp_len;// add replacement, remove %X, add two quotes
-                    out = CHECK_ALLOC_FATAL(realloc(out, len));
-                    dst = out + len_written;
-                    memcpy(dst, "'", 1);
-                    memcpy(dst+1, tmp, tmp_len);
-                    memcpy(dst+tmp_len+1, "'", 1);
-                    if (must_free_tmp) {
-                        free(tmp);
-                        must_free_tmp = 0;
-                    }
-                    dst += tmp_len + 2;
-                    len_written += tmp_len + 2;
-                    src += 2;
-                }
+                src+= 2;
                 break;
             default:
-                *dst = *src;
-                dst++;
+                strlib_push(sb, *src);
                 src++;
-                len_written++;
                 break;
         }
     }
-
-    *dst = '\0';
-    len_written++;
-
-    ASSERT(len == len_written);
-
-    return out;
 }
 
 /* execute the commands in progs or if default_progs if progs is NULL
@@ -148,17 +86,18 @@ static char *replace_args(const char *s, char *device) {
 static void exec_internal(char **progs, const char ** default_progs, char *device) {
     int r;
     const char **programs = progs != NULL ? (const char **) progs : default_progs;
-    char *cmd;
+    strlib_buf_t sb;
+    strlib_init(&sb);
     if (programs != NULL) {
         while (*programs) {
-            cmd = replace_args(*programs, device);
-            log_message_level(2, "Running: %s", cmd);
-            r = system(cmd);
+            replace_args(&sb, *programs, device);
+            log_message_level(2, "Running: %s", sb.s);
+            r = system(sb.s);
             log_message_level(2, "Exited with status %d", WEXITSTATUS(r));
-            free(cmd);
             programs++;
         }
     }
+    strlib_free(&sb);
 }
 
 void exec_up(char *device) {
