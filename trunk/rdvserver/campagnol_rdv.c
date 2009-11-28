@@ -170,6 +170,8 @@ static int parse_args(int argc, char **argv) {
                 config.serverport = (uint16_t) i;
                 break;
             case 'P' :
+                if (config.pidfile)
+                    free(config.pidfile);
                 config.pidfile = CHECK_ALLOC_FATAL(strdup(optarg));
                 break;
             case 'v':
