@@ -28,6 +28,7 @@ v 0.3.3
 	sections have been replaced with a single [COMMANDS] section.
 	* daemon: --verbose and --debug are now also used with --daemon to
 	adjust the log verbosity.
+	* tun_device: fix the local UDP port in the up and down commands.
 
 	rdv server:
 	* configuration: Set the default maximum number of clients to 100.

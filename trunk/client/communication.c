@@ -505,8 +505,6 @@ static inline void end_peer_handling(struct client *peer, int islocked) {
  */
 static int register_rdv(struct rdv_args *args) {
     message_t smsg, rmsg;
-    struct sockaddr_in tmp_addr;
-    socklen_t tmp_addr_len;
 
     int r;
     int registered = 0;
@@ -516,10 +514,7 @@ static int register_rdv(struct rdv_args *args) {
     log_message_level(1, "Registering with the RDV server...");
     if (config.send_local_addr == 1) {
         init_smsg(&smsg, HELLO, config.vpnIP.s_addr, config.localIP.s_addr);
-        // get the local port
-        tmp_addr_len = sizeof(tmp_addr);
-        getsockname(args->sockfd, (struct sockaddr *) &tmp_addr, &tmp_addr_len);
-        smsg.port = tmp_addr.sin_port;
+        smsg.port = htons(config.localport);
     }
     else if (config.send_local_addr == 2) {
         init_smsg(&smsg, HELLO, config.vpnIP.s_addr,
