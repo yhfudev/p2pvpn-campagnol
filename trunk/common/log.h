@@ -53,7 +53,7 @@ extern __attribute__((format(printf,5,6))) void _log_error_cygwin(
 #define CHECK_ALLOC_FATAL(__ptr)    ({\
     void *ptr = __ptr;  \
     if (ptr == NULL)  {\
-        log_error(errno, NULL);    \
+        log_error(errno, "Fatal error");    \
         exit(EXIT_FAILURE); \
     }   \
     ptr;    \
