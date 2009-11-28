@@ -146,8 +146,7 @@ int init_tun() {
     DWORD len;
     ULONG status;
 
-    if (config.verbose)
-        printf("TUN interface initialization\n");
+    log_message_level(1, "TUN interface initialization");
 
     if (find_tap(adapterid, sizeof(adapterid), &key, config.tun_device) != 0) {
         log_error(-1, "Unable to find a TUN/TAP device");
@@ -198,8 +197,7 @@ int init_tun() {
         return -1;
     }
 
-    if (config.verbose)
-        printf("TUN interface configuration (%s MTU %d)\n", device,
+    log_message_level(1, "TUN interface configuration (%s MTU %d)", device,
                 config.tun_mtu);
     exec_up(device);
 

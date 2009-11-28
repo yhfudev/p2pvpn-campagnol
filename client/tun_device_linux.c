@@ -53,7 +53,7 @@ int init_tun() {
     struct ifreq ifr;           // interface request used to open the TUN device
 
     /* Open TUN interface */
-    if (config.verbose) printf("TUN interface initialization\n");
+    log_message_level(1, "TUN interface initialization");
     if( (tunfd = open("/dev/net/tun", O_RDWR)) < 0 ) {
          log_error(errno, "Could not open /dev/net/tun");
          return -1;
@@ -111,7 +111,8 @@ int init_tun() {
 
     /* Inteface configuration */
     device = CHECK_ALLOC_FATAL(strdup(ifr.ifr_name));
-    if (config.verbose) printf("TUN interface configuration (%s MTU %d)\n", device, config.tun_mtu);
+    log_message_level(1, "TUN interface configuration (%s MTU %d)", device,
+            config.tun_mtu);
     exec_up(device);
 
     return tunfd;

@@ -61,7 +61,7 @@ int init_tun() {
     struct tuninfo infos;
 
     /* Open TUN interface */
-    if (config.verbose) printf("TUN interface initialization\n");
+    log_message_level(1, "TUN interface initialization");
     for (i=0; i<255; i++) {
         // search for the first tun device
         snprintf(devicename, sizeof(devicename), "/dev/tun%d", i);
@@ -83,7 +83,8 @@ int init_tun() {
     }
 
     /* Inteface configuration */
-    if (config.verbose) printf("TUN interface configuration (tun%d MTU %d)\n", i, config.tun_mtu);
+    log_message_level(1, "TUN interface configuration (tun%d MTU %d)", i,
+            config.tun_mtu);
 
     device = CHECK_ALLOC_FATAL(malloc(20));
     snprintf(device, 20, "tun%d", i);

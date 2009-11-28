@@ -25,12 +25,12 @@
 
 #include <stdio.h>
 
-extern void log_init(int enabled, int verbose, const char *name);
+extern void log_init(int enabled, int level, const char *name);
 extern void log_close(void);
 extern __attribute__((format(printf,1,2))) void log_message(const char *format,
         ...);
-extern __attribute__((format(printf,1,2))) void log_message_verb(
-        const char *format, ...);
+extern __attribute__((format(printf,2,3))) void log_message_level(
+        int level, const char *format, ...);
 extern __attribute__((format(printf,1,2))) void log_message_syslog(
         const char *format, ...);
 extern __attribute__((format(printf,5,6))) void _log_error(const char *filename,

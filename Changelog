@@ -26,9 +26,13 @@ v 0.3.3
 	maintainable parser. The new parser supports parameters with multiple
 	values and preserves the order of the definitions. The [UP] and [DOWN]
 	sections have been replaced with a single [COMMANDS] section.
+	* daemon: --verbose and --debug are now also used with --daemon to
+	adjust the log verbosity.
 
 	rdv server:
-	Set the default maximum number of clients to 100.
+	* configuration: Set the default maximum number of clients to 100.
+	* daemon: --verbose and --debug are now also used with --daemon to
+	adjust the log verbosity.
 
 v 0.3.2:
 	client:
