@@ -106,6 +106,8 @@ static int parse_args(int argc, char **argv, const char **configFile) {
 #endif
                 break;
             case 'p' :
+                if (config.pidfile)
+                    free(config.pidfile);
                 config.pidfile = CHECK_ALLOC_FATAL(strdup(optarg));
                 break;
             case 'V' :
