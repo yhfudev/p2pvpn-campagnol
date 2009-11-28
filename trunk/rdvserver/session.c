@@ -70,9 +70,8 @@ struct session * add_session(struct client *peer1, struct client *peer2, time_t 
         return NULL;
     }
 
-    if (config.verbose) {
-        printf("New connection from %s to %s\n", peer1->vpnIP_string, peer2->vpnIP_string);
-    }
+    log_message_level(1, "New connection from %s to %s", peer1->vpnIP_string,
+            peer2->vpnIP_string);
 
     sess->next = sessions;
     sess->prev = NULL;
@@ -83,9 +82,8 @@ struct session * add_session(struct client *peer1, struct client *peer2, time_t 
 }
 
 void remove_session(struct session *s) {
-    if (config.verbose) {
-        printf("Remove connection from %s to %s\n", s->peer1->vpnIP_string, s->peer2->vpnIP_string);
-    }
+    log_message_level(1, "Remove connection from %s to %s",
+            s->peer1->vpnIP_string, s->peer2->vpnIP_string);
     if (s->next) s->next->prev = s->prev;
     if (s->prev) {
         s->prev->next = s->next;

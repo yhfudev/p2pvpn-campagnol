@@ -58,7 +58,7 @@ int init_tun() {
     struct stat buf;
 
     /* Open TUN interface */
-    if (config.verbose) printf("TUN interface initialization\n");
+    log_message_level(1, "TUN interface initialization");
     if( (tunfd = open("/dev/tun", O_RDWR)) < 0 ) {
          log_error(errno, "Could not open /dev/net/tun");
          return -1;
@@ -78,7 +78,8 @@ int init_tun() {
     fstat(tunfd, &buf);
 
     /* Inteface configuration */
-    if (config.verbose) printf("TUN interface configuration (%s MTU %d)\n", devname(buf.st_rdev, S_IFCHR), config.tun_mtu);
+    log_message_level(1, "TUN interface configuration (%s MTU %d)",
+            devname(buf.st_rdev, S_IFCHR), config.tun_mtu);
     exec_up(devname(buf.st_rdev, S_IFCHR));
 
     return tunfd;

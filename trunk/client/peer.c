@@ -128,14 +128,12 @@ static struct client * peers_add(int sockfd, int tunfd, int state, time_t t,
     GLOBAL_MUTEXLOCK;
 
     if (peers_n_clients >= config.max_clients) {
-        if (config.debug) {
-            printf("Cannot open a new connection: maximum number of connections reached\n");
-        }
+        log_message_level(2, "Cannot open a new connection: maximum number of connections reached");
         GLOBAL_MUTEXUNLOCK;
         return NULL;
     }
 
-    if (config.debug) printf("Adding new client %s\n", inet_ntoa(vpnIP));
+    log_message_level(2, "Adding new client %s", inet_ntoa(vpnIP));
     struct client *peer = malloc(sizeof(struct client));
     if (peer == NULL) {
         log_error(errno, "Cannot allocate a new client (malloc)");
@@ -257,7 +255,7 @@ int peers_register_endpoint(struct client *peer) {
  */
 void peers_remove(struct client *peer) {
     GLOBAL_MUTEXLOCK;
-    if (config.debug) printf("Deleting the client %s\n", inet_ntoa(peer->vpnIP));
+    log_message_level(2, "Deleting the client %s", inet_ntoa(peer->vpnIP));
 
     conditionDestroy(&peer->cond_connected);
     mutexDestroy(&peer->mutex);

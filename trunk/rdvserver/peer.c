@@ -78,10 +78,7 @@ struct client * add_client(int sockfd, time_t t, struct in_addr clientIP,
     void *slot1, *slot2;
 
     if (config.max_clients != 0 && n_clients >= config.max_clients) {
-        if (config.debug) {
-            printf(
-                    "Cannot register a new client: maximum number of clients reached\n");
-        }
+        log_message_level(2, "Cannot register a new client: maximum number of clients reached");
         return NULL;
     }
 
@@ -116,19 +113,17 @@ struct client * add_client(int sockfd, time_t t, struct in_addr clientIP,
         return NULL;
     }
 
-    if (config.verbose) {
-        peer->vpnIP_string = CHECK_ALLOC_FATAL(strdup(inet_ntoa(vpnIP)));
-        peer->clientaddr_string = CHECK_ALLOC_FATAL(malloc(32));
-        if (peer->clientaddr_string != NULL) {
-            r = snprintf(peer->clientaddr_string, 32, "%s/%d", inet_ntoa(clientIP), ntohs(clientPort));
-            if (r >= 32) {
-                peer->clientaddr_string[31] = '\0';
-            }
+    peer->vpnIP_string = CHECK_ALLOC_FATAL(strdup(inet_ntoa(vpnIP)));
+    peer->clientaddr_string = CHECK_ALLOC_FATAL(malloc(32));
+    if (peer->clientaddr_string != NULL) {
+        r = snprintf(peer->clientaddr_string, 32, "%s/%d", inet_ntoa(clientIP), ntohs(clientPort));
+        if (r >= 32) {
+            peer->clientaddr_string[31] = '\0';
         }
     }
 
-    if (config.verbose)
-        printf("Adding new client [%s] %s\n", peer->clientaddr_string, peer->vpnIP_string);
+    log_message_level(1, "Adding new client [%s] %s", peer->clientaddr_string,
+            peer->vpnIP_string);
 
     peer->next = clients;
     peer->prev = NULL;
@@ -144,8 +139,8 @@ struct client * add_client(int sockfd, time_t t, struct in_addr clientIP,
  * Remove a client from the list and trees
  */
 void remove_client(struct client *peer) {
-    if (config.verbose)
-        printf("Deleting the client [%s] %s\n", peer->clientaddr_string, peer->vpnIP_string);
+    log_message_level(1, "Deleting the client [%s] %s", peer->clientaddr_string,
+            peer->vpnIP_string);
 
     if (peer->next)
         peer->next->prev = peer->prev;
@@ -156,10 +151,8 @@ void remove_client(struct client *peer) {
         clients = peer->next;
     }
 
-    if (config.verbose) {
-        free(peer->clientaddr_string);
-        free(peer->vpnIP_string);
-    }
+    free(peer->clientaddr_string);
+    free(peer->vpnIP_string);
 
     tdelete(peer, &clients_address_root, compare_clients_addr);
     tdelete(peer, &clients_vpn_root, compare_clients_vpn);

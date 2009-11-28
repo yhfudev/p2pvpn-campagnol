@@ -201,19 +201,19 @@ static void * sig_handler(void * arg __attribute__((unused))) {
                 timer_ping.it_value.tv_sec = 0;
                 timer_ping.it_value.tv_usec = 0;
                 setitimer(ITIMER_REAL, &timer_ping, NULL);
-                log_message("received signal %d, exiting...", sig);
+                log_message("Received signal %d, exiting...", sig);
                 return NULL;
             case SIGALRM:
                 handler_sigTimerPing(sig);
                 break;
             case SIGUSR1:
-                log_message("received signal %d, reloading client...", sig);
+                log_message("Received signal %d, reloading client...", sig);
                 end_campagnol = 1;
                 reload = 1;
                 break;
             case SIGUSR2:
                 if (!end_campagnol) {
-                    log_message("received signal %d, recreating DTLS contexts...", sig);
+                    log_message("Received signal %d, recreating DTLS contexts...", sig);
                     rebuildDTLS();
                 }
                 break;
@@ -231,6 +231,7 @@ int main (int argc, char **argv) {
     int pa;
     int exit_status = EXIT_SUCCESS;
     int send_bye = 0;
+    int log_level = 0;
 
     initConfig();
 
@@ -242,8 +243,15 @@ int main (int argc, char **argv) {
         version();
     }
 
+    if (config.debug)
+        log_level = 2;
+    else if (config.verbose)
+        log_level = 1;
+    else
+        log_level = 0;
+
     if (config.daemonize) daemonize();
-    log_init(config.daemonize, config.verbose, "campagnol");
+    log_init(config.daemonize, log_level, "campagnol");
 
     /* init openssl */
     SSL_library_init();
@@ -340,7 +348,7 @@ int main (int argc, char **argv) {
         smsg.ip2.s_addr = 0;
         smsg.port = 0;
         smsg.type = BYE;
-        if (config.debug) printf("Sending BYE\n");
+        log_message_level(2, "Sending BYE");
         xsendto(sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
     }
 

@@ -37,7 +37,7 @@ int create_socket(void) {
     struct sockaddr_in localaddr;
 
     /* Socket creation */
-    if (config.debug) printf("Create the UDP socket...\n");
+    log_message_level(2, "Creating the UDP socket...");
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd<0) {
         log_error(errno, "Could not create the socket");

@@ -106,7 +106,7 @@ static void *punch(void *arg) {
     struct client *peer = (struct client *)arg;
     message_t smsg;
     init_smsg(&smsg, PUNCH, config.vpnIP.s_addr, 0);
-    if (config.verbose) printf("punch %s %d\n", inet_ntoa(peer->clientaddr.sin_addr), ntohs(peer->clientaddr.sin_port));
+    log_message_level(2, "Punching %s %d", inet_ntoa(peer->clientaddr.sin_addr), ntohs(peer->clientaddr.sin_port));
     for (i=0; i<PUNCH_NUMBER; i++) {
         CLIENT_MUTEXLOCK(peer);
         if (peer->state == CLOSED) {
@@ -325,7 +325,7 @@ static void * peer_handling(void * args) {
         else if (peer->state == ESTABLISHED) {
             CLIENT_MUTEXUNLOCK(peer);
             int end_reading_loop = 0;
-            log_message_verb("New DTLS connection opened with peer %s", inet_ntoa(peer->vpnIP));
+            log_message_level(1, "New DTLS connection opened with peer %s", inet_ntoa(peer->vpnIP));
 
             /* Start the writing thread */
             start_SSL_writing(peer);
@@ -347,8 +347,8 @@ static void * peer_handling(void * args) {
 
                         if ((!peer->is_dtls_client && (timestamp - peer->time) > (config.timeout + 10))
                                 || (peer->is_dtls_client && (timestamp - peer->time) > config.timeout)) {
-                            if (config.debug) printf("timeout: %s\n", inet_ntoa(peer->vpnIP));
-                            log_message_verb("Closing DTLS connection with peer %s", inet_ntoa(peer->vpnIP));
+                            log_message_level(2, "Session timeout: %s", inet_ntoa(peer->vpnIP));
+                            log_message_level(1, "Closing DTLS connection with peer %s", inet_ntoa(peer->vpnIP));
                             init_smsg(&smsg, CLOSE_CONNECTION, peer->vpnIP.s_addr, 0);
                             xsendto(peer->sockfd, &smsg, sizeof(smsg), 0, (struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr));
                             CHANGE_STATE(peer, CLOSED);
@@ -382,11 +382,11 @@ static void * peer_handling(void * args) {
                             continue;
                             break;
                         case SSL_ERROR_ZERO_RETURN: // shutdown received
-                            log_message_verb("DTLS connection closed by peer %s", inet_ntoa(peer->vpnIP));
+                            log_message_level(1, "DTLS connection closed by peer %s", inet_ntoa(peer->vpnIP));
                             break;
                         case SSL_ERROR_SYSCALL: // end_peer_handling or error
                             if (peer->shutdown) { //end_peer_handling was called
-                                log_message_verb("Closing DTLS connection with peer %s", inet_ntoa(peer->vpnIP));
+                                log_message_level(1, "Closing DTLS connection with peer %s", inet_ntoa(peer->vpnIP));
                                 r = SSL_shutdown(peer->ssl);
                                 while (r == 0 && peer->ssl->s3->alert_dispatch) {
                                     /* data are still being written out,
@@ -513,7 +513,7 @@ static int register_rdv(struct rdv_args *args) {
     int registeringTries = 0;
 
     /* Create a HELLO message */
-    log_message_verb("Registering with the RDV server...");
+    log_message_level(1, "Registering with the RDV server...");
     if (config.send_local_addr == 1) {
         init_smsg(&smsg, HELLO, config.vpnIP.s_addr, config.localIP.s_addr);
         // get the local port
@@ -534,8 +534,7 @@ static int register_rdv(struct rdv_args *args) {
             && !end_campagnol) {
         /* sending HELLO to the server */
         registeringTries++;
-        if (config.debug)
-            printf("Sending HELLO\n");
+        log_message_level(2, "Sending HELLO");
         if (xsendto(args->sockfd, &smsg, sizeof(smsg), 0,
                 (struct sockaddr *) &config.serverAddr,
                 sizeof(config.serverAddr)) == -1) {
@@ -548,7 +547,7 @@ static int register_rdv(struct rdv_args *args) {
             switch (rmsg.type) {
                 case OK:
                     /* Registration OK */
-                    log_message_verb("Registration complete");
+                    log_message_level(1, "Registration complete");
                     registered = 1;
                     break;
                 case NOK:
@@ -565,7 +564,7 @@ static int register_rdv(struct rdv_args *args) {
 
     /* Registration failed. The server may be down */
     if (!registered) {
-        log_message_verb("The connection with the RDV server failed");
+        log_message_level(1, "The connection with the RDV server failed");
     }
 
     return registered;
@@ -939,7 +938,7 @@ int start_vpn(int sockfd, int tunfd) {
     GLOBAL_MUTEXUNLOCK;
 
     init_smsg(&smsg, BYE, config.vpnIP.s_addr, 0);
-    if (config.debug) printf("Sending BYE\n");
+    log_message_level(2, "Sending BYE");
     if (xsendto(sockfd,&smsg,sizeof(smsg),0,(struct sockaddr *)&config.serverAddr, sizeof(config.serverAddr)) == -1) {
         log_error(errno, "sendto");
     }

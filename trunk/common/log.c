@@ -32,15 +32,16 @@
 #include "strlib.h"
 
 static int log_enabled;
-static int log_verbose;
+static int log_level;
 
 /*
  * Initialise syslog if enabled is true
+ * level is the minimum level for log_message_level
  * Use name for the logs
  */
-void log_init(int enabled, int verbose, const char *name) {
+void log_init(int enabled, int level, const char *name) {
     log_enabled = enabled;
-    log_verbose = verbose;
+    log_level = level;
     if (log_enabled) {
         openlog(name, LOG_PID, LOG_DAEMON);
     }
@@ -91,14 +92,15 @@ void log_message(const char *format, ...) {
 }
 
 /*
- * Log a message with syslog or print it to stdout
- * if log_verbose is true
+ * If level <= log_level, log a message with syslog or print it to stdout
  */
-void log_message_verb(const char *format, ...) {
+void log_message_level(int level, const char *format, ...) {
     va_list ap;
-    va_start(ap, format);
-    log_message_inner_v(log_verbose ? stdout : NULL, format, ap);
-    va_end(ap);
+    if (level <= log_level) {
+        va_start(ap, format);
+        log_message_inner_v(stdout, format, ap);
+        va_end(ap);
+    }
 }
 
 /*
@@ -106,11 +108,11 @@ void log_message_verb(const char *format, ...) {
  */
 void log_message_syslog(const char *format, ...) {
     va_list ap;
-    va_start(ap, format);
     if (log_enabled) {
+        va_start(ap, format);
         vsyslog(LOG_NOTICE, format, ap);
+        va_end(ap);
     }
-    va_end(ap);
 }
 
 /*

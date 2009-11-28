@@ -152,13 +152,9 @@ static void exec_internal(char **progs, const char ** default_progs, char *devic
     if (programs != NULL) {
         while (*programs) {
             cmd = replace_args(*programs, device);
-            if (config.debug) {
-                printf("Running: %s\n", cmd);
-            }
+            log_message_level(2, "Running: %s", cmd);
             r = system(cmd);
-            if (config.debug) {
-                printf("Exited with status %d\n", WEXITSTATUS(r));
-            }
+            log_message_level(2, "Exited with status %d", WEXITSTATUS(r));
             free(cmd);
             programs++;
         }

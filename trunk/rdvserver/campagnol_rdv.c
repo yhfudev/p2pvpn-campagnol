@@ -108,7 +108,7 @@ static void sig_handler(int sig) {
         case SIGTERM:
         case SIGQUIT:
             end_server = 1;
-            log_message("received signal %d, exiting...", sig);
+            log_message("Received signal %d, exiting...", sig);
             break;
         default:
             break;
@@ -198,6 +198,7 @@ int main(int argc, char **argv) {
     int pa;
     int sockfd;
     int exit_status = EXIT_SUCCESS;
+    int log_level;
 
     pa = parse_args(argc, argv);
     if (pa == 1) {
@@ -207,8 +208,15 @@ int main(int argc, char **argv) {
         version();
     }
 
+    if (config.debug)
+        log_level = 2;
+    else if (config.verbose)
+        log_level = 1;
+    else
+        log_level = 0;
+
     if (config.daemonize) daemonize();
-    log_init(config.daemonize, config.verbose, "campagnol_rdv");
+    log_init(config.daemonize, log_level, "campagnol_rdv");
 
     if (config.daemonize) {
         const char *pidtmp = (config.pidfile != NULL) ? config.pidfile : DEFAULT_PID_FILE;
