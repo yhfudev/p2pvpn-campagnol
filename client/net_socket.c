@@ -37,7 +37,8 @@
  */
 int create_socket(void) {
     int sockfd;
-    struct sockaddr_in localaddr;
+    struct sockaddr_in localaddr, tmp_addr;
+    socklen_t tmp_addr_len;
 
     /* Socket creation */
     log_message_level(2, "Creating the UDP socket...");
@@ -74,6 +75,13 @@ int create_socket(void) {
         return -1;
     }
     log_message_level(1, "Socket opened");
+
+    /* Get the local port */
+    if (config.localport == 0) {
+        tmp_addr_len = sizeof(tmp_addr);
+        getsockname(sockfd, (struct sockaddr *) &tmp_addr, &tmp_addr_len);
+        config.localport = ntohs(tmp_addr.sin_port);
+    }
 
     return sockfd;
 }
