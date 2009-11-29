@@ -46,7 +46,7 @@ static void replace_args(strlib_buf_t *sb, const char *s, char *device) {
                         strlib_push(sb, '%');
                         break;
                     case 'D': // device
-                        strlib_appendf(sb, "%s", device);
+                        strlib_appendf(sb, "'%s'", device);
                         break;
                     case 'V': // VPN IP
                         strlib_appendf(sb, "%s", inet_ntoa (config.vpnIP));
@@ -55,7 +55,7 @@ static void replace_args(strlib_buf_t *sb, const char *s, char *device) {
                         strlib_appendf(sb, "%d", config.tun_mtu);
                         break;
                     case 'N': // netmask as a string
-                        strlib_appendf(sb, "%s", config.network);
+                        strlib_appendf(sb, "'%s'", config.network);
                         break;
                     case 'n': // netmask
                         strlib_appendf(sb, "%s", inet_ntoa(config.vpnNetmask));
