@@ -668,7 +668,9 @@ Set the local UDP port. Useful if you have some firewall or NAT rules to define.
 @cindex option tun_mtu [NETWORK]
 This parameter set the MTU of the TUN device (i.e. the MTU of the VPN). It's
 recommended to use the same value for all the clients although it's not
-strictly required (using different MTU has an impact on the performance).
+strictly required, unless you have an OpenBSD client in the network (it seems
+that the OpenBSD TUN driver doesn't accept IP frames larger than the MTU). Using
+different MTU sizes has an impact on the performance.
 
 The default value (1419) is the  highest value  which should  yield packets
 smaller than 1500 bytes (the usual MTU for ethernet) whichever cipher algorithm
