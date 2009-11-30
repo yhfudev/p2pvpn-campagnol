@@ -1,0 +1,83 @@
+# texi2html init file used to create the manual for Campagnol's website
+# use with --init-file=xhtml.init --init-file=utf8.init before
+
+$EXTENSION = 'php';
+
+# Use the correct doctype for xhtml 1.0 transitional
+$DOCTYPE = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">';
+
+# campagnol.css
+$EXTRA_HEAD = '<link rel="stylesheet" type="text/css" href="../campagnol.css" title="CSS" media="screen" />';
+
+# include the header and menu
+$AFTER_BODY_OPEN = '<?php
+  require_once("../base.php");
+  begin_manual_file();
+?>';
+
+# The xhtml_page_head function is broken with php (default conf with short_open_tag=On)
+# because of the <?xml declaration.
+# Replace $T2H_DOCTYPE by $DOCTYPE
+# The $T2H_LANG variable also seems to be wrong, replace by $LANG
+# Replace T2H_THISDOC{program} by $Texi2HTML::THISDOC{'program'} for the Generator tag
+# Update the xml declaration for utf-8
+$print_page_head = \&T2H_campagnol_print_page_head;
+sub T2H_campagnol_print_page_head
+{
+    my $fh = shift;
+    my $longtitle = "$Texi2HTML::THISDOC{'title_no_texi'}";
+    $longtitle .= ": $Texi2HTML::NO_TEXI{'This'}" if exists $T2H_NO_TEXI{'This'};
+    print $fh <<EOT;
+<?php
+  echo "<?xml version=\\"1.0\\" encoding=\\"utf-8\\"?>\\n";
+?>
+$DOCTYPE
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="$LANG" lang="$LANG">
+$T2H_THISDOC{'copying'}<!-- Created on $Texi2HTML::THISDOC{today} by $Texi2HTML::THISDOC{program} -->
+<!--
+$Texi2HTML::THISDOC{program_authors}
+-->
+<head>
+<title>$longtitle</title>
+
+<meta name="description" content="$longtitle"/>
+<meta name="keywords" content="$longtitle"/>
+<meta name="resource-type" content="document"/>
+<meta name="distribution" content="global"/>
+<meta name="Generator" content="$Texi2HTML::THISDOC{'program'}"/>
+$EXTRA_HEAD
+</head>
+
+<body $T2H_BODYTEXT>
+$AFTER_BODY_OPEN
+EOT
+}
+
+
+# the default function inserts $PRE_BODY_CLOSE before the </p> element
+$print_page_foot = \&T2H_campagnol_print_page_foot;
+sub T2H_campagnol_print_page_foot
+{
+    my $fh = shift;
+    print $fh <<EOT;
+<p>
+ <span style="font-size: smaller">
+  This document was generated $ADDRESS
+  using <a href="$T2H_THISDOC{program_homepage}"><i>$Texi2HTML::THISDOC{program}</i></a>.
+ </span>
+ <br/>
+</p>
+$PRE_BODY_CLOSE
+</body>
+</html>
+EOT
+}
+
+# close the file + footer
+$PRE_BODY_CLOSE = '<?php
+  end_manual_file();
+?>';
+
+# Remove the rendering of the @minus command in @itemize lists
+$special_list_commands{'itemize'} = { 'bullet' => '', 'minus' => '' };
+
