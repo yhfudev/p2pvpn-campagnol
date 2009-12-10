@@ -1,0 +1,25 @@
+#!/sbin/runscript
+# Copyright 1999-2009 Gentoo Foundation
+# Distributed under the terms of the GNU General Public License v2
+# $Header: $
+
+PIDFILE=/var/run/campagnol_rdv.pid
+
+depend() {
+	need net
+}
+
+start() {
+	ebegin "Starting Campagnol VPN RDV server"
+	start-stop-daemon --start --exec /usr/bin/campagnol_rdv \
+		--pidfile ${PIDFILE} -- \
+		$RDV_OPTS --daemon --pidfile=$PIDFILE
+	eend $?
+}
+
+stop() {
+	ebegin "Stopping Campagnol VPN RDV server"
+	start-stop-daemon --stop --exec /usr/bin/campagnol_rdv \
+		--pidfile ${PIDFILE}
+	eend $?
+}
