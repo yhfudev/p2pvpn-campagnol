@@ -7,11 +7,10 @@ $EXTENSION = 'php';
 $DOCTYPE = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">';
 
 # campagnol.css
-$EXTRA_HEAD = '<link rel="stylesheet" type="text/css" href="../campagnol.css" title="CSS" media="screen" />';
+$EXTRA_HEAD = '<?php echo "<link rel=\"stylesheet\" type=\"text/css\" href=\"$webpath/campagnol.css\" title=\"CSS\" media=\"screen\" />\n"; ?>';
 
 # include the header and menu
 $AFTER_BODY_OPEN = '<?php
-  require_once("../base.php");
   begin_manual_file();
 ?>';
 
@@ -29,6 +28,7 @@ sub T2H_campagnol_print_page_head
     $longtitle .= ": $Texi2HTML::NO_TEXI{'This'}" if exists $T2H_NO_TEXI{'This'};
     print $fh <<EOT;
 <?php
+  require_once("../base.php");
   echo "<?xml version=\\"1.0\\" encoding=\\"utf-8\\"?>\\n";
 ?>
 $DOCTYPE
