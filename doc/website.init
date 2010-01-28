@@ -7,7 +7,7 @@ $EXTENSION = 'php';
 $DOCTYPE = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">';
 
 # campagnol.css
-$EXTRA_HEAD = '<?php echo "<link rel=\"stylesheet\" type=\"text/css\" href=\"$webpath/campagnol.css\" title=\"CSS\" media=\"screen\" />\n"; ?>';
+$EXTRA_HEAD = '<?php echo "<link rel=\"stylesheet\" type=\"text/css\" href=\"${webpath}campagnol.css\" title=\"CSS\" media=\"screen\" />\n"; ?>';
 
 # include the header and menu
 $AFTER_BODY_OPEN = '<?php
