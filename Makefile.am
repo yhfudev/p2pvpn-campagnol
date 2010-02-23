@@ -95,6 +95,9 @@ endif
 if HAVE_CYGWIN
 campagnol_SOURCES += client/tun_device_cygwin.c client/tap-win32_common.h
 endif
+if HAVE_NETBSD
+campagnol_SOURCES += client/tun_device_netbsd.c
+endif
 
 campagnol_CPPFLAGS = -DSYSCONFDIR="\"$(sysconfdir)\"" -DLOCALSTATEDIR="\"$(localstatedir)\"" @OPENSSL_CFLAGS@
 campagnol_CFLAGS = @COMMON_CFLAGS@

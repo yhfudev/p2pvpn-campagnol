@@ -250,15 +250,14 @@ certificates
 @cindex platforms
 
 Both the client and the RDV server are written in C. The supported platforms
-are Linux, FreeBSD, OpenBSD and 32 bits Windows with Cygwin.
+are Linux, FreeBSD, OpenBSD, NetBSD and 32 bits Windows with Cygwin.
 
 @cindex Cygwin TAP driver
 @cindex TAP-Win32
 The Cygwin port uses the TAP driver from the OpenVPN project (TAP-Win32) which
 is available on their website (@uref{http://openvpn.net}).
 
-NetBSD and Solaris are candidate platforms for a port since they also have a
-TUN/TAP driver.
+Solaris is a candidate platform for a port since it also has a TUN/TAP driver.
 
 @comment -----------------------------------------------------------------------
 @comment -----------------------------------------------------------------------
@@ -303,9 +302,9 @@ Cygwin users should use the OpenSSL package from the Cygwin repository.
 For Linux and *BSD, the TUN/TAP driver is the @emph{Universal TUN/TAP driver}
 from @uref{http://vtun.sourceforge.net/tun}.
 
-This driver is included in the default kernel of FreeBSD and OpenBSD. The kernel
-option on Linux is called @samp{CONFIG_TUN} (which is enabled in the default
-kernel of most Linux distributions).
+This driver is included in the default kernel of FreeBSD, NetBSD and OpenBSD.
+The kernel option on Linux is called @samp{CONFIG_TUN} (which is enabled in the
+default kernel of most Linux distributions).
 @end itemize
 
 @comment -----------------------------------------------------------------------
@@ -668,9 +667,9 @@ Set the local UDP port. Useful if you have some firewall or NAT rules to define.
 @cindex option tun_mtu [NETWORK]
 This parameter set the MTU of the TUN device (i.e. the MTU of the VPN). It's
 recommended to use the same value for all the clients although it's not
-strictly required, unless you have an OpenBSD client in the network (it seems
-that the OpenBSD TUN driver doesn't accept IP frames larger than the MTU). Using
-different MTU sizes has an impact on the performance.
+strictly required, unless you have an OpenBSD or NetBSD client in the network
+(it seems that their TUN driver doesn't accept IP frames larger than the MTU).
+Using different MTU sizes has an impact on the performance.
 
 The default value (1419) is the  highest value  which should  yield packets
 smaller than 1500 bytes (the usual MTU for ethernet) whichever cipher algorithm
