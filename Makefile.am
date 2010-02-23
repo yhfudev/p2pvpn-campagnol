@@ -5,9 +5,7 @@ AUTOMAKE_OPTIONS = subdir-objects
 # Misc and initialization
 # -----------------------
 
-EXTRA_DIST = Changelog \
-	lib/tdestroy.c lib/tdestroy.h \
-	lib/cygwin_byteorder.h
+EXTRA_DIST = Changelog
 bin_PROGRAMS=
 AM_CFLAGS = @COMMON_CFLAGS@
 
@@ -54,6 +52,9 @@ info_TEXINFOS = doc/campagnol.texi
 
 # common/libcommon.a
 # ------------------
+
+EXTRA_DIST += lib/tdestroy.h \
+	lib/cygwin_byteorder.h
 
 noinst_LIBRARIES = common/libcommon.a
 common_libcommon_a_SOURCES = common/bss_fifo.c common/bss_fifo.h \
@@ -136,4 +137,12 @@ campagnol_rdv_CPPFLAGS = -DSYSCONFDIR="\"$(sysconfdir)\"" -DLOCALSTATEDIR="\"$(l
 campagnol_rdv_CFLAGS = @COMMON_CFLAGS@
 campagnol_rdv_LDADD = common/libcommon.a @RDV_LIBS@
 endif
+
+
+# contrib
+# -------
+
+EXTRA_DIST += contrib/gentoo/campagnol-0.3.3.ebuild \
+	contrib/gentoo/campagnol.conf contrib/gentoo/campagnol.init \
+	contrib/gentoo/campagnol_rdv.conf contrib/gentoo/campagnol_rdv.init
 

@@ -60,7 +60,9 @@ src_install() {
 pkg_postinst() {
 	elog "You will need the Universal TUN/TAP driver compiled into"
 	elog "your kernel or as a module to use ${PN}."
-	elog ""
-	elog "The /usr/share/${PN}/samples directory contains some samples"
-	elog "certificates and a helper script to create and manage a small CA."
+	if use client; then
+		elog ""
+		elog "The /usr/share/${PN}/samples directory contains some samples"
+		elog "certificates and a helper script to create and manage a small CA."
+	fi
 }
