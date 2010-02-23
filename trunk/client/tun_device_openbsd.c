@@ -52,7 +52,6 @@ const char *tun_default_down[] = {NULL};
 /*
  * Open a new TUN virtual interface
  * Bind it to config.vpnIP
- * istun : use a TUN or TAP device
  */
 int init_tun() {
     int tunfd = 0;

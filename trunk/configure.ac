@@ -70,6 +70,10 @@ case $host_os in
 		AC_DEFINE([HAVE_CYGWIN], [1], [Cygwin])
 		host_os_name=cygwin
 		;;
+	*netbsd*)
+		AC_DEFINE([HAVE_NETBSD], [1], [NetBSD])
+		host_os_name=netbsd
+		;;
 	*)
 		AC_MSG_ERROR([OS $host_os not supported.])
 		;;
@@ -78,6 +82,7 @@ AM_CONDITIONAL([HAVE_LINUX], [test "$host_os_name" = "linux"])
 AM_CONDITIONAL([HAVE_FREEBSD], [test "$host_os_name" = "freebsd"])
 AM_CONDITIONAL([HAVE_OPENBSD], [test "$host_os_name" = "openbsd"])
 AM_CONDITIONAL([HAVE_CYGWIN], [test "$host_os_name" = "cygwin"])
+AM_CONDITIONAL([HAVE_NETBSD], [test "$host_os_name" = "netbsd"])
 AC_CACHE_SAVE
 
 # Checks for programs.

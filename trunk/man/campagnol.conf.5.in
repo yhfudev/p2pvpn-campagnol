@@ -430,7 +430,7 @@ up = "ip route replace %N via %V || route add -net %N gw %V"
 .fi
 .ft
 .PP
-This is the default up commands for FreeBSD:
+This is the default up commands for FreeBSD and NetBSD:
 .IP
 .ft C
 .nf
@@ -460,7 +460,7 @@ up = "netsh interface ip set address name=%D static %V %n none"
 .PP
 There is no default down command on Linux, OpenBSD and Cygwin.
 .PP
-This is the defaul down command for FreeBSD:
+This is the defaul down command for FreeBSD and NetBSD:
 .IP
 .ft C
 .nf
