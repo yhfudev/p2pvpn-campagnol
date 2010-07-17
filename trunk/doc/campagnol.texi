@@ -783,7 +783,7 @@ This  section  defines  the  programs  that  are launched when the TUN device is
 opened or closed. It can be used to configure the TUN device with ifconfig, set
 the MTU, add a route, open some port on the firewall...
 
-Campagnol can also execute some platform-dependend default commands to setup the
+Campagnol can also execute some platform-dependent default commands to setup the
 interface, its MTU and add a route.
 
 See the man page @samp{campagnol.conf(5)} for a detailed description of this
