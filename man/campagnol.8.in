@@ -110,7 +110,7 @@ but you can specify another file as a command line argument.
 The syntax of this file and all the available options are described in 
 .BR campagnol.conf (5).
 .PP
-You can use the sample configuration file as a basis for writting your own.
+You can use the sample configuration file as a basis for writing your own.
 .SH FILES
 .TP
 .I \*[configname]

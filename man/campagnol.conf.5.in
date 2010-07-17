@@ -48,7 +48,7 @@ around the name and the value are stripped. The name are case sensitive.
 Values may be quoted between double quotation marks. A quoted value can expand
 over multiple lines. A \[oq]\\\[cq] at the end of the line is treated as a line
 continuation. It is removed and the parser continue to read the value with the
-next line. Several quotted or unquotted values on the same line are
+next line. Several quoted or unquoted values on the same line are
 concatenated.
 .PP
 Special characters in the section names, parameters and values can be escaped
@@ -189,7 +189,7 @@ useful if this client and others clients of the VPN are behind a common NAT:
 .EDRAWING
 .IP
 In this configuration and if this parameter is enabled, the two peers will use
-their local IP and port to reach each other. Otherwhise they will use their
+their local IP and port to reach each other. Otherwise they will use their
 public address (as with the other clients of the VPN).
 .IP
 If peer A send a packet to peer B using its public address and port, the common
@@ -198,7 +198,7 @@ feature. By using the local address, the NAT doesn't need to do hairpin
 translation so leaving this option to the default value is probably what most
 users want.
 .IP
-If the VPN configuration involes peers behind multiple level of NAT, see the
+If the VPN configuration involves peers behind multiple level of NAT, see the
 next parameter
 .BR override_local_addr .
 Disable this option only if you know what you
@@ -239,7 +239,7 @@ connection with A, it will now use its address on NAT_A.
 .PARAMETER tun_device "[Name of the TUN interface]" "none"
 .IP
 CYGWIN - The name of the TUN/TAP adapter to use (as it appears in Windows'
-"Network Connections" pannel). If this is not defined, the first adapter found
+"Network Connections" panel). If this is not defined, the first adapter found
 is used.
 .IP
 LINUX - Give this name to the TUN interface. If the parameter is not defined,
@@ -362,7 +362,7 @@ This section defines the programs that are launched when the TUN device is
 opened or closed. It can be used to configure the TUN device with ifconfig, 
 set the MTU, add a route, open some port on the firewall...
 .PP
-Campagnol can also execute some platform-dependend default commands to setup the
+Campagnol can also execute some platform-dependent default commands to setup the
 interface, its MTU and add a route.
 .TP 15n
 .PARAMETER default_up "[yes/no]" "yes"
@@ -375,7 +375,7 @@ defined in this section.
 Use the default commands when the TUN device is closed instead of the commands
 defined in this section.
 .TP
-.PARAMETER up "shell command" "plateform-dependent"
+.PARAMETER up "shell command" "platform-dependent"
 .IP
 A shell command executed when the TUN device is opened and \fBdefault_up\fR is
 false. This parameter can be defined multiple times.
@@ -414,7 +414,7 @@ the netmask of the VPN in dot-decimal notation.
 the \[oq]%\[cq] character
 .RE
 .TP
-.PARAMETER down "shell command" "plateform-dependent"
+.PARAMETER down "shell command" "platform-dependent"
 .IP
 A shell command executed when the TUN device is closed and \fBdefault_down\fR
 is false. This parameter can be defined multiple times.
@@ -460,7 +460,7 @@ up = "netsh interface ip set address name=%D static %V %n none"
 .PP
 There is no default down command on Linux, OpenBSD and Cygwin.
 .PP
-This is the defaul down command for FreeBSD and NetBSD:
+This is the default down command for FreeBSD and NetBSD:
 .IP
 .ft C
 .nf
