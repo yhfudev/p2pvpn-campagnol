@@ -106,7 +106,7 @@ void position_inc_char(position_t *pos) {
  * Convert an hexadecimal digit to its int value.
  * Assume that isxdigit(c) == true
  */
-static inline int hextoint(char c) {
+static inline int hextoint(int c) {
     if (isdigit(c))
         return c - '0';
     else if (islower(c))
@@ -124,7 +124,7 @@ static inline int isoctdigit(int c) {
  * Convert an octal digit to its int value.
  * Assume that isoctdigit(c) == true
  */
-static inline int octtoint(char c) {
+static inline int octtoint(int c) {
     return c - '0';
 }
 
