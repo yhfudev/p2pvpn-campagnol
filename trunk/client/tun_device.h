@@ -30,8 +30,8 @@
 extern int init_tun(void);
 extern int close_tun(int fd);
 
-extern void exec_up(char *device);
-extern void exec_down(char *device);
+extern void exec_up(const char *device);
+extern void exec_down(const char *device);
 extern const char *tun_default_up[];
 extern const char *tun_default_down[];
 
