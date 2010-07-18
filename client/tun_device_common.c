@@ -32,16 +32,16 @@
 
 /* Replace the special variables %D %V ... in s and write the result in sb
  */
-static void replace_args(strlib_buf_t *sb, const char *s, char *device) {
+static void replace_args(strlib_buf_t *sb, const char *s, const char *device) {
     const char *src;
 
     strlib_reset(sb);
     src = s;
 
     while (*src) {
-        switch(*src) {
+        switch (*src) {
             case '%':
-                switch (*(src+1)) {
+                switch (*(src + 1)) {
                     case '%':
                         strlib_push(sb, '%');
                         break;
@@ -49,7 +49,7 @@ static void replace_args(strlib_buf_t *sb, const char *s, char *device) {
                         strlib_appendf(sb, "'%s'", device);
                         break;
                     case 'V': // VPN IP
-                        strlib_appendf(sb, "%s", inet_ntoa (config.vpnIP));
+                        strlib_appendf(sb, "%s", inet_ntoa(config.vpnIP));
                         break;
                     case 'M': // MTU
                         strlib_appendf(sb, "%d", config.tun_mtu);
@@ -68,10 +68,10 @@ static void replace_args(strlib_buf_t *sb, const char *s, char *device) {
                         break;
                     default:
                         strlib_push(sb, '%');
-                        strlib_push(sb, *(src+1));
+                        strlib_push(sb, *(src + 1));
                         break;
                 }
-                src+= 2;
+                src += 2;
                 break;
             default:
                 strlib_push(sb, *src);
@@ -81,11 +81,10 @@ static void replace_args(strlib_buf_t *sb, const char *s, char *device) {
     }
 }
 
-/* execute the commands in progs or if default_progs if progs is NULL
+/* execute the commands in programs
  */
-static void exec_internal(char **progs, const char ** default_progs, char *device) {
+static void exec_internal(const char * const * programs, const char *device) {
     int r;
-    const char **programs = progs != NULL ? (const char **) progs : default_progs;
     strlib_buf_t sb;
     strlib_init(&sb);
     if (programs != NULL) {
@@ -100,10 +99,20 @@ static void exec_internal(char **progs, const char ** default_progs, char *devic
     strlib_free(&sb);
 }
 
-void exec_up(char *device) {
-    exec_internal(config.exec_up, tun_default_up, device);
+void exec_up(const char *device) {
+    if (config.exec_up != NULL) {
+        exec_internal((const char * const *) config.exec_up, device);
+    }
+    else {
+        exec_internal((const char * const *) tun_default_up, device);
+    }
 }
 
-void exec_down(char *device) {
-    exec_internal(config.exec_down, tun_default_down, device);
+void exec_down(const char *device) {
+    if (config.exec_down != NULL) {
+        exec_internal((const char * const *) config.exec_down, device);
+    }
+    else {
+        exec_internal((const char * const *) tun_default_down, device);
+    }
 }
