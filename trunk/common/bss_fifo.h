@@ -26,23 +26,12 @@
 
 #include <pthread.h>
 #include <openssl/bio.h>
+#include <sys/time.h>
 
 /* BIO type: source/sink */
 #define BIO_TYPE_FIFO (23|BIO_TYPE_SOURCE_SINK)
 
-/* controls:
- * DTLS assumes that it is used with a UDP socket BIO
- * so we reuse the same values */
-
-/* get and set the reception timeout
- * the parameter is a struc timespec*
- */
-#define BIO_CTRL_FIFO_SET_RECV_TIMEOUT      BIO_CTRL_DGRAM_SET_RECV_TIMEOUT
-#define BIO_CTRL_FIFO_GET_RECV_TIMEOUT      BIO_CTRL_DGRAM_GET_RECV_TIMEOUT
-
-/* last operation timed out ?*/
-#define BIO_CTRL_FIFO_GET_RECV_TIMER_EXP    BIO_CTRL_DGRAM_GET_RECV_TIMER_EXP
-#define BIO_CTRL_FIFO_GET_SEND_TIMER_EXP    BIO_CTRL_DGRAM_GET_SEND_TIMER_EXP
+/* The control interface for the timeouts is the same than in the DGRAM Bio. */
 
 /* discard packets when the FIFO is full instead of waiting */
 #define BIO_CTRL_FIFO_SET_DROPTAIL          100
@@ -64,8 +53,9 @@ struct fifo_data {
     unsigned int nelem;             // Number of items written in the FIFO
     int waiting_read;               // Number of threads waiting on cond
     int waiting_write;
-    long int rcv_timeout_nsec;      // recv timeout, ns
-    time_t rcv_timeout_sec;         // recv timeout, seconds
+    struct timeval rcv_timeout;     // Default recv timeout
+    struct timeval next_rcv_timeout;    // timeout adjustment
+    struct timeval curr_rcv_timeout;    // Current recv timeout
     int rcv_timer_exp;              // Timeout during fifo_read
     int droptail;                   // Drop new packets when the fifo is full
 };

@@ -305,7 +305,20 @@ static void * peer_handling(void * args) {
             CLIENT_MUTEXUNLOCK(peer);
             /* DTLS handshake */
             BIO_ctrl(peer->wbio, BIO_CTRL_DGRAM_SET_PEER, 0, &peer->clientaddr);
-            r = SSL_do_handshake(peer->ssl);
+            while (1) {
+                r = SSL_do_handshake(peer->ssl);
+                if (r == 1)
+                    break;
+                else {
+                    err = SSL_get_error(peer->ssl, r);
+                    if (err == SSL_ERROR_WANT_READ) {
+                        DTLSv1_handle_timeout(peer->ssl);
+                    }
+                    else
+                        break;
+                }
+            }
+
             if (r != 1) {
                 log_message("Error during DTLS handshake with peer %s", inet_ntoa(peer->vpnIP));
                 ERR_print_errors_fp(stderr);
@@ -900,7 +913,7 @@ int start_vpn(int sockfd, int tunfd) {
     int registered;
     pthread_t th_socket, th_rdv;
     struct itimerval timer_ping;
-    struct timespec timeout;
+    struct timeval timeout;
 
     args.sockfd = sockfd;
     args.tunfd = tunfd;
@@ -908,8 +921,8 @@ int start_vpn(int sockfd, int tunfd) {
     rdvargs.tunfd = tunfd;
     rdvargs.fifo = BIO_new_fifo(10, sizeof(message_t));
     timeout.tv_sec = SELECT_DELAY_SEC;
-    timeout.tv_nsec = SELECT_DELAY_USEC * 1000;
-    BIO_ctrl(rdvargs.fifo, BIO_CTRL_FIFO_SET_RECV_TIMEOUT, 0, &timeout);
+    timeout.tv_usec = SELECT_DELAY_USEC;
+    BIO_ctrl(rdvargs.fifo, BIO_CTRL_DGRAM_SET_RECV_TIMEOUT, 0, &timeout);
     args.rdvargs = &rdvargs;
 
     /* initialize the global rate limiter */

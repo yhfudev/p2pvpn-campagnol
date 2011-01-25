@@ -102,7 +102,7 @@ AS_IF([test "x$build_client" != "xno"],[
     [test "$ac_res" = "none required" || CLIENT_LIBS="$ac_res $CLIENT_LIBS"],
     [AC_MSG_ERROR([Requires pthreads])]
   )
-  OPENSSL_CHECK([0.9.8j], [0x009080af])
+  OPENSSL_CHECK([0.9.8m], [0x009080df])
   # later: search into libposix4 for Solaris support
   AC_SEARCH_LIBS([clock_gettime], [rt], 
     [test "$ac_res" = "none required" || CLIENT_LIBS="$ac_res $CLIENT_LIBS"],

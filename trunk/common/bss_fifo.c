@@ -100,8 +100,9 @@ int fifo_allocate(BIO *bi, int len, int data_size) {
     d->size = len;
     d->threshold = len/10;
     d->rcv_timer_exp = 0;
-    d->rcv_timeout_nsec = 0;
-    d->rcv_timeout_sec = 0;
+    d->rcv_timeout.tv_sec = d->rcv_timeout.tv_usec = 0;
+    d->next_rcv_timeout.tv_sec = d->next_rcv_timeout.tv_usec = 0;
+    d->curr_rcv_timeout.tv_sec = d->curr_rcv_timeout.tv_usec = 0;
     d->droptail = 0;
 
     d->fifo = (struct fifo_item *) malloc(d->size * sizeof(struct fifo_item));
@@ -178,13 +179,76 @@ static int fifo_free(BIO *bi) {
 }
 
 /* define tspec for use with sem_timedwait or pthread_cond_timedwait */
-static inline void set_timeout(struct timespec *tspec, long sec, time_t nsec) {
-    clock_gettime(CLOCK_REALTIME, tspec);
-    tspec->tv_nsec += nsec;
-    tspec->tv_sec += sec;
+static inline void set_timeout(struct timespec *tspec, struct timeval timeout) {
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    tspec->tv_nsec = (now.tv_usec + timeout.tv_usec) * 1000L;
+    tspec->tv_sec = now.tv_sec + timeout.tv_sec;
     if (tspec->tv_nsec >= 1000000000L) { // overflow
         tspec->tv_nsec -= 1000000000L;
         tspec->tv_sec ++;
+    }
+}
+
+/* The handling of the receiving timeout is the same than in the DGRAM Bio.
+ * This function is an adaptation of the original in bss_dgram.c.
+ *
+ * The resulting receiving timeout is un curr_rcv_timeout.
+ * The original timeout is stored in rcv_timeout.
+ */
+static void fifo_adjust_rcv_timeout(BIO *b) {
+    struct fifo_data *d;
+
+    d = (struct fifo_data *) b->ptr;
+
+    if (d->next_rcv_timeout.tv_sec > 0 || d->next_rcv_timeout.tv_usec > 0) {
+        struct timeval timenow, timeleft;
+
+        /* Read current socket timeout */
+        d->rcv_timeout = d->curr_rcv_timeout;
+
+        /* Get current time */
+        gettimeofday(&timenow, NULL);
+
+        /* Calculate time left until timer expires */
+        memcpy(&timeleft, &(d->next_rcv_timeout), sizeof(struct timeval));
+        timeleft.tv_sec -= timenow.tv_sec;
+        timeleft.tv_usec -= timenow.tv_usec;
+        if (timeleft.tv_usec < 0) {
+            timeleft.tv_sec--;
+            timeleft.tv_usec += 1000000;
+        }
+
+        if (timeleft.tv_sec < 0) {
+            timeleft.tv_sec = 0;
+            timeleft.tv_usec = 1;
+        }
+
+        /* Adjust socket timeout if next handhake message timer
+         * will expire earlier.
+         */
+        if ((d->rcv_timeout.tv_sec == 0 && d->rcv_timeout.tv_usec
+                == 0) || (d->rcv_timeout.tv_sec > timeleft.tv_sec)
+                || (d->rcv_timeout.tv_sec == timeleft.tv_sec
+                        && d->rcv_timeout.tv_usec >= timeleft.tv_usec)) {
+            d->curr_rcv_timeout = timeleft;
+        }
+    }
+}
+
+/*
+ * Adaptation of bss_dgram.c
+ * Restore the original receiving timeout if it was changed by
+ * fifo_adjust_rcv_timeout.
+ */
+static void fifo_reset_rcv_timeout(BIO *b) {
+    struct fifo_data *d;
+
+    d = (struct fifo_data *) b->ptr;
+
+    /* Is a timer active? */
+    if (d->next_rcv_timeout.tv_sec > 0 || d->next_rcv_timeout.tv_usec > 0) {
+        d->curr_rcv_timeout = d->rcv_timeout;
     }
 }
 
@@ -192,27 +256,29 @@ static inline void set_timeout(struct timespec *tspec, long sec, time_t nsec) {
  * Blocking read from the FIFO
  */
 static int fifo_read(BIO *b, char *out, int outl) {
-    int ret = -1, len, r = 0;
+    int ret = 0, len, r = 0;
     struct fifo_data *d;
     struct fifo_item *item;
     struct timespec timeout;
 
     d = (struct fifo_data *) b->ptr;
 
+    if (!out) {
+        return ret;
+    }
+
     mutexLock(&d->mutex);
-    while (d->nelem == 0) {
+    if (d->nelem == 0) {
         d->waiting_read++;
-        if (d->rcv_timeout_sec || d->rcv_timeout_nsec) {
-            set_timeout(&timeout, d->rcv_timeout_sec, d->rcv_timeout_nsec);
+        fifo_adjust_rcv_timeout(b);
+        if (d->curr_rcv_timeout.tv_sec || d->curr_rcv_timeout.tv_usec) {
+            set_timeout(&timeout, d->curr_rcv_timeout);
             r = conditionTimedwait(&d->cond_read, &d->mutex, &timeout);
-            if (r != 0) {
-                d->waiting_read--;
-                break;
-            }
         }
         else {
             conditionWait(&d->cond_read, &d->mutex);
         }
+        fifo_reset_rcv_timeout(b);
         d->waiting_read--;
     }
 
@@ -222,6 +288,7 @@ static int fifo_read(BIO *b, char *out, int outl) {
     if (r != 0) { // timeout
         BIO_set_retry_read(b);
         d->rcv_timer_exp = 1;
+        ret = -1;
     }
     else {
         item = &d->fifo[d->index_read];
@@ -336,15 +403,16 @@ static long fifo_ctrl(BIO *b, int cmd, long num, void *ptr) {
         case BIO_CTRL_FLUSH:
             ret = 1;
             break;
-        case BIO_CTRL_FIFO_SET_RECV_TIMEOUT:
-            d->rcv_timeout_nsec = ((struct timespec *) ptr)->tv_nsec;
-            d->rcv_timeout_sec = ((struct timespec *) ptr)->tv_sec;
+        case BIO_CTRL_DGRAM_SET_NEXT_TIMEOUT:
+            d->next_rcv_timeout = *(struct timeval *) ptr;
             break;
-        case BIO_CTRL_FIFO_GET_RECV_TIMEOUT:
-            ((struct timespec *) ptr)->tv_nsec = d->rcv_timeout_nsec;
-            ((struct timespec *) ptr)->tv_sec = d->rcv_timeout_sec;
+        case BIO_CTRL_DGRAM_SET_RECV_TIMEOUT:
+            d->curr_rcv_timeout = *(struct timeval *) ptr;
             break;
-        case BIO_CTRL_FIFO_GET_RECV_TIMER_EXP:
+        case BIO_CTRL_DGRAM_GET_RECV_TIMEOUT:
+            *(struct timeval *)ptr = d->curr_rcv_timeout;
+            break;
+        case BIO_CTRL_DGRAM_GET_RECV_TIMER_EXP:
             if (d->rcv_timer_exp) {
                 ret = 1;
                 d->rcv_timer_exp = 0;
@@ -364,7 +432,6 @@ static long fifo_ctrl(BIO *b, int cmd, long num, void *ptr) {
             break;
         case BIO_CTRL_PUSH:
         case BIO_CTRL_POP:
-        case BIO_CTRL_FIFO_GET_SEND_TIMER_EXP:
         default:
             ret = 0;
             break;
