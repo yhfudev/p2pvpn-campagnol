@@ -27,7 +27,7 @@
 #include "rate_limiter.h"
 
 /* BIO type: filter */
-#define BIO_TYPE_RATE_FILTER    (24|BIO_TYPE_FILTER)
+#define BIO_TYPE_RATE_FILTER    (101|BIO_TYPE_FILTER)
 
 /* Create a new BIO */
 extern BIO *BIO_f_new_rate_limiter(struct tb_state*, struct tb_state*);
