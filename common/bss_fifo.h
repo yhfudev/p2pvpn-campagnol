@@ -29,7 +29,7 @@
 #include <sys/time.h>
 
 /* BIO type: source/sink */
-#define BIO_TYPE_FIFO (23|BIO_TYPE_SOURCE_SINK)
+#define BIO_TYPE_FIFO (100|BIO_TYPE_SOURCE_SINK)
 
 /* The control interface for the timeouts is the same than in the DGRAM Bio. */
 
