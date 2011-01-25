@@ -347,7 +347,7 @@ int createClientSSL(struct client *peer) {
     /* Don't try to discover the MTU
      */
     SSL_set_options(peer->ssl, SSL_OP_NO_QUERY_MTU);
-    peer->ssl->d1->mtu = MESSAGE_MAX_LENGTH;
+    peer->ssl->d1->mtu = config.tun_mtu;
 
     mutexUnlock(&ctx_lock);
     return 0;

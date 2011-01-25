@@ -316,9 +316,39 @@ static void * peer_handling(void * args) {
                 CLIENT_MUTEXUNLOCK(peer);
             }
             else {
+                unsigned int mac_size, blocksize;
+                unsigned int pkt_size;
                 CLIENT_MUTEXLOCK(peer);
                 CHANGE_STATE(peer, ESTABLISHED);
                 peers_update_peer_time(peer, time(NULL));
+
+                // Get the mac size and the block size, compute the required MTU
+                // for OpenSSL.
+                if (peer->ssl->write_hash)
+#if OPENSSL_VERSION_NUMBER >= 0x10000000
+                    mac_size = EVP_MD_CTX_size(peer->ssl->write_hash);
+#else
+                    mac_size = EVP_MD_size(peer->ssl->write_hash);
+#endif
+                else
+                    mac_size = 0;
+
+                if (peer->ssl->enc_write_ctx &&
+                    (EVP_CIPHER_mode( peer->ssl->enc_write_ctx->cipher) & EVP_CIPH_CBC_MODE))
+                    blocksize = EVP_CIPHER_block_size(peer->ssl->enc_write_ctx->cipher);
+                else
+                    blocksize = 0;
+
+                pkt_size = config.tun_mtu + 1 + blocksize + mac_size; // padding field + IV + MAC
+                peer->ssl->d1->mtu = pkt_size;
+                if (pkt_size & (blocksize - 1)) // not a multiple of the block size, need to add padding
+                    peer->ssl->d1->mtu += blocksize - (pkt_size & (blocksize - 1));
+
+                // DTLS header
+                peer->ssl->d1->mtu += DTLS1_RT_HEADER_LENGTH; // Header length
+
+                log_message_level(2, "Internal MTU adjusted to %u", peer->ssl->d1->mtu);
+
                 CLIENT_MUTEXUNLOCK(peer);
             }
         }
