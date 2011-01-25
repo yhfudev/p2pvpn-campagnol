@@ -30,7 +30,7 @@
 enum client_type {NEW, PUNCHING, LINKED, ESTABLISHED, CLOSED};
 
 /* default receive timeout */
-#define PEER_RECV_TIMEMOUT_NSEC 500000000L
+#define PEER_RECV_TIMEMOUT_USEC 250000
 #define PEER_RECV_TIMEOUT_SEC 0
 
 /* client storage structure */

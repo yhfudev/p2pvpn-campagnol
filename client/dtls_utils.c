@@ -262,7 +262,7 @@ int rebuildDTLS() {
  * Build the SSL structure for a client
  */
 int createClientSSL(struct client *peer) {
-    struct timespec recv_timeout;
+    struct timeval recv_timeout;
     BIO *wbio_tmp;
 
     mutexLock(&ctx_lock);
@@ -319,9 +319,9 @@ int createClientSSL(struct client *peer) {
         mutexUnlock(&ctx_lock);
         return -1;
     }
-    recv_timeout.tv_nsec = PEER_RECV_TIMEMOUT_NSEC;
+    recv_timeout.tv_usec = PEER_RECV_TIMEMOUT_USEC;
     recv_timeout.tv_sec = PEER_RECV_TIMEOUT_SEC;
-    BIO_ctrl(peer->rbio, BIO_CTRL_FIFO_SET_RECV_TIMEOUT, 0, &recv_timeout);
+    BIO_ctrl(peer->rbio, BIO_CTRL_DGRAM_SET_RECV_TIMEOUT, 0, &recv_timeout);
     SSL_set_bio(peer->ssl, peer->rbio, peer->wbio);
 
     peer->out_fifo = BIO_new_fifo(config.FIFO_size, MESSAGE_MAX_LENGTH);
