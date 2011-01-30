@@ -172,9 +172,12 @@ total overhead of campagnol. This is described in the source file
 .TP
 .PARAMETER interface "[a network interface name]" "no interface binding"
 .IP
-This parameter is also used to find the local IP address to use if the 
+This parameter is used to find the local IP address to use if the 
 .B local_host
-parameter is not used. LINUX ONLY: if this parameter is defined, the UDP socket
+parameter is not set. On cygwin, the intefaces' names are as specified in the
+Network Connections settings panel.
+.IP
+LINUX ONLY: if this parameter is defined, the UDP socket
 is also bound to this interface.
 .TP
 .PARAMETER use_local_addr "[yes/no]" "yes"

@@ -1,5 +1,13 @@
 	Add support for NetBSD.
 
+	client:
+	* MTU: Make sure that the packet size is coherent with the MTU during
+	the handshake.
+	* DTLS: Fix the handling of the receiving timeout. The required
+	version of OpenSSL is now 0.9.8m.
+	* cygwin: The inteface parameter in the configuration file can now be used
+	with an interface name as specified in Network Connections. 
+
 v 0.3.3
 	The client and rdv server have been ported to Cygwin.
 	Add a texinfo manual.
