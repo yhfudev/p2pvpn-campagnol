@@ -109,10 +109,10 @@ static int get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
     ifap_first = ifap;
     while (ifap != NULL) {
         if (iface == NULL && ((ifap->ifa_flags & IFF_LOOPBACK)
-                || !(ifap->ifa_flags & IFF_RUNNING) || !(ifap->ifa_flags
-                & IFF_UP))) {
+                || !(ifap->ifa_flags & IFF_RUNNING)
+                || !(ifap->ifa_flags & IFF_UP))) {
             ifap = ifap->ifa_next;
-            continue; // local interface, skip it
+            continue; // local or not running interface, skip it
         }
         if (iface == NULL || strcmp(ifap->ifa_name, iface) == 0) {
             /* If the interface has no link level address (like a TUN device),
@@ -174,8 +174,10 @@ static int get_local_IP(struct in_addr * ip, int *localIPset, char *iface) {
             log_error(errno, "ioctl SIOCGIFFLAGS");
             return -1;
         }
-        if (ifreq_flags.ifr_flags & IFF_LOOPBACK) {
-            continue; // local interface, skip it
+        if (iface == NULL && ((ifreq_flags.ifr_flags & IFF_LOOPBACK)
+                || !(ifreq_flags.ifr_flags & IFF_RUNNING)
+                || !(ifreq_flags.ifr_flags & IFF_UP))) {
+            continue; // local or not running interface, skip it
         }
 
         if (iface == NULL || strcmp (ifr->ifr_name, iface) == 0) {
