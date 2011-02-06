@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009 Florent Bondoux
+ * Copyright (C) 2008-2011 Florent Bondoux
  *
  * This file is part of Campagnol.
  *

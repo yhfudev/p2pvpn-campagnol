@@ -1,5 +1,5 @@
 AC_PREREQ([2.61])
-AC_INIT([campagnol],[0.3.3],[florent.bondoux@resel.fr])
+AC_INIT([campagnol],[0.3.4],[florent.bondoux@resel.fr])
 AM_INIT_AUTOMAKE([-Wall foreign dist-bzip2])
 AM_MAINTAINER_MODE
 AC_CONFIG_SRCDIR([client/campagnol.c])
