@@ -1,7 +1,7 @@
 /*
  * OpenSSL rate limiter filter BIO
  *
- * Copyright (C) 2008 Florent Bondoux
+ * Copyright (C) 2008-2011 Florent Bondoux
  *
  * This file is part of Campagnol.
  *

@@ -1,7 +1,7 @@
 /*
  * Campagnol RDV server, startup code
  *
- * Copyright (C) 2009 Florent Bondoux
+ * Copyright (C) 2009-2011 Florent Bondoux
  *
  * This file is part of Campagnol.
  *
@@ -53,7 +53,7 @@ static void usage(void) {
 static void version(void) {
     fprintf(stderr, "Campagnol VPN | Server | Version %s\n", VERSION);
     fprintf(stderr, "Copyright (c) 2007 Antoine Vianey\n");
-    fprintf(stderr, "              2008-2009 Florent Bondoux\n");
+    fprintf(stderr, "              2008-2011 Florent Bondoux\n");
     exit(EXIT_SUCCESS);
 }
 

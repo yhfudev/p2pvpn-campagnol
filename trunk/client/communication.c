@@ -2,7 +2,7 @@
  * Campagnol main code
  *
  * Copyright (C) 2007 Antoine Vianey
- *               2008-2009 Florent Bondoux
+ *               2008-2011 Florent Bondoux
  *
  * This file is part of Campagnol.
  *
