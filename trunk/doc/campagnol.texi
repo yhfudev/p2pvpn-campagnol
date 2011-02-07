@@ -289,10 +289,9 @@ same on all the supported platforms.
 
 @cindex OpenSSL, dependency
 @itemize @minus
-@item @strong{OpenSSL library version >= 0.9.8j}, @uref{http://www.openssl.org/}
+@item @strong{OpenSSL library version >= 0.9.8m}, @uref{http://www.openssl.org/}
 
-The latest 0.9.8* available is recommended. Campagnol should also work with
-OpenSSL 1.0.0*.
+Using OpenSSL 1.0.0* is recommended.
 
 Cygwin users should use the OpenSSL package from the Cygwin repository.
 
@@ -305,6 +304,9 @@ from @uref{http://vtun.sourceforge.net/tun}.
 This driver is included in the default kernel of FreeBSD, NetBSD and OpenBSD.
 The kernel option on Linux is called @samp{CONFIG_TUN} (which is enabled in the
 default kernel of most Linux distributions).
+
+For Cygwin, the TAP driver comes from the OpenVPN project (TAP-Win32). It is
+available on their website (@uref{http://openvpn.net}).
 @end itemize
 
 @comment -----------------------------------------------------------------------
@@ -945,6 +947,7 @@ campagnol_rdv --daemon
 @node Running the client
 @section Running the client
 
+The client needs to run with a privileged account to configure the interfaces.
 To start a client, run:
 @example
 campagnol conf_file.conf
