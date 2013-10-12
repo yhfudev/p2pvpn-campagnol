@@ -171,9 +171,6 @@ $ make install
 Creating the certificates
 -------------------------
 
-The "samples/sample_certs" directory in the sources contains a few certificates 
-and configuration files useful for testing purpose only.
-
 To create a small certificate authority for Campagnol, you can use the 
 ca_wrap.sh script from the "samples" directory. See its README file. This script 
 enables you to create a configuration file for OpenSSL, create the CA structure, 

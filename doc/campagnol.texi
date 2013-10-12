@@ -377,9 +377,7 @@ make install
 @cindex CA, creation
 @cindex ca_wrap.sh
 
-The @file{samples/sample_certs} directory in the sources contains a few
-certificates and configuration files useful for testing purpose only. You will
-need to create a small certificate authority for your VPN.
+You will need to create a small certificate authority for your VPN.
 
 Campagnol comes with a small wrapper script around the OpenSSL utilities:
 @command{ca_wrap.sh}. It can be used to

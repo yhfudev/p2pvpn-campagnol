@@ -110,17 +110,6 @@ endif
 
 if BUILD_CLIENT
 nobase_dist_pkgdata_DATA = \
-	samples/sample_certs/cert1/key.pem \
-	samples/sample_certs/cert1/certificate.pem \
-	samples/sample_certs/cert2/key.pem \
-	samples/sample_certs/cert2/certificate.pem \
-	samples/sample_certs/cert_revoked/key.pem \
-	samples/sample_certs/cert_revoked/certificate.pem \
-	samples/sample_certs/cacert.pem \
-	samples/sample_certs/crl.pem \
-	samples/sample_certs/client1.conf \
-	samples/sample_certs/client2.conf \
-	samples/sample_certs/README \
 	samples/ca_wrap.sh samples/README.ca_wrap
 endif
 
